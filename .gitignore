@@ -1,0 +1,30 @@
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.DS_Store
+
+# Data Folders
+data/expected
+data/out
+
+# Distribution / packaging
+dist/
+
+# Poetry
+poetry.lock
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# mypy
+.mypy_cache/

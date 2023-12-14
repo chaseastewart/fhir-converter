@@ -1,0 +1,36 @@
+[build-system]
+requires = ["poetry_core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "python-fhir-converter"
+version = "0.0.1"
+authors = ["Chase Stewart <chase.a.stewart@outlook.com>"]
+description = "Conversion utility to translate data formats into FHIR"
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/chaseastewart/fhir-converter"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries",
+]
+packages = [
+    {include = "fhir_converter"},
+    {include = "fhir_converter/py.typed"},
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+python-liquid = "^1.10.2"
+xmltodict = "^0.13.0"
+pyjson5 = "^1.6.5"
+frozendict = "^2.3.10"
