@@ -1,10 +1,10 @@
 import re
-from typing import Callable
+from typing import Callable, TextIO, Union
 
 from pyjson5 import loads as json5_loads
 from xmltodict import parse as xmltodict_parse
 
-REGEX = re.compile(r"\t?|\r\n?|\n")
+REGEX = re.compile(r"\r\n?|\n")
 
 
 def _normalize_dict(data: dict, func: Callable[[dict, tuple], None]) -> dict:
@@ -38,7 +38,7 @@ def parse_json(json_input: str) -> dict:
     return _normalize_dict(json5_loads(json_input.strip()), strip_null_empty)
 
 
-def parse_xml(xml_input: str) -> dict:
+def parse_xml(xml_input: Union[str, TextIO]) -> dict:
     def normalize_text(data: dict, key_val: tuple) -> None:
         key, val = key_val
         if key == "#text":
@@ -56,7 +56,11 @@ def parse_xml(xml_input: str) -> dict:
             data[key.replace(":", "_")] = val
             del data[key]
 
+    
+    if not isinstance(xml_input, str):
+        xml_input = xml_input.read()
     xml_input = REGEX.sub("", xml_input.strip())
+
     data = _normalize_dict(
         _normalize_dict(xmltodict_parse(xml_input), normalize_text), normalize_keys
     )

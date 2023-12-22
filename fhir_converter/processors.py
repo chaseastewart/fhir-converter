@@ -1,12 +1,14 @@
 from abc import ABC
 from json import dumps as json_dumps
-from typing import Optional
+from typing import Optional, TextIO, Union
 
 from frozendict import frozendict
 from liquid import Environment
 from pyjson5 import loads as json5_loads
 
 from fhir_converter import parsers, templates
+
+XMLT = Union[str, TextIO]
 
 
 class BaseProcessor(ABC):
@@ -39,10 +41,18 @@ class CcdaProcessor(BaseProcessor):
             ).get("Mapping", {})
         )
 
-    def convert(self, template_name: str, xml_input: str) -> str:
+    def convert_to_dict(self, template_name: str, xml_input: XMLT) -> dict:
         template = self.env.get_template(
             template_name, globals={"code_mapping": self.value_sets}
         )
-        return json_dumps(
-            parsers.parse_json(template.render({"msg": parsers.parse_xml(xml_input)}))
+        return parsers.parse_json(
+            template.render({"msg": parsers.parse_xml(xml_input)})
         )
+
+    def convert(self, template_name: str, xml_input: XMLT) -> str:
+        return json_dumps(self.convert_to_dict(template_name, xml_input))
+
+    def ccda_to_fhir(
+        self, template_name: str, xml_input: XMLT, json_out: TextIO
+    ) -> None:
+        json_out.write(self.convert(template_name, xml_input))
