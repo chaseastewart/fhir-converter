@@ -8,9 +8,7 @@ from fhir_converter.processors import CcdaProcessor
 def ccda_to_fhir(processor: CcdaProcessor, template_name: str, filename: str) -> None:
     with open(f"data/sample/ccda/{filename}.ccda") as ccda_file:
         with open(f"data/out/{filename}.json", "w") as fhir_file:
-            processor.ccda_to_fhir(
-                template_name, xml_input=ccda_file, json_out=fhir_file
-            )
+            fhir_file.write(processor.convert(template_name, xml_input=ccda_file))
 
 
 def main() -> None:
