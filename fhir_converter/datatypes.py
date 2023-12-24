@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import math
 import re
-from enum import Enum
+from enum import IntEnum
 from typing import NamedTuple, Optional
 
 DTM_REGEX = re.compile(r"(\d+(?:\.\d+)?)(?:([+-]\d{2})(\d{2}))?")
@@ -26,13 +26,21 @@ class _UTCOffset(datetime.tzinfo):
         return datetime.timedelta(0)
 
 
-class FhirDtmPrecision(Enum):
+class FhirDtmPrecision(IntEnum):
     YEAR = 4
     MONTH = 7
     DAY = 10
+    HOUR = 13
+    MIN = 16
+    SEC = 19
+    MILLIS = 21
+
+    @property
+    def timespec(self) -> str:
+        return "milliseconds" if self > FhirDtmPrecision.SEC else "seconds"
 
 
-class Hl7DtmPrecision(Enum):
+class Hl7DtmPrecision(IntEnum):
     YEAR = 4
     MONTH = 6
     DAY = 8
@@ -41,32 +49,26 @@ class Hl7DtmPrecision(Enum):
     SEC = 14
     MILLIS = 16
 
-    def greater(self, other: Hl7DtmPrecision) -> bool:
-        return self.value > other.value
-
-    def atleast(self, other: Hl7DtmPrecision) -> bool:
-        return self.value >= other.value
-
     @property
-    def timespec(self) -> str:
-        return "milliseconds" if self.greater(Hl7DtmPrecision.SEC) else "seconds"
+    def fhir_precision(self) -> FhirDtmPrecision:
+        return FhirDtmPrecision[self.name]
 
     @classmethod
     def from_dtm(cls, dtm: str) -> Hl7DtmPrecision:
         _len = len(dtm)
-        if _len > Hl7DtmPrecision.SEC.value:
+        if _len > Hl7DtmPrecision.SEC:
             return Hl7DtmPrecision.MILLIS
-        elif _len > Hl7DtmPrecision.MIN.value:
+        elif _len > Hl7DtmPrecision.MIN:
             return Hl7DtmPrecision.SEC
-        elif _len > Hl7DtmPrecision.HOUR.value:
+        elif _len > Hl7DtmPrecision.HOUR:
             return Hl7DtmPrecision.MIN
-        elif _len > Hl7DtmPrecision.DAY.value:
+        elif _len > Hl7DtmPrecision.DAY:
             return Hl7DtmPrecision.HOUR
-        elif _len > Hl7DtmPrecision.MONTH.value:
+        elif _len > Hl7DtmPrecision.MONTH:
             return Hl7DtmPrecision.DAY
-        elif _len > Hl7DtmPrecision.YEAR.value:
+        elif _len > Hl7DtmPrecision.YEAR:
             return Hl7DtmPrecision.MONTH
-        elif _len == Hl7DtmPrecision.YEAR.value:
+        elif _len == Hl7DtmPrecision.YEAR:
             return Hl7DtmPrecision.YEAR
         raise ValueError("Malformed HL7 datetime {0}".format(dtm))
 
@@ -92,38 +94,37 @@ def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
         tzinfo = None
 
     precision = Hl7DtmPrecision.from_dtm(dtm)
-    year = int(dtm[0:4])
+    year = int(dtm[: Hl7DtmPrecision.YEAR])
 
-    atleast = precision.atleast
-    if atleast(Hl7DtmPrecision.MONTH):
-        month, precision = int(dtm[4:6]), Hl7DtmPrecision.MONTH
+    if precision >= Hl7DtmPrecision.MONTH:
+        month = int(dtm[Hl7DtmPrecision.YEAR : Hl7DtmPrecision.MONTH])
     else:
         month = 1
 
-    if atleast(Hl7DtmPrecision.DAY):
-        day, precision = int(dtm[6:8]), Hl7DtmPrecision.DAY
+    if precision >= Hl7DtmPrecision.DAY:
+        day = int(dtm[Hl7DtmPrecision.MONTH : Hl7DtmPrecision.DAY])
     else:
         day = 1
 
-    if atleast(Hl7DtmPrecision.HOUR):
-        hour, precision = int(dtm[8:10]), Hl7DtmPrecision.HOUR
+    if precision >= Hl7DtmPrecision.HOUR:
+        hour = int(dtm[Hl7DtmPrecision.DAY : Hl7DtmPrecision.HOUR])
     else:
         hour = 0
 
-    if atleast(Hl7DtmPrecision.MIN):
-        minute, precision = int(dtm[10:12]), Hl7DtmPrecision.MIN
+    if precision >= Hl7DtmPrecision.MIN:
+        minute = int(dtm[Hl7DtmPrecision.HOUR : Hl7DtmPrecision.MIN])
     else:
         minute = 0
 
-    if atleast(Hl7DtmPrecision.SEC):
-        delta = datetime.timedelta(seconds=float(dtm[Hl7DtmPrecision.MIN.value:]))
+    if precision >= Hl7DtmPrecision.SEC:
+        delta = datetime.timedelta(seconds=float(dtm[Hl7DtmPrecision.MIN :]))
         second, microsecond = delta.seconds, delta.microseconds
     else:
         second = 0
         microsecond = 0
 
     return Hl7ParsedDtm(
-        precision=precision,
+        precision,
         dt=datetime.datetime(
             year, month, day, hour, minute, second, microsecond, tzinfo=tzinfo
         ),
@@ -132,26 +133,30 @@ def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
 
 def hl7_to_fhir_dtm(input: str, precision: Optional[Hl7DtmPrecision] = None) -> str:
     parsed_dtm = parse_hl7_dtm(input)
-    if precision is None or precision.greater(parsed_dtm.precision):
+    if precision is None or precision > parsed_dtm.precision:
         precision = parsed_dtm.precision
 
-    iso_dtm = to_fhir_dtm(
+    return to_fhir_dtm(
         dt=parsed_dtm.dt,
-        timespec=precision.timespec,
+        precision=precision.fhir_precision,
     )
 
-    if precision.greater(Hl7DtmPrecision.DAY):
-        return iso_dtm
-    elif precision.greater(Hl7DtmPrecision.MONTH):
-        return iso_dtm[: FhirDtmPrecision.DAY.value]
-    elif precision.greater(Hl7DtmPrecision.YEAR):
-        return iso_dtm[: FhirDtmPrecision.MONTH.value]
-    return iso_dtm[: FhirDtmPrecision.YEAR.value]
 
+def to_fhir_dtm(
+    dt: datetime.datetime, precision: Optional[FhirDtmPrecision] = None
+) -> str:
+    if precision is None:
+        precision = FhirDtmPrecision.MILLIS
 
-def to_fhir_dtm(dt: datetime.datetime, timespec: Optional[str] = None) -> str:
-    iso_dtm = dt.isoformat(timespec=timespec if timespec else "milliseconds")
+    iso_dtm = dt.isoformat(timespec=precision.timespec)
     off = dt.utcoffset()
     if off is not None and int(off.total_seconds()) == 0:
         iso_dtm = iso_dtm[:-6] + "Z"
-    return iso_dtm
+
+    if precision > FhirDtmPrecision.DAY:
+        return iso_dtm
+    elif precision > FhirDtmPrecision.MONTH:
+        return iso_dtm[: FhirDtmPrecision.DAY]
+    elif precision > FhirDtmPrecision.YEAR:
+        return iso_dtm[: FhirDtmPrecision.MONTH]
+    return iso_dtm[: FhirDtmPrecision.YEAR]
