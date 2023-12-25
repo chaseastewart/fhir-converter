@@ -174,6 +174,4 @@ def _parse_argument(stream: ExprTokenStream) -> Tuple[str, Expression]:
     stream.next_token()
     return key, val
 
-
-def register(env: Environment) -> None:
-    env.add_tag(EvaluateTag)
+__tags__ = [EvaluateTag]

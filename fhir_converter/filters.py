@@ -125,20 +125,19 @@ def batch_render(
         return buffer.getvalue()
 
 
-def register(env: Environment) -> None:
-    env.add_filter("to_json_string", to_json_string)
-    env.add_filter("to_array", to_array)
-    env.add_filter("contains", contains)
-    env.add_filter("match", match)
-    env.add_filter("gzip", gzip)
-    env.add_filter("sha1_hash", sha1_hash)
-    env.add_filter("base64_encode", base64_encode)
-    env.add_filter("add_hyphens_date", add_hyphens_date)
-    env.add_filter("format_as_date_time", format_as_date_time)
-    env.add_filter("now", now)
-    env.add_filter("generate_uuid", generate_uuid)
-    env.add_filter("get_property", get_property)
-    env.add_filter(
-        "get_first_ccda_sections_by_template_id", get_first_ccda_sections_by_template_id
-    )
-    env.add_filter("batch_render", batch_render)
+__filters__ = [
+    ("to_json_string", to_json_string),
+    ("to_array", to_array),
+    ("contains", contains),
+    ("match", match),
+    ("gzip", gzip),
+    ("sha1_hash", sha1_hash),
+    ("base64_encode", base64_encode),
+    ("add_hyphens_date", add_hyphens_date),
+    ("format_as_date_time", format_as_date_time),
+    ("now", now),
+    ("generate_uuid", generate_uuid),
+    ("get_property", get_property),
+    ("get_first_ccda_sections_by_template_id", get_first_ccda_sections_by_template_id),
+    ("batch_render", batch_render),
+]

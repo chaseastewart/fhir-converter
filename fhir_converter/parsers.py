@@ -1,16 +1,14 @@
 import re
-from typing import TextIO, Union
+from typing import IO, Callable, Optional, Union
 
 from pyjson5 import loads as json5_loads
 from xmltodict import parse as xmltodict_parse
-
-from fhir_converter import utils
 
 REGEX = re.compile(r"\r\n?|\n")
 
 
 def parse_json(json_input: str) -> dict:
-    json_data = utils.apply(json5_loads(json_input.strip()), _remove_null_empty)
+    json_data = _apply(json5_loads(json_input.strip()), _remove_null_empty)
     unique_entrys = {}
     for entry in json_data.get("entry", []):
         key = _get_key(entry)
@@ -26,6 +24,30 @@ def _remove_null_empty(data: dict, key_val: tuple) -> None:
     key, val = key_val
     if val is None or not val:
         del data[key]
+
+
+def _apply(data: dict, func: Callable[[dict, tuple], None]) -> dict:
+    for key in set(data.keys()):
+        val = data[key]
+        if isinstance(val, dict):
+            _apply(val, func)
+        elif isinstance(val, list):
+            l = []
+            for el in val:
+                if isinstance(el, dict):
+                    _apply(el, func)
+                if el:
+                    l.append(el)
+            if l:
+                val, data[key] = l, l
+            else:
+                val = None
+
+        if val:
+            func(data, (key, val))
+        else:
+            del data[key]
+    return data
 
 
 def _get_key(entry: dict) -> str:
@@ -59,32 +81,26 @@ def _merge_dict(a: dict, b: dict) -> dict:
     return a
 
 
-def parse_xml(xml_input: Union[str, TextIO]) -> dict:
-    if not isinstance(xml_input, str):
-        xml_input = xml_input.read()
-    xml_input = REGEX.sub("", xml_input.strip())
+def parse_xml(xml_input: Union[str, IO], encoding: Optional[str] = None) -> dict:
+    if isinstance(xml_input, str):
+        xml = xml_input
+    else:
+        xml = xml_input.read()
+        if not isinstance(xml, str):
+            if not encoding:
+                encoding = "utf-8"
+            xml = xml.decode(encoding)
+    xml = REGEX.sub("", xml.strip())
 
-    data = utils.apply(
-        xmltodict_parse(xml_input), _normalize_xml_text, _normalize_xml_keys
+    data = xmltodict_parse(
+        xml,
+        force_cdata=True,
+        attr_prefix="",
+        cdata_key="_",
+        postprocessor=lambda _, key, value: (
+            key.replace(":", "_") if ":" in key else key,
+            value,
+        ),
     )
-    data["_originalData"] = xml_input
+    data["_originalData"] = xml
     return data
-
-
-def _normalize_xml_text(data: dict, key_val: tuple) -> None:
-    key, val = key_val
-    if key == "#text":
-        data["_"] = val
-        del data[key]
-    elif not key.startswith("@") and isinstance(val, str):
-        data[key] = {"_": val}
-
-
-def _normalize_xml_keys(data: dict, key_val: tuple) -> None:
-    key, val = key_val
-    if key.startswith("@"):
-        data[key[1:]] = val
-        del data[key]
-    elif ":" in key:
-        data[key.replace(":", "_")] = val
-        del data[key]
