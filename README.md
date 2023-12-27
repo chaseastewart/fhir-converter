@@ -34,7 +34,8 @@ $ pip install python-fhir-converter
 ```python
 from fhir_converter.processors import CcdaProcessor
 
-with open(f"data/sample/ccda/Discharge_Summary.ccda") as ccda_file:
+processor = CcdaProcessor.from_template_dir(TEMPLATE_DIR)
+with open("data/sample/ccda/Discharge_Summary.ccda") as ccda_file:
     print(processor.convert(template_name="DischargeSummary", xml_input=ccda_file))
 ```
 

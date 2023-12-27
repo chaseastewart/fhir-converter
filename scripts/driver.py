@@ -36,7 +36,7 @@ def main() -> None:
             os.mkdir(template_dir)
 
     with Profile() as pr:
-        processor = CcdaProcessor(TEMPLATE_DIR)
+        processor = CcdaProcessor.from_template_dir(TEMPLATE_DIR)
         for cda_path in walk_dir(SAMPLE_DIR):
             for template in TEMPLATES:
                 convert_to_fhir(processor, template, cda_path)
@@ -52,9 +52,7 @@ def walk_dir(path: str) -> Generator[str, Any, None]:
                 yield os.path.join(root, filename)
 
 
-def convert_to_fhir(
-    processor: CcdaProcessor, template_name: str, cda_path: str
-) -> None:
+def convert_to_fhir(processor: CcdaProcessor, template_name: str, cda_path: str) -> None:
     with open(cda_path) as ccda_file:
         fhir_path = os.path.join(
             DATA_OUT_DIR,

@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from abc import ABC
 from json import dumps as json_dumps
-from typing import IO, Callable, Optional, Type, Union
+from typing import IO, Optional, Type, TypeVar, Union
 
 from frozendict import frozendict
 from liquid import Environment
@@ -8,46 +10,24 @@ from pyjson5 import loads as json5_loads
 
 from fhir_converter import filters, parsers, tags, templates
 
-DATAT = Union[str, IO]
+T = TypeVar("T", bound="BaseProcessor")
+XMLT = Union[str, IO]
 
 
 class BaseProcessor(ABC):
     """Base processor from which all processors are derived.
 
     Args:
-        template_dir: The path containing the templates to use.
-
-    Attributes:
         env (Environment): The rendering `Environment`
     """
 
-    def __init__(self, template_dir: str) -> None:
-        self.env = Environment(
-            loader=templates.TemplateLoader(template_dir, auto_reload=False)
-        )
-        self.register_filters(filters.__filters__)
-        self.register_tags(tags.__tags__)
-
-    def register_filters(self, filters: list[tuple[str, Callable]]) -> None:
-        """Register 1:* filter function(s) with the processor.
-
-        Args:
-            filters: The function(s) to register.
-        """
-        for filter in filters:
-            self.env.add_filter(*filter)
-
-    def register_tags(self, tags: list[Type]) -> None:
-        """Register 1:* liquid tag(s) with the processor.
-
-        Args:
-            tags: The tag(s) to register.
-        """
-        for tag in tags:
-            self.env.add_tag(tag)
+    def __init__(self, env: Environment) -> None:
+        self.env = env
+        templates.register_filters(self.env, filters.__default__)
+        templates.register_tags(self.env, tags.__default__)
 
     def convert(
-        self, template_name: str, input: DATAT, encoding: Optional[str] = None
+        self, template_name: str, input: XMLT, encoding: Optional[str] = None
     ) -> str:
         """Converts the input data using the supplied rendering template
 
@@ -58,17 +38,35 @@ class BaseProcessor(ABC):
         """
         raise NotImplementedError("processors must implement a convert method")
 
+    @classmethod
+    def from_template_dir(cls: Type[T], template_dir: str, *args, **kwargs) -> T:
+        """Constructs a new processor initializing the rendering environment
+           with the specified template directory
+
+           See processors for specific initialization parameters
+
+        Args:
+            template_dir: The directory of the rendering liquid templates
+        """
+        return cls(
+            Environment(
+                loader=templates.TemplateLoader(template_dir, auto_reload=False)
+            ),
+            *args,
+            *kwargs,
+        )
+
 
 class CcdaProcessor(BaseProcessor):
     """Converts consolidated CDA documents to FHIR
 
     Args:
-        template_dir: The path containing the templates to use.
+        env (Environment): The rendering `Environment`
         value_set_path: The path containing the valueset mappings.
     """
 
-    def __init__(self, template_dir: str, value_set_path: Optional[str] = None) -> None:
-        super().__init__(template_dir)
+    def __init__(self, env: Environment, value_set_path: Optional[str] = None) -> None:
+        super().__init__(env)
         self.value_sets = frozendict(
             json5_loads(
                 templates.get_template_resource(
@@ -79,7 +77,7 @@ class CcdaProcessor(BaseProcessor):
         )
 
     def convert(
-        self, template_name: str, xml_input: DATAT, encoding: Optional[str] = None
+        self, template_name: str, xml_input: XMLT, encoding: Optional[str] = None
     ) -> str:
         """Convert the xml input to a FHIR string
 
@@ -91,7 +89,7 @@ class CcdaProcessor(BaseProcessor):
         return json_dumps(self.convert_to_dict(template_name, xml_input, encoding))
 
     def convert_to_dict(
-        self, template_name: str, xml_input: DATAT, encoding: Optional[str] = None
+        self, template_name: str, xml_input: XMLT, encoding: Optional[str] = None
     ) -> dict:
         """Convert the xml input to a FHIR dict
 

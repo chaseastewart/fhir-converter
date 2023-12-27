@@ -1,8 +1,7 @@
 from functools import partial
 from sys import intern
-from typing import Dict, List, Optional, TextIO, Tuple
+from typing import Dict, List, Optional, TextIO, Tuple, Type
 
-from liquid import Environment
 from liquid.ast import ChildNode, Node
 from liquid.context import Context
 from liquid.exceptions import LiquidSyntaxError
@@ -174,4 +173,5 @@ def _parse_argument(stream: ExprTokenStream) -> Tuple[str, Expression]:
     stream.next_token()
     return key, val
 
-__tags__ = [EvaluateTag]
+
+__default__: list[Type[Tag]] = [EvaluateTag]

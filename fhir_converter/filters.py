@@ -1,12 +1,11 @@
 import re
-from base64 import b64encode
 from datetime import datetime, timezone
 from hashlib import sha1, sha256
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 from uuid import UUID
 from zlib import compress as z_compress
 
-from liquid import Environment
+from liquid.builtin.filters.string import base64_encode
 from liquid.context import Context
 from liquid.filter import liquid_filter, string_filter, with_context
 from liquid.undefined import Undefined
@@ -49,11 +48,6 @@ def gzip(data: str) -> str:
 @string_filter
 def sha1_hash(data: str) -> str:
     return sha1(data.encode()).hexdigest()
-
-
-@string_filter
-def base64_encode(val: str) -> str:
-    return b64encode(val.encode()).decode()
 
 
 @string_filter
@@ -125,14 +119,13 @@ def batch_render(
         return buffer.getvalue()
 
 
-__filters__ = [
+__default__: list[tuple[str, Callable]] = [
     ("to_json_string", to_json_string),
     ("to_array", to_array),
     ("contains", contains),
     ("match", match),
     ("gzip", gzip),
     ("sha1_hash", sha1_hash),
-    ("base64_encode", base64_encode),
     ("add_hyphens_date", add_hyphens_date),
     ("format_as_date_time", format_as_date_time),
     ("now", now),
