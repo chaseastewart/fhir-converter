@@ -98,8 +98,7 @@ def parse_xml(xml_input: Union[str, IO], encoding: Optional[str] = None) -> dict
         attr_prefix="",
         cdata_key="_",
         postprocessor=lambda _, key, value: (
-            key.replace(":", "_") if ":" in key else key,
-            value,
+            (key.replace(":", "_") if ":" in key else key, value) if value else None
         ),
     )
     data["_originalData"] = xml

@@ -1,39 +1,68 @@
 import os
 import sys
+from typing import Any, Generator
 
 sys.path.insert(0, os.getcwd())
 from fhir_converter.processors import CcdaProcessor
 
+TEMPLATES = (
+    "CCD",
+    "ConsultationNote",
+    "DischargeSummary",
+    "HistoryandPhysical",
+    "OperativeNote",
+    "ProcedureNote",
+    "ProgressNote",
+    "ReferralNote",
+    "TransferSummary",
+)
 
-def ccda_to_fhir(processor: CcdaProcessor, template_name: str, filename: str) -> None:
-    with open(f"data/sample/ccda/{filename}.ccda") as ccda_file:
-        with open(f"data/out/{filename}.json", "w") as fhir_file:
-            fhir_file.write(processor.convert(template_name, xml_input=ccda_file))
+DATA_OUT_DIR, TEMPLATE_DIR, SAMPLE_DIR = (
+    "data/out",
+    "data/templates/ccda",
+    "data/sample/ccda/",
+)
 
 
 def main() -> None:
     from cProfile import Profile
     from pstats import SortKey, Stats
 
-    if not os.path.isdir("data/out"):
-        os.mkdir("data/out")
+    if not os.path.isdir(DATA_OUT_DIR):
+        os.mkdir(DATA_OUT_DIR)
+    for template in TEMPLATES:
+        template_dir = os.path.join(DATA_OUT_DIR, template)
+        if not os.path.isdir(template_dir):
+            os.mkdir(template_dir)
 
     with Profile() as pr:
-        processor = CcdaProcessor(template_dir="data/templates/ccda")
-        ccda_to_fhir(processor, "CCD", "C-CDA_R2-1_CCD")
-        ccda_to_fhir(processor, "ConsultationNote", "Consultation_Note")
-        ccda_to_fhir(processor, "DischargeSummary", "Discharge_Summary")
-        ccda_to_fhir(processor, "HistoryandPhysical", "History_and_Physical")
-        ccda_to_fhir(processor, "OperativeNote", "Operative_Note")
-        ccda_to_fhir(processor, "ProcedureNote", "Procedure_Note")
-        ccda_to_fhir(processor, "ProgressNote", "Progress_Note")
-        ccda_to_fhir(processor, "ReferralNote", "Referral_Note")
-        ccda_to_fhir(processor, "TransferSummary", "Transfer_Summary")
-        ccda_to_fhir(processor, "CCD", "Patient-1")
-        ccda_to_fhir(processor, "CCD", "PROBLEMS_in_Empty_C-CDA_2.1-C-CDAR2.1")
+        processor = CcdaProcessor(TEMPLATE_DIR)
+        for cda_path in walk_dir(SAMPLE_DIR):
+            for template in TEMPLATES:
+                convert_to_fhir(processor, template, cda_path)
 
-        with open("data/out/stats.log", "w") as stats_log:
+        with open(os.path.join(DATA_OUT_DIR, "stats.log"), "w") as stats_log:
             Stats(pr, stream=stats_log).sort_stats(SortKey.CUMULATIVE).print_stats()
+
+
+def walk_dir(path: str) -> Generator[str, Any, None]:
+    for root, _, filenames in os.walk(path):
+        for filename in filenames:
+            if os.path.splitext(filename)[1] in (".ccda", ".xml"):
+                yield os.path.join(root, filename)
+
+
+def convert_to_fhir(
+    processor: CcdaProcessor, template_name: str, cda_path: str
+) -> None:
+    with open(cda_path) as ccda_file:
+        fhir_path = os.path.join(
+            DATA_OUT_DIR,
+            template_name,
+            os.path.splitext(os.path.basename(cda_path))[0] + ".json",
+        )
+        with open(fhir_path, "w") as fhir_file:
+            fhir_file.write(processor.convert(template_name, ccda_file))
 
 
 if __name__ == "__main__":
