@@ -93,17 +93,63 @@ def get_property(
 
 
 @liquid_filter
-def get_first_ccda_sections_by_template_id(data: dict, template_id: str) -> dict:
-    for component in (
+def get_first_ccda_sections_by_template_id(data: dict, template_ids: str) -> dict:
+    sections, search_template_ids = {}, list(filter(None, template_ids.split("|")))
+    if search_template_ids:
+        components = _get_ccda_components(data)
+        if components:
+            for template_id in search_template_ids:
+                template_id_key = _get_template_id_key(template_id)
+                for component in components:
+                    for id in _get_ccda_section_template_ids(component):
+                        if _is_template_id(id, template_id):
+                            sections[template_id_key] = component["section"]
+                            break
+                    if template_id_key in sections:
+                        break
+    return sections
+
+
+@liquid_filter
+def get_ccda_section_by_template_id(
+    data: dict, template_id: str, *template_ids: str
+) -> dict:
+    search_template_ids = [template_id]
+    if template_ids:
+        search_template_ids += template_ids
+
+    search_template_ids = list(filter(None, search_template_ids))
+    if search_template_ids:
+        for component in _get_ccda_components(data):
+            for id in _get_ccda_section_template_ids(component):
+                for template_id in search_template_ids:
+                    if _is_template_id(id, template_id):
+                        return component["section"]
+    return {}
+
+
+def _get_ccda_components(data: dict) -> list:
+    component = (
         data.get("ClinicalDocument", {})
         .get("component", {})
         .get("structuredBody", {})
         .get("component", [])
-    ):
-        for id in to_array(component.get("section", {}).get("templateId", [])):
-            if template_id == id.get("root", "").strip():
-                return {re.sub(r"[^A-Za-z0-9]", "_", template_id): component["section"]}
-    return {}
+    )
+    if not isinstance(component, list):
+        return [component]
+    return component
+
+
+def _get_ccda_section_template_ids(component: dict) -> list:
+    return to_array(component.get("section", {}).get("templateId", []))
+
+
+def _get_template_id_key(template_id: str) -> str:
+    return re.sub(r"[^A-Za-z0-9]", "_", template_id)
+
+
+def _is_template_id(id: dict, template_id: str) -> bool:
+    return template_id == id.get("root", "").strip()
 
 
 @with_context
@@ -111,6 +157,8 @@ def get_first_ccda_sections_by_template_id(data: dict, template_id: str) -> dict
 def batch_render(
     batch: list, template_name: str, arg_name: str, *, context: Context
 ) -> str:
+    if not batch:
+        return ""
     template = context.get_template_with_context(template_name)
     with context.get_buffer() as buffer:
         for data in batch:
@@ -132,5 +180,6 @@ __default__: list[tuple[str, Callable]] = [
     ("generate_uuid", generate_uuid),
     ("get_property", get_property),
     ("get_first_ccda_sections_by_template_id", get_first_ccda_sections_by_template_id),
+    ("get_ccda_section_by_template_id", get_ccda_section_by_template_id),
     ("batch_render", batch_render),
 ]

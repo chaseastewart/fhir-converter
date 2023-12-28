@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from typing import Any, Generator
 
 sys.path.insert(0, os.getcwd())
@@ -35,6 +36,7 @@ def main() -> None:
         if not os.path.isdir(template_dir):
             os.mkdir(template_dir)
 
+    before = time.perf_counter_ns()
     with Profile() as pr:
         processor = CcdaProcessor.from_template_dir(TEMPLATE_DIR)
         for cda_path in walk_dir(SAMPLE_DIR):
@@ -43,6 +45,9 @@ def main() -> None:
 
         with open(os.path.join(DATA_OUT_DIR, "stats.log"), "w") as stats_log:
             Stats(pr, stream=stats_log).sort_stats(SortKey.CUMULATIVE).print_stats()
+    print(
+        f"Took {round((time.perf_counter_ns() - before) / 1000000000, ndigits=3)} seconds."
+    )
 
 
 def walk_dir(path: str) -> Generator[str, Any, None]:
