@@ -2,3 +2,6 @@
 [
 	{ {% include 'DataType/Coding' Coding: CodeableConcept -%} },
 ],
+{% if CodeableConcept.originalText._ -%}
+"text": "{{CodeableConcept.originalText._}}",
+{% endif -%}

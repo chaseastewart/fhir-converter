@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from abc import ABC
 from json import dumps as json_dumps
-from typing import IO, Optional, Type, TypeVar, Union
+from pathlib import Path
+from typing import IO, Iterable, Optional, Type, TypeVar, Union
 
 from frozendict import frozendict
 from liquid import Environment
@@ -10,11 +11,11 @@ from pyjson5 import loads as json5_loads
 
 from fhir_converter import filters, parsers, tags, templates
 
-T = TypeVar("T", bound="BaseProcessor")
+T = TypeVar("T", bound="Processor")
 XMLT = Union[str, IO]
 
 
-class BaseProcessor(ABC):
+class Processor(ABC):
     """Base processor from which all processors are derived.
 
     Args:
@@ -38,8 +39,47 @@ class BaseProcessor(ABC):
         """
         raise NotImplementedError("processors must implement a convert method")
 
+    def convert_to_dir(
+        self,
+        from_file: Union[str, Path],
+        to_dir: Union[str, Path],
+        template_name: str,
+        encoding: Optional[str] = None,
+        extension: Optional[str] = None,
+    ) -> None:
+        """Converts the input file using the supplied rendering template writing
+           the output to the supplied directory. A new file will be created with
+           the same name using the supplide extension. If an extension is not
+           supplied, .json will be used
+
+        Args:
+            from_file: The input file path
+            to_dir: The output directory path
+            template_name: The rendering template name
+            encoding: The encoding for the data. Optional
+            extension: The file extension to use. Optional
+        """
+        if not encoding:
+            encoding = "utf-8"
+        if not extension:
+            extension = ".json"
+        if isinstance(from_file, str):
+            from_file = Path(from_file)
+        if isinstance(to_dir, str):
+            to_dir = Path(to_dir)
+
+        with open(from_file, "r", encoding=encoding) as ccda_file:
+            fhir_path = to_dir.joinpath(from_file.with_suffix(extension).name)
+            with open(fhir_path, "w", encoding=encoding) as fhir_file:
+                fhir_file.write(self.convert(template_name, ccda_file, encoding))
+
     @classmethod
-    def from_template_dir(cls: Type[T], template_dir: str, *args, **kwargs) -> T:
+    def from_template_dir(
+        cls: Type[T],
+        template_dir: Union[str, Path, Iterable[Union[str, Path]]],
+        *args,
+        **kwargs,
+    ) -> T:
         """Constructs a new processor initializing the rendering environment
            with the specified template directory
 
@@ -56,8 +96,16 @@ class BaseProcessor(ABC):
             *kwargs,
         )
 
+    @staticmethod
+    def resolve(from_file: Union[str, Path]) -> Type[Processor]:
+        if isinstance(from_file, str):
+            from_file = Path(from_file)
+        if from_file.suffix in (".ccda", ".xml"):
+            return CcdaProcessor
+        raise ValueError(f"Unknown file suffix[{from_file.suffix}]")
 
-class CcdaProcessor(BaseProcessor):
+
+class CcdaProcessor(Processor):
     """Converts consolidated CDA documents to FHIR
 
     Args:

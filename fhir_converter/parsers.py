@@ -8,7 +8,10 @@ REGEX = re.compile(r"\r\n?|\n")
 
 
 def parse_json(json_input: str) -> dict:
-    json_data = _apply(json5_loads(json_input.strip()), _remove_null_empty)
+    json_data = _apply(
+        json5_loads(json_input.strip()),
+        _remove_null_empty,
+    )
     unique_entrys = {}
     for entry in json_data.get("entry", []):
         key = _get_key(entry)
@@ -82,18 +85,20 @@ def _merge_dict(a: dict, b: dict) -> dict:
 
 
 def parse_xml(xml_input: Union[str, IO], encoding: Optional[str] = None) -> dict:
+    if not encoding:
+        encoding = "utf-8"
+
     if isinstance(xml_input, str):
         xml = xml_input
     else:
         xml = xml_input.read()
         if not isinstance(xml, str):
-            if not encoding:
-                encoding = "utf-8"
             xml = xml.decode(encoding)
     xml = REGEX.sub("", xml.strip())
 
     data = xmltodict_parse(
         xml,
+        encoding=encoding,
         force_cdata=True,
         attr_prefix="",
         cdata_key="_",

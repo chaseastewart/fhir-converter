@@ -41,7 +41,10 @@ def main() -> None:
         processor = CcdaProcessor.from_template_dir(TEMPLATE_DIR)
         for cda_path in walk_dir(SAMPLE_DIR):
             for template in TEMPLATES:
-                convert_to_fhir(processor, template, cda_path)
+                fhir_path = os.path.join(DATA_OUT_DIR, template)
+                processor.convert_to_dir(
+                    from_file=cda_path, to_dir=fhir_path, template_name=template
+                )
 
         with open(os.path.join(DATA_OUT_DIR, "stats.log"), "w") as stats_log:
             Stats(pr, stream=stats_log).sort_stats(SortKey.CUMULATIVE).print_stats()
@@ -55,17 +58,6 @@ def walk_dir(path: str) -> Generator[str, Any, None]:
         for filename in filenames:
             if os.path.splitext(filename)[1] in (".ccda", ".xml"):
                 yield os.path.join(root, filename)
-
-
-def convert_to_fhir(processor: CcdaProcessor, template_name: str, cda_path: str) -> None:
-    with open(cda_path) as ccda_file:
-        fhir_path = os.path.join(
-            DATA_OUT_DIR,
-            template_name,
-            os.path.splitext(os.path.basename(cda_path))[0] + ".json",
-        )
-        with open(fhir_path, "w") as fhir_file:
-            fhir_file.write(processor.convert(template_name, ccda_file))
 
 
 if __name__ == "__main__":
