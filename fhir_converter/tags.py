@@ -1,7 +1,9 @@
+from collections.abc import Iterable
 from functools import partial
 from sys import intern
-from typing import Dict, List, Optional, TextIO, Tuple, Type
+from typing import Optional, TextIO
 
+from liquid import Environment
 from liquid.ast import ChildNode, Node
 from liquid.context import Context
 from liquid.exceptions import LiquidSyntaxError
@@ -64,7 +66,7 @@ class EvaluateNode(Node):
         tok: Token,
         name: str,
         template_name: Expression,
-        args: Optional[Dict[str, Expression]] = None,
+        args: Optional[dict[str, Expression]] = None,
     ) -> None:
         self.tok = tok
         self.name = name
@@ -88,7 +90,7 @@ class EvaluateNode(Node):
         template_name = str(self.template_name.evaluate(context))
         template = context.get_template_with_context(template_name, tag=self.tag)
 
-        namespace: Dict[str, object] = {}
+        namespace: dict[str, object] = {}
         for _key, _val in self.args.items():
             namespace[_key] = _val.evaluate(context)
 
@@ -99,8 +101,8 @@ class EvaluateNode(Node):
 
         return False
 
-    def children(self) -> List[ChildNode]:
-        block_scope: List[str] = list(self.args.keys())
+    def children(self) -> list[ChildNode]:
+        block_scope: list[str] = list(self.args.keys())
         _children = [
             ChildNode(
                 linenum=self.tok.linenum,
@@ -144,7 +146,7 @@ class EvaluateTag(Tag):
         template_name = parse_string_or_identifier(expr_stream)
         next(expr_stream)
 
-        args: Dict[str, Expression] = {}
+        args: dict[str, Expression] = {}
         if expr_stream.current[1] == TOKEN_IDENTIFIER:
             key, val = _parse_argument(expr_stream)
             args[key] = val
@@ -164,7 +166,7 @@ class EvaluateTag(Tag):
         return self.node_class(tok, name=name, template_name=template_name, args=args)
 
 
-def _parse_argument(stream: ExprTokenStream) -> Tuple[str, Expression]:
+def _parse_argument(stream: ExprTokenStream) -> tuple[str, Expression]:
     key = str(parse_unchained_identifier(stream))
     stream.next_token()
     stream.expect(TOKEN_COLON)
@@ -174,4 +176,9 @@ def _parse_argument(stream: ExprTokenStream) -> Tuple[str, Expression]:
     return key, val
 
 
-__default__: list[Type[Tag]] = [EvaluateTag]
+all: list[type[Tag]] = [EvaluateTag]
+
+
+def register(env: Environment, tags: Iterable[type[Tag]]) -> None:
+    for tag in filter(lambda tag: not tag.name in env.tags, tags):
+        env.add_tag(tag)

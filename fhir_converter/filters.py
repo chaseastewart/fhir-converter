@@ -5,6 +5,7 @@ from typing import Any, Callable, Optional
 from uuid import UUID
 from zlib import compress as z_compress
 
+from liquid import Environment
 from liquid.builtin.filters.string import base64_encode
 from liquid.context import Context
 from liquid.filter import liquid_filter, string_filter, with_context
@@ -51,17 +52,17 @@ def sha1_hash(data: str) -> str:
 
 
 @string_filter
-def add_hyphens_date(input: str) -> str:
-    if not input:
-        return input
-    return datatypes.hl7_to_fhir_dtm(input, precision=datatypes.Hl7DtmPrecision.DAY)
+def add_hyphens_date(dtm: str) -> str:
+    if not dtm:
+        return dtm
+    return datatypes.hl7_to_fhir_dtm(dtm, precision=datatypes.Hl7DtmPrecision.DAY)
 
 
 @string_filter
-def format_as_date_time(input: str) -> str:
-    if not input:
-        return input
-    return datatypes.hl7_to_fhir_dtm(input)
+def format_as_date_time(dtm: str) -> str:
+    if not dtm:
+        return dtm
+    return datatypes.hl7_to_fhir_dtm(dtm)
 
 
 @string_filter
@@ -167,13 +168,18 @@ def batch_render(
         return buffer.getvalue()
 
 
-__default__: list[tuple[str, Callable]] = [
+generic: list[tuple[str, Callable]] = [
     ("to_json_string", to_json_string),
     ("to_array", to_array),
     ("contains", contains),
     ("match", match),
     ("gzip", gzip),
     ("sha1_hash", sha1_hash),
+    ("generate_uuid", generate_uuid),
+    ("batch_render", batch_render),
+]
+
+hl7: list[tuple[str, Callable]] = [
     ("add_hyphens_date", add_hyphens_date),
     ("format_as_date_time", format_as_date_time),
     ("now", now),
@@ -181,5 +187,9 @@ __default__: list[tuple[str, Callable]] = [
     ("get_property", get_property),
     ("get_first_ccda_sections_by_template_id", get_first_ccda_sections_by_template_id),
     ("get_ccda_section_by_template_id", get_ccda_section_by_template_id),
-    ("batch_render", batch_render),
 ]
+
+
+def register(env: Environment, filters: list[tuple[str, Callable]]) -> None:
+    for name, func in filter(lambda f: not f[0] in env.filters, filters):
+        env.add_filter(name, func)

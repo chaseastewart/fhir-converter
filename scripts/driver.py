@@ -1,12 +1,10 @@
-import os
-import sys
 import time
-from typing import Any, Generator
+from functools import partial
+from pathlib import Path
 
-sys.path.insert(0, os.getcwd())
-from fhir_converter.processors import CcdaProcessor
+from fhir_converter import loaders, renderers
 
-TEMPLATES = (
+templates = (
     "CCD",
     "ConsultationNote",
     "DischargeSummary",
@@ -18,10 +16,10 @@ TEMPLATES = (
     "TransferSummary",
 )
 
-DATA_OUT_DIR, TEMPLATE_DIR, SAMPLE_DIR = (
-    "data/out",
-    "data/templates/ccda",
-    "data/sample/ccda/",
+data_out_dir, templates_dir, sample_data_dir = (
+    Path("data/out"),
+    Path("data/templates/ccda"),
+    Path("data/sample/ccda"),
 )
 
 
@@ -29,35 +27,40 @@ def main() -> None:
     from cProfile import Profile
     from pstats import SortKey, Stats
 
-    if not os.path.isdir(DATA_OUT_DIR):
-        os.mkdir(DATA_OUT_DIR)
-    for template in TEMPLATES:
-        template_dir = os.path.join(DATA_OUT_DIR, template)
-        if not os.path.isdir(template_dir):
-            os.mkdir(template_dir)
+    if not data_out_dir.is_dir():
+        data_out_dir.mkdir()
+    for template in templates:
+        template_dir = data_out_dir.joinpath(template)
+        if not template_dir.is_dir():
+            template_dir.mkdir()
 
     before = time.perf_counter_ns()
     with Profile() as pr:
-        processor = CcdaProcessor.from_template_dir(TEMPLATE_DIR)
-        for cda_path in walk_dir(SAMPLE_DIR):
-            for template in TEMPLATES:
-                fhir_path = os.path.join(DATA_OUT_DIR, template)
-                processor.convert_to_dir(
-                    from_file=cda_path, to_dir=fhir_path, template_name=template
+        #render_samples(renderer=renderers.CcdaRenderer())
+        render_samples(
+            renderer=renderers.CcdaRenderer(
+                env=renderers.get_environment(
+                    loader=lambda: loaders.get_file_system_loader(
+                        search_path=templates_dir
+                    )
                 )
+            )
+        )
 
-        with open(os.path.join(DATA_OUT_DIR, "stats.log"), "w") as stats_log:
+        with open(data_out_dir.joinpath("stats.log"), "w") as stats_log:
             Stats(pr, stream=stats_log).sort_stats(SortKey.CUMULATIVE).print_stats()
     print(
         f"Took {round((time.perf_counter_ns() - before) / 1000000000, ndigits=3)} seconds."
     )
 
 
-def walk_dir(path: str) -> Generator[str, Any, None]:
-    for root, _, filenames in os.walk(path):
-        for filename in filenames:
-            if os.path.splitext(filename)[1] in (".ccda", ".xml"):
-                yield os.path.join(root, filename)
+def render_samples(renderer: renderers.CcdaRenderer) -> None:
+    for template in templates:
+        renderers.render_files_to_dir(
+            render=partial(renderer.render_to_json_string, template),
+            from_dir=sample_data_dir,
+            to_dir=data_out_dir.joinpath(template),
+        )
 
 
 if __name__ == "__main__":

@@ -7,9 +7,9 @@ from xmltodict import parse as xmltodict_parse
 REGEX = re.compile(r"\r\n?|\n")
 
 
-def parse_json(json_input: str) -> dict:
+def parse_json(json_input: str, encoding: str = 'utf-8') -> dict:
     json_data = _apply(
-        json5_loads(json_input.strip()),
+        json5_loads(json_input.strip(), encoding=encoding),
         _remove_null_empty,
     )
     unique_entrys = {}
@@ -84,10 +84,7 @@ def _merge_dict(a: dict, b: dict) -> dict:
     return a
 
 
-def parse_xml(xml_input: Union[str, IO], encoding: Optional[str] = None) -> dict:
-    if not encoding:
-        encoding = "utf-8"
-
+def parse_xml(xml_input: Union[str, IO], encoding: str = 'utf-8') -> dict:
     if isinstance(xml_input, str):
         xml = xml_input
     else:
