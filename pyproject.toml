@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "python-fhir-converter"
-version = "0.0.11"
+version = "0.0.11.1"
 authors = ["Chase Stewart <chase.a.stewart@outlook.com>"]
 description = "Conversion utility to translate data formats into FHIR"
 readme = "README.md"
@@ -27,9 +27,6 @@ classifiers = [
 packages = [
     {include = "fhir_converter"},
     {include = "fhir_converter/py.typed"},
-]
-include = [
-    { path = "data/templates" },
 ]
 
 [tool.poetry.dependencies]

@@ -20,7 +20,7 @@ def get_environment(
     cache_size: int = 0,
     expression_cache_size: int = 10,
     loader: Callable[[], BaseLoader] = lambda: loaders.get_resource_loader(
-        search_package="data.templates.ccda"
+        search_package="fhir_converter.templates.ccda"
     ),
     **kwargs,
 ) -> Environment:

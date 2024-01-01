@@ -18,7 +18,7 @@ templates = (
 
 data_out_dir, templates_dir, sample_data_dir = (
     Path("data/out"),
-    Path("data/templates/ccda"),
+    Path("fhir_converter/templates/ccda"),
     Path("data/sample/ccda"),
 )
 
@@ -36,7 +36,7 @@ def main() -> None:
 
     before = time.perf_counter_ns()
     with Profile() as pr:
-        #render_samples(renderer=renderers.CcdaRenderer())
+        render_samples(renderer=renderers.CcdaRenderer())
         render_samples(
             renderer=renderers.CcdaRenderer(
                 env=renderers.get_environment(
