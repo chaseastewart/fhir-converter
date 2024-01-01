@@ -29,17 +29,12 @@ class TemplateResourceLoader(BaseLoader):
 
     def __init__(
         self,
-        search_package: Union[Package, Iterable[Package]],
+        search_package: Package,
         encoding: str = "utf-8",
         ext: str = ".liquid",
         cache_size: int = 300,
     ) -> None:
-        if not isinstance(search_package, Iterable) or isinstance(
-            search_package, Package
-        ):
-            search_package = [search_package]
-
-        self.search_package = [package for package in search_package]
+        self.search_package = search_package
         self.encoding = encoding
         self.ext = ext
         self.cache = LRUCache(capacity=cache_size)
@@ -104,15 +99,14 @@ class TemplateResourceLoader(BaseLoader):
         if not template_path.suffix:
             template_path = template_path.with_suffix(self.ext)
 
-        cause = None
-        for package in self.search_package:
-            try:
-                return get_template_source(
-                    files(package), normalize_path(template_path), self.encoding
-                )
-            except (ModuleNotFoundError, FileNotFoundError) as e:
-                cause = e
-        raise TemplateNotFound(template_name) from cause
+        try:
+            return get_template_source(
+                files(self.search_package),
+                normalize_path(template_path),
+                self.encoding,
+            )
+        except (ModuleNotFoundError, FileNotFoundError):
+            raise TemplateNotFound(template_name)
 
 
 def get_template_source(
@@ -156,7 +150,7 @@ def get_file_system_loader(
 
 
 def get_resource_loader(
-    search_package: Union[Package, Iterable[Package]],
+    search_package: Package,
     **kwargs,
 ) -> TemplateResourceLoader:
     return TemplateResourceLoader(search_package=search_package, **kwargs)
