@@ -1,0 +1,14 @@
+{
+    "resourceType": "Bundle",
+    "type": "batch",
+    "entry": [
+        {% evaluate patientId using 'Utils/GenerateId' obj: msg.ClinicalDocument.recordTarget.patientRole -%}
+        {% assign fullPatientId = patientId | prepend: 'Patient/' -%}
+        {% include 'Header' -%}
+        {% include 'Section/AllergiesAndAdverseReaction' -%}
+        {% include 'Section/Medication' -%}
+        {% include 'Section/Problem' -%}
+        {% include 'Section/Procedure' -%}
+        {% include 'Section/Immunization' -%}
+    ]
+}
