@@ -1,7 +1,7 @@
 import argparse
 import sys
 import textwrap
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
 from typing import Optional
@@ -12,11 +12,35 @@ from fhir_converter import loaders, renderers
 
 
 def main(argv: Sequence[str], prog: Optional[str] = None) -> None:
-    args = make_parser(prog).parse_args(argv)
-    args.func(args)
+    argparser = get_argparser(prog)
+    args = argparser.parse_args(argv)
+    if not args.from_dir and not args.from_file:
+        argparser.error("Either --from-file or --from-dir must be specified.")
+    if not args.to_dir.is_dir():
+        args.to_dir.mkdir()
+
+    render = partial(
+        renderers.CcdaRenderer(env=get_user_defined_environment(args)).render_fhir,
+        args.template_name,
+    )
+    if args.from_dir:
+        renderers.render_files_to_dir(
+            render,
+            from_dir=args.from_dir,
+            to_dir=args.to_dir,
+            filter_func=lambda p: p.suffix in (".ccda", ".xml"),
+            **get_user_defined_options(args),
+        )
+    else:
+        renderers.render_to_dir(
+            render,
+            from_file=args.from_file,
+            to_dir=args.to_dir,
+            **get_user_defined_options(args),
+        )
 
 
-def make_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
+def get_argparser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog,
         description=textwrap.indent(
@@ -39,13 +63,18 @@ def make_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
         type=absolute_path,
         metavar="<Path>",
         help="The file to render",
-        required=True,
+    )
+    parser.add_argument(
+        "--from-dir",
+        type=absolute_path,
+        metavar="<Path>",
+        help="The directory to render",
     )
     parser.add_argument(
         "--to-dir",
         type=absolute_path,
         metavar="<Path>",
-        help="The directory to store the rendered file to",
+        help="The directory to store the rendered file(s)",
         required=True,
     )
     parser.add_argument(
@@ -66,8 +95,6 @@ def make_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
         metavar="<int>",
         help="The indentation amount",
     )
-    parser.set_defaults(func=render)
-
     return parser
 
 
@@ -88,31 +115,6 @@ def get_user_defined_options(args: argparse.Namespace) -> dict:
     if args.indent:
         options["indent"] = args.indent
     return options
-
-
-def render_ccda(args: argparse.Namespace) -> None:
-    renderers.render_to_dir(
-        partial(
-            renderers.CcdaRenderer(env=get_user_defined_environment(args)).render_fhir,
-            args.template_name,
-        ),
-        args.from_file,
-        args.to_dir,
-        **get_user_defined_options(args),
-    )
-
-
-file_type_renderers: dict[str, Callable[[argparse.Namespace], None]] = {
-    ".ccda": render_ccda,
-    ".xml": render_ccda,
-}
-
-
-def render(args: argparse.Namespace) -> None:
-    try:
-        file_type_renderers[args.from_file.suffix](args)
-    except KeyError:
-        raise ValueError(f"Unsupported file ext[{args.from_file.suffix}]")
 
 
 def entrypoint() -> None:
