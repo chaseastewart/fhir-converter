@@ -1,20 +1,23 @@
 from __future__ import annotations
 
-import datetime
-import math
-import re
+from datetime import datetime, timedelta, tzinfo
 from enum import IntEnum
+from math import copysign
+from re import compile as re_compile
+from re import sub as re_sub
 from typing import NamedTuple, Optional
 
-DTM_REGEX = re.compile(r"(\d+(?:\.\d+)?)(?:([+-]\d{2})(\d{2}))?")
+from fhir_converter import utils
+
+DTM_REGEX = re_compile(r"(\d+(?:\.\d+)?)(?:([+-]\d{2})(\d{2}))?")
 
 
-class _UTCOffset(datetime.tzinfo):
+class UTCOffset(tzinfo):
     def __init__(self, minutes) -> None:
         self.minutes = minutes
 
-    def utcoffset(self, _) -> datetime.timedelta:
-        return datetime.timedelta(minutes=self.minutes)
+    def utcoffset(self, _) -> timedelta:
+        return timedelta(minutes=self.minutes)
 
     def tzname(self, _) -> str:
         minutes = abs(self.minutes)
@@ -22,8 +25,8 @@ class _UTCOffset(datetime.tzinfo):
             "-" if self.minutes < 0 else "+", minutes // 60, minutes % 60
         )
 
-    def dst(self, _) -> datetime.timedelta:
-        return datetime.timedelta(0)
+    def dst(self, _) -> timedelta:
+        return timedelta(0)
 
 
 class FhirDtmPrecision(IntEnum):
@@ -75,7 +78,7 @@ class Hl7DtmPrecision(IntEnum):
 
 class Hl7ParsedDtm(NamedTuple):
     precision: Hl7DtmPrecision
-    dt: datetime.datetime
+    dt: datetime
 
 
 def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
@@ -88,8 +91,8 @@ def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
     tzm = dt_match.group(3)
     if tzh and tzm:
         minutes = int(tzh) * 60
-        minutes += math.copysign(int(tzm), minutes)
-        tzinfo = _UTCOffset(minutes)
+        minutes += copysign(int(tzm), minutes)
+        tzinfo = UTCOffset(minutes)
     else:
         tzinfo = None
 
@@ -117,7 +120,7 @@ def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
         minute = 0
 
     if precision >= Hl7DtmPrecision.SEC:
-        delta = datetime.timedelta(seconds=float(dtm[Hl7DtmPrecision.MIN :]))
+        delta = timedelta(seconds=float(dtm[Hl7DtmPrecision.MIN :]))
         second, microsecond = delta.seconds, delta.microseconds
     else:
         second = 0
@@ -125,9 +128,7 @@ def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
 
     return Hl7ParsedDtm(
         precision,
-        dt=datetime.datetime(
-            year, month, day, hour, minute, second, microsecond, tzinfo=tzinfo
-        ),
+        dt=datetime(year, month, day, hour, minute, second, microsecond, tzinfo=tzinfo),
     )
 
 
@@ -142,9 +143,7 @@ def hl7_to_fhir_dtm(input: str, precision: Optional[Hl7DtmPrecision] = None) -> 
     )
 
 
-def to_fhir_dtm(
-    dt: datetime.datetime, precision: Optional[FhirDtmPrecision] = None
-) -> str:
+def to_fhir_dtm(dt: datetime, precision: Optional[FhirDtmPrecision] = None) -> str:
     if precision is None:
         precision = FhirDtmPrecision.MILLIS
 
@@ -160,3 +159,51 @@ def to_fhir_dtm(
     elif precision > FhirDtmPrecision.YEAR:
         return iso_dtm[: FhirDtmPrecision.MONTH]
     return iso_dtm[: FhirDtmPrecision.YEAR]
+
+
+def parse_fhir(json_input: str, encoding: str = "utf-8") -> dict:
+    json_data = utils.parse_json(json_input, encoding)
+    unique_entrys = {}
+    for entry in json_data.get("entry", []):
+        key = get_fhir_entry_key(entry)
+        if key in unique_entrys:
+            utils.merge_dict(unique_entrys[key], entry)
+        else:
+            unique_entrys[key] = entry
+    json_data["entry"] = list(unique_entrys.values())
+    return json_data
+
+
+def get_fhir_entry_key(entry: dict) -> str:
+    resource = entry.get("resource", {})
+    return "_".join(
+        filter(
+            None,
+            (
+                resource.get("resourceType", ""),
+                resource.get("meta", {}).get("versionId", ""),
+                resource.get("id", ""),
+            ),
+        )
+    )
+
+
+def get_ccda_components(data: dict) -> list:
+    return utils.to_list(
+        data.get("ClinicalDocument", {})
+        .get("component", {})
+        .get("structuredBody", {})
+        .get("component", [])
+    )
+
+
+def get_ccda_section_template_ids(component: dict) -> list:
+    return utils.to_list(component.get("section", {}).get("templateId", []))
+
+
+def get_template_id_key(template_id: str) -> str:
+    return re_sub(r"[^A-Za-z0-9]", "_", template_id)
+
+
+def is_template_id(id: dict, template_id: str) -> bool:
+    return template_id == id.get("root", "").strip()

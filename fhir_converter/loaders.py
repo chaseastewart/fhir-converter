@@ -11,6 +11,7 @@ from liquid.exceptions import TemplateNotFound
 from liquid.loaders import (
     BaseLoader,
     FileExtensionLoader,
+    FileSystemLoader,
     TemplateNamespace,
     TemplateSource,
 )
@@ -97,7 +98,7 @@ class TemplateSystemLoader(BaseLoader):
         env: Environment,
         name: str,
     ) -> TemplateSource:
-        template_name = self.get_template_name(name)
+        template_name = self.resolve_template_name(name)
         try:
             return self.loader.get_source(env, template_name)
         except TemplateNotFound as e:
@@ -105,8 +106,7 @@ class TemplateSystemLoader(BaseLoader):
                 return self.defaults_loader.get_source(env, template_name)
             raise e
 
-    @staticmethod
-    def get_template_name(template_name: str) -> str:
+    def resolve_template_name(self, template_name: str) -> str:
         template_path = Path(template_name)
         parts = template_path.parts
         if len(parts) > 1:
@@ -116,7 +116,7 @@ class TemplateSystemLoader(BaseLoader):
         return str(template_path)
 
 
-class TemplateResourceLoader(BaseLoader):
+class ResourceLoader(BaseLoader):
     def __init__(
         self,
         search_package: Package,
@@ -149,12 +149,12 @@ def read_text(env: Environment, filename: str) -> str:
 def get_file_system_loader(
     search_path: Union[str, Path, Iterable[Union[str, Path]]],
     **kwargs,
-) -> FileExtensionLoader:
+) -> FileSystemLoader:
     return FileExtensionLoader(search_path=search_path, **kwargs)
 
 
 def get_resource_loader(
     search_package: Package,
     **kwargs,
-) -> TemplateResourceLoader:
-    return TemplateResourceLoader(search_package=search_package, **kwargs)
+) -> ResourceLoader:
+    return ResourceLoader(search_package=search_package, **kwargs)

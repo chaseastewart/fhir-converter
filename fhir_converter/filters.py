@@ -1,6 +1,6 @@
-import re
 from datetime import datetime, timezone
 from hashlib import sha1, sha256
+from re import findall as re_findall
 from typing import Any, Callable, Optional
 from uuid import UUID
 from zlib import compress as z_compress
@@ -12,7 +12,7 @@ from liquid.filter import liquid_filter, string_filter, with_context
 from liquid.undefined import Undefined
 from pyjson5 import dumps as json5_dumps
 
-from fhir_converter import datatypes
+from fhir_converter import hl7, utils
 
 
 @liquid_filter
@@ -26,9 +26,7 @@ def to_json_string(data: Any) -> str:
 def to_array(obj: Any) -> list:
     if isinstance(obj, Undefined):
         return []
-    elif isinstance(obj, list):
-        return obj
-    return [obj]
+    return utils.to_list(obj)
 
 
 @string_filter
@@ -38,7 +36,7 @@ def contains(data: str, sub_str: str) -> bool:
 
 @string_filter
 def match(data: str, regex: str) -> list:
-    return re.findall(regex, data)
+    return re_findall(regex, data)
 
 
 @string_filter
@@ -55,19 +53,19 @@ def sha1_hash(data: str) -> str:
 def add_hyphens_date(dtm: str) -> str:
     if not dtm:
         return dtm
-    return datatypes.hl7_to_fhir_dtm(dtm, precision=datatypes.Hl7DtmPrecision.DAY)
+    return hl7.hl7_to_fhir_dtm(dtm, precision=hl7.Hl7DtmPrecision.DAY)
 
 
 @string_filter
 def format_as_date_time(dtm: str) -> str:
     if not dtm:
         return dtm
-    return datatypes.hl7_to_fhir_dtm(dtm)
+    return hl7.hl7_to_fhir_dtm(dtm)
 
 
 @string_filter
 def now(_: str) -> str:
-    return datatypes.to_fhir_dtm(datetime.now(timezone.utc))
+    return hl7.to_fhir_dtm(datetime.now(timezone.utc))
 
 
 @string_filter
@@ -97,13 +95,13 @@ def get_property(
 def get_first_ccda_sections_by_template_id(data: dict, template_ids: str) -> dict:
     sections, search_template_ids = {}, list(filter(None, template_ids.split("|")))
     if search_template_ids:
-        components = _get_ccda_components(data)
+        components = hl7.get_ccda_components(data)
         if components:
             for template_id in search_template_ids:
-                template_id_key = _get_template_id_key(template_id)
+                template_id_key = hl7.get_template_id_key(template_id)
                 for component in components:
-                    for id in _get_ccda_section_template_ids(component):
-                        if _is_template_id(id, template_id):
+                    for id in hl7.get_ccda_section_template_ids(component):
+                        if hl7.is_template_id(id, template_id):
                             sections[template_id_key] = component["section"]
                             break
                     if template_id_key in sections:
@@ -121,36 +119,12 @@ def get_ccda_section_by_template_id(
 
     search_template_ids = list(filter(None, search_template_ids))
     if search_template_ids:
-        for component in _get_ccda_components(data):
-            for id in _get_ccda_section_template_ids(component):
+        for component in hl7.get_ccda_components(data):
+            for id in hl7.get_ccda_section_template_ids(component):
                 for template_id in search_template_ids:
-                    if _is_template_id(id, template_id):
+                    if hl7.is_template_id(id, template_id):
                         return component["section"]
     return {}
-
-
-def _get_ccda_components(data: dict) -> list:
-    component = (
-        data.get("ClinicalDocument", {})
-        .get("component", {})
-        .get("structuredBody", {})
-        .get("component", [])
-    )
-    if not isinstance(component, list):
-        return [component]
-    return component
-
-
-def _get_ccda_section_template_ids(component: dict) -> list:
-    return to_array(component.get("section", {}).get("templateId", []))
-
-
-def _get_template_id_key(template_id: str) -> str:
-    return re.sub(r"[^A-Za-z0-9]", "_", template_id)
-
-
-def _is_template_id(id: dict, template_id: str) -> bool:
-    return template_id == id.get("root", "").strip()
 
 
 @with_context
@@ -168,7 +142,7 @@ def batch_render(
         return buffer.getvalue()
 
 
-generic: list[tuple[str, Callable]] = [
+all: list[tuple[str, Callable]] = [
     ("to_json_string", to_json_string),
     ("to_array", to_array),
     ("contains", contains),
@@ -177,9 +151,6 @@ generic: list[tuple[str, Callable]] = [
     ("sha1_hash", sha1_hash),
     ("generate_uuid", generate_uuid),
     ("batch_render", batch_render),
-]
-
-hl7: list[tuple[str, Callable]] = [
     ("add_hyphens_date", add_hyphens_date),
     ("format_as_date_time", format_as_date_time),
     ("now", now),

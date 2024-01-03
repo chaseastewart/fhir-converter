@@ -18,11 +18,18 @@ builtin_templates = (
 )
 
 user_defined_templates = ("LabsandVitals", "Pampi")
+all_templates = builtin_templates + user_defined_templates
 
-data_out_dir, templates_dir, sample_data_dir = (
-    Path("data/out"),
+templates_dir, sample_data_dir = (
     Path("data/templates/ccda"),
     Path("data/sample/ccda"),
+)
+
+data_out_dir, data_builtin_dir, data_user_defined_dir, data_all_dir = (
+    Path("data/out"),
+    Path("data/out/builtin"),
+    Path("data/out/user_defined"),
+    Path("data/out/all"),
 )
 
 
@@ -30,23 +37,31 @@ def main() -> None:
     from cProfile import Profile
     from pstats import SortKey, Stats
 
-    if not data_out_dir.is_dir():
-        data_out_dir.mkdir()
-    for template in builtin_templates + user_defined_templates:
-        template_dir = data_out_dir.joinpath(template)
-        if not template_dir.is_dir():
-            template_dir.mkdir()
+    mkdir_if_not_exists(data_out_dir)
+    mkdirs_if_not_exists(data_builtin_dir, builtin_templates)
+    mkdirs_if_not_exists(data_user_defined_dir, user_defined_templates)
+    mkdirs_if_not_exists(data_all_dir, all_templates)
 
     before = time.perf_counter_ns()
     with Profile() as pr:
-        # render_samples(renderer=renderers.CcdaRenderer(), templates=builtin_templates)
+        renderer = renderers.CcdaRenderer()
+        render_samples(renderer, templates=builtin_templates, to_dir=data_builtin_dir)
+
+        renderer = renderers.CcdaRenderer(
+            renderers.get_environment(
+                loader=loaders.get_file_system_loader(search_path=templates_dir)
+            )
+        )
         render_samples(
-            renderer=renderers.CcdaRenderer(
-                env=renderers.get_environment(
-                    loader=loaders.get_file_system_loader(search_path=templates_dir)
-                )
-            ),
-            templates=builtin_templates + user_defined_templates,
+            renderer,
+            templates=user_defined_templates,
+            to_dir=data_user_defined_dir,
+        )
+        render_samples(
+            renderer,
+            templates=all_templates,
+            to_dir=data_all_dir,
+            indent=2
         )
 
         with open(data_out_dir.joinpath("stats.log"), "w") as stats_log:
@@ -56,13 +71,27 @@ def main() -> None:
     )
 
 
-def render_samples(renderer: renderers.CcdaRenderer, templates: Sequence[str]) -> None:
+def mkdir_if_not_exists(dir: Path) -> None:
+    if not dir.is_dir():
+        dir.mkdir()
+
+
+def mkdirs_if_not_exists(root: Path, dirnames: Sequence[str]) -> None:
+    mkdir_if_not_exists(root)
+    for dirname in dirnames:
+        mkdir_if_not_exists(root.joinpath(dirname))
+
+
+def render_samples(
+    renderer: renderers.CcdaRenderer, templates: Sequence[str], to_dir: Path, **kwargs
+) -> None:
     for template in templates:
         renderers.render_files_to_dir(
-            render=partial(renderer.render_to_json_string, template),
+            render=partial(renderer.render_fhir, template),
             from_dir=sample_data_dir,
-            to_dir=data_out_dir.joinpath(template),
+            to_dir=to_dir.joinpath(template),
             filter_func=lambda p: p.suffix in (".ccda", ".xml"),
+            **kwargs,
         )
 
 
