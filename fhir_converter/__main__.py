@@ -6,7 +6,9 @@ from functools import partial
 from pathlib import Path
 from typing import Optional
 
-from fhir_converter import renderers
+from liquid import Environment
+
+from fhir_converter import loaders, renderers
 
 
 def main(argv: Sequence[str], prog: Optional[str] = None) -> None:
@@ -51,13 +53,18 @@ def make_parser(prog: Optional[str] = None) -> argparse.ArgumentParser:
         type=absolute_path,
         metavar="<Path>",
         help="The liquid template directory",
-        required=True,
     )
     parser.add_argument(
         "--template-name",
         metavar="<str>",
         help="The liquid template to use when rendering the file",
         required=True,
+    )
+    parser.add_argument(
+        "--indent",
+        type=int,
+        metavar="<int>",
+        help="The indentation amount",
     )
     parser.set_defaults(func=render)
 
@@ -68,12 +75,30 @@ def absolute_path(path: str) -> Path:
     return Path(path).absolute()
 
 
+def get_user_defined_environment(args: argparse.Namespace) -> Optional[Environment]:
+    if args.template_dir:
+        return renderers.get_environment(
+            loader=loaders.get_file_system_loader(search_path=args.template_dir)
+        )
+    return None
+
+
+def get_user_defined_options(args: argparse.Namespace) -> dict:
+    options = {}
+    if args.indent:
+        options["indent"] = args.indent
+    return options
+
+
 def render_ccda(args: argparse.Namespace) -> None:
-    renderer = renderers.CcdaRenderer()
     renderers.render_to_dir(
-        render=partial(renderer.render_to_json_string, args.template_name),
-        from_file=args.from_file,
-        to_dir=args.to_dir,
+        partial(
+            renderers.CcdaRenderer(env=get_user_defined_environment(args)).render_fhir,
+            args.template_name,
+        ),
+        args.from_file,
+        args.to_dir,
+        **get_user_defined_options(args),
     )
 
 
@@ -87,7 +112,7 @@ def render(args: argparse.Namespace) -> None:
     try:
         file_type_renderers[args.from_file.suffix](args)
     except KeyError:
-        raise ValueError(f"Unknown file ext[{args.from_file.suffix}]")
+        raise ValueError(f"Unsupported file ext[{args.from_file.suffix}]")
 
 
 def entrypoint() -> None:
