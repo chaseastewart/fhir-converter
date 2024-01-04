@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "python-fhir-converter"
-version = "0.0.14"
+version = "0.0.15"
 authors = ["Chase Stewart <chase.a.stewart@outlook.com>"]
 description = "Transformation utility to translate data formats into FHIR"
 readme = "README.md"
@@ -36,6 +36,7 @@ xmltodict = "^0.13.0"
 pyjson5 = "^1.6.5"
 frozendict = "^2.3.10"
 importlib_resources = "^6.1.1"
+psutil = "^5.9.7"
 
 [tool.poetry.scripts]
 fhir_converter_cli  = "fhir_converter.__main__:entrypoint"

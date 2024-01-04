@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Generator, Mapping
-from functools import partial
 from json import dump as json_dump
+from os import remove as os_remove
 from os import walk as os_walk
 from pathlib import Path
-from typing import IO, Any, Optional, Union
+from typing import IO, Any, NoReturn, Optional, Union
 
 from frozendict import frozendict
 from liquid import Environment
@@ -16,6 +16,14 @@ from fhir_converter import filters, hl7, loaders, tags, utils
 
 DataInput = Union[str, IO]
 DataOutput = IO
+DataRenderer = Callable[[DataInput, DataOutput, str], None]
+RenderErrorHandler = Callable[[Exception], None]
+
+
+class RenderingError(Exception):
+   def __init__(self, msg: str, cause: Exception) -> None:
+        super().__init__(msg)
+        self.__cause__ = cause
 
 
 class CcdaRenderer:
@@ -152,49 +160,50 @@ def get_environment(
     )
 
 
+def fail(e: Exception) -> NoReturn:
+    raise e
+
+
 def render_files_to_dir(
-    render: Callable[[DataInput, DataOutput, str], None],
+    render: DataRenderer,
     from_dir: Path,
     to_dir: Path,
     extension: str = ".json",
     encoding: str = "utf-8",
-    filter_func: Optional[Callable[[Path], bool]] = None,
-    **kwargs,
+    onerror: RenderErrorHandler = fail,
+    path_filter: Optional[Callable[[Path], bool]] = None,
 ) -> None:
-    render_files(
-        from_dir,
-        render=partial(
-            render_to_dir, render, to_dir=to_dir, extension=extension, encoding=encoding
-        ),
-        filter_func=filter_func,
-        **kwargs,
-    )
+    def walk_dir() -> Generator[Path, Any, None]:
+        for root, _, filenames in os_walk(from_dir, onerror=fail):
+            for file_path in filter(path_filter, map(Path, filenames)):
+                yield Path(root).joinpath(file_path)
+
+    try:
+        for from_file in walk_dir():
+            render_to_dir(render, from_file, to_dir, extension, encoding, onerror)
+    except Exception as e:
+        onerror(RenderingError(f"Failed to render {from_dir}", e))
 
 
 def render_to_dir(
-    render: Callable[[DataInput, DataOutput, str], None],
+    render: DataRenderer,
     from_file: Path,
     to_dir: Path,
     extension: str = ".json",
     encoding: str = "utf-8",
-    **kwargs,
+    onerror: RenderErrorHandler = fail,
 ) -> None:
-    with open(from_file, "r", encoding=encoding) as data_in:
-        out_path = to_dir.joinpath(from_file.with_suffix(extension).name)
-        with open(out_path, "w", encoding=encoding) as data_out:
-            render(data_in, data_out, encoding, **kwargs)
-
-
-def render_files(
-    from_dir: Path,
-    render: Callable[[Path], None],
-    filter_func: Optional[Callable[[Path], bool]] = None,
-    **kwargs,
-) -> None:
-    def walk_dir() -> Generator[Path, Any, None]:
-        for root, _, filenames in os_walk(from_dir):
-            for file_path in filter(filter_func, map(Path, filenames)):
-                yield Path(root).joinpath(file_path)
-
-    for from_file in walk_dir():
-        render(from_file, **kwargs)
+    try:
+        with open(from_file, "r", encoding=encoding) as data_in:
+            out_path = to_dir.joinpath(from_file.with_suffix(extension).name)
+            try:
+                with open(out_path, "w", encoding=encoding) as data_out:
+                    render(data_in, data_out, encoding)
+            except Exception as e:
+                try:
+                    os_remove(out_path)
+                except OSError:
+                    pass
+                raise e
+    except Exception as e:
+        onerror(RenderingError(f"Failed to render {from_file}", e))
