@@ -57,12 +57,7 @@ def main() -> None:
             templates=user_defined_templates,
             to_dir=data_user_defined_dir,
         )
-        render_samples(
-            renderer,
-            templates=all_templates,
-            to_dir=data_all_dir,
-            indent=2
-        )
+        render_samples(renderer, templates=all_templates, to_dir=data_all_dir, indent=2)
 
         with open(data_out_dir.joinpath("stats.log"), "w") as stats_log:
             Stats(pr, stream=stats_log).sort_stats(SortKey.CUMULATIVE).print_stats()
@@ -87,11 +82,10 @@ def render_samples(
 ) -> None:
     for template in templates:
         renderers.render_files_to_dir(
-            render=partial(renderer.render_fhir, template),
+            render=partial(renderer.render_fhir, template, **kwargs),
             from_dir=sample_data_dir,
             to_dir=to_dir.joinpath(template),
-            filter_func=lambda p: p.suffix in (".ccda", ".xml"),
-            **kwargs,
+            path_filter=lambda p: p.suffix in (".ccda", ".xml"),
         )
 
 
