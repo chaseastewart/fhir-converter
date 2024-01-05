@@ -66,4 +66,6 @@ jobs:
     - name: Install project
       run: poetry install --no-interaction
     - name: Run tests
-      run: poetry run python -m unittest discover
+      run: |
+        poetry run python --version
+        poetry run python -m unittest discover
