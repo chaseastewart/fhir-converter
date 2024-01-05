@@ -30,12 +30,9 @@ def to_array(obj: Any) -> list:
 
 
 @string_filter
-def contains(data: str, sub_str: str) -> bool:
-    return sub_str in data if data else False
-
-
-@string_filter
 def match(data: str, regex: str) -> list:
+    if not data:
+        return []
     return re_findall(regex, data)
 
 
@@ -145,7 +142,6 @@ def batch_render(
 all: list[tuple[str, Callable]] = [
     ("to_json_string", to_json_string),
     ("to_array", to_array),
-    ("contains", contains),
     ("match", match),
     ("gzip", gzip),
     ("sha1_hash", sha1_hash),
