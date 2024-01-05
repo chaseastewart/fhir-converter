@@ -2,13 +2,13 @@ from unittest import TestCase
 
 from liquid import Environment
 
-from fhir_converter import filters
+from fhir_converter.filters import all_filters, register_filters
 
 
 class ToArrayFilterTestCase(TestCase):
     def setUp(self) -> None:
         env = Environment(strict_filters=True)
-        filters.register(env, filters.all)
+        register_filters(env, all_filters)
 
         self.template = env.from_string(
             """
@@ -36,7 +36,7 @@ class ToArrayFilterTestCase(TestCase):
 class MatchFilterTestCase(TestCase):
     def setUp(self) -> None:
         self.env = Environment(strict_filters=True)
-        filters.register(self.env, filters.all)
+        register_filters(self.env, all_filters)
 
     def test_match(self) -> None:
         template = self.env.from_string("""{{code | match: "[0123456789.]+" | size}}""")

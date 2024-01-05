@@ -38,5 +38,9 @@ frozendict = "^2.3.10"
 importlib_resources = "^6.1.1"
 psutil = "^5.9.7"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+pytest-cov = "^4.1.0"
+
 [tool.poetry.scripts]
 fhir_converter_cli  = "fhir_converter.__main__:entrypoint"

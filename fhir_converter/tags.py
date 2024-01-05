@@ -176,9 +176,9 @@ def _parse_argument(stream: ExprTokenStream) -> tuple[str, Expression]:
     return key, val
 
 
-all: list[type[Tag]] = [EvaluateTag]
+all_tags: list[type[Tag]] = [EvaluateTag]
 
 
-def register(env: Environment, tags: Iterable[type[Tag]]) -> None:
+def register_tags(env: Environment, tags: Iterable[type[Tag]]) -> None:
     for tag in filter(lambda tag: not tag.name in env.tags, tags):
         env.add_tag(tag)

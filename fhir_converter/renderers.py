@@ -12,7 +12,11 @@ from liquid import Environment
 from liquid.loaders import BaseLoader
 from pyjson5 import loads as json5_loads
 
-from fhir_converter import filters, hl7, loaders, tags, utils
+from fhir_converter.filters import all_filters, register_filters
+from fhir_converter.hl7 import parse_fhir
+from fhir_converter.loaders import TemplateSystemLoader, get_resource_loader, read_text
+from fhir_converter.tags import all_tags, register_tags
+from fhir_converter.utils import parse_xml
 
 DataInput = Union[str, IO]
 DataOutput = IO
@@ -21,7 +25,7 @@ RenderErrorHandler = Callable[[Exception], None]
 
 
 class RenderingError(Exception):
-   def __init__(self, msg: str, cause: Exception) -> None:
+    def __init__(self, msg: str, cause: Exception) -> None:
         super().__init__(msg)
         self.__cause__ = cause
 
@@ -58,8 +62,8 @@ class CcdaRenderer:
     ) -> None:
         if not env:
             env = get_environment()
-        filters.register(env, filters.all)
-        tags.register(env, tags.all)
+        register_filters(env, all_filters)
+        register_tags(env, all_tags)
 
         self.env = env
         self.template_globals = self._make_globals(template_globals)
@@ -68,7 +72,7 @@ class CcdaRenderer:
         template_globals = dict(globals or {})
         if not "code_mapping" in template_globals:
             value_set = json5_loads(
-                loaders.read_text(self.env, filename="ValueSet/ValueSet.json")
+                read_text(self.env, filename="ValueSet/ValueSet.json")
             )
             template_globals["code_mapping"] = frozendict(value_set.get("Mapping", {}))
         return frozendict(template_globals)
@@ -110,8 +114,8 @@ class CcdaRenderer:
             dict: The rendered FHIR bundle
         """
         template = self.env.get_template(template_name, globals=self.template_globals)
-        return hl7.parse_fhir(
-            json_input=template.render({"msg": utils.parse_xml(xml_input, encoding)}),
+        return parse_fhir(
+            json_input=template.render({"msg": parse_xml(xml_input, encoding)}),
             encoding=encoding,
         )
 
@@ -142,13 +146,13 @@ def get_environment(
         Environment: the rendering environment
     """
     if not defaults_loader:
-        defaults_loader = loaders.get_resource_loader(
+        defaults_loader = get_resource_loader(
             search_package="fhir_converter.templates.ccda"
         )
     if not loader:
         loader, defaults_loader = defaults_loader, None
     return Environment(
-        loader=loaders.TemplateSystemLoader(
+        loader=TemplateSystemLoader(
             loader=loader,
             auto_reload=auto_reload,
             cache_size=cache_size,

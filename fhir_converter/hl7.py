@@ -7,7 +7,7 @@ from re import compile as re_compile
 from re import sub as re_sub
 from typing import NamedTuple, Optional
 
-from fhir_converter import utils
+from fhir_converter.utils import merge_dict, parse_json, to_list
 
 DTM_REGEX = re_compile(r"(\d+(?:\.\d+)?)(?:([+-]\d{2})(\d{2}))?")
 
@@ -162,12 +162,12 @@ def to_fhir_dtm(dt: datetime, precision: Optional[FhirDtmPrecision] = None) -> s
 
 
 def parse_fhir(json_input: str, encoding: str = "utf-8") -> dict:
-    json_data = utils.parse_json(json_input, encoding)
+    json_data = parse_json(json_input, encoding)
     unique_entrys = {}
     for entry in json_data.get("entry", []):
         key = get_fhir_entry_key(entry)
         if key in unique_entrys:
-            utils.merge_dict(unique_entrys[key], entry)
+            merge_dict(unique_entrys[key], entry)
         else:
             unique_entrys[key] = entry
     json_data["entry"] = list(unique_entrys.values())
@@ -189,7 +189,7 @@ def get_fhir_entry_key(entry: dict) -> str:
 
 
 def get_ccda_components(data: dict) -> list:
-    return utils.to_list(
+    return to_list(
         data.get("ClinicalDocument", {})
         .get("component", {})
         .get("structuredBody", {})
@@ -198,7 +198,7 @@ def get_ccda_components(data: dict) -> list:
 
 
 def get_ccda_section_template_ids(component: dict) -> list:
-    return utils.to_list(component.get("section", {}).get("templateId", []))
+    return to_list(component.get("section", {}).get("templateId", []))
 
 
 def get_template_id_key(template_id: str) -> str:

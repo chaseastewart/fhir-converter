@@ -12,7 +12,16 @@ from liquid.filter import liquid_filter, string_filter, with_context
 from liquid.undefined import Undefined
 from pyjson5 import dumps as json5_dumps
 
-from fhir_converter import hl7, utils
+from fhir_converter.hl7 import (
+    Hl7DtmPrecision,
+    get_ccda_components,
+    get_ccda_section_template_ids,
+    get_template_id_key,
+    hl7_to_fhir_dtm,
+    is_template_id,
+    to_fhir_dtm,
+)
+from fhir_converter.utils import to_list
 
 
 @liquid_filter
@@ -26,7 +35,7 @@ def to_json_string(data: Any) -> str:
 def to_array(obj: Any) -> list:
     if isinstance(obj, Undefined):
         return []
-    return utils.to_list(obj)
+    return to_list(obj)
 
 
 @string_filter
@@ -50,19 +59,19 @@ def sha1_hash(data: str) -> str:
 def add_hyphens_date(dtm: str) -> str:
     if not dtm:
         return dtm
-    return hl7.hl7_to_fhir_dtm(dtm, precision=hl7.Hl7DtmPrecision.DAY)
+    return hl7_to_fhir_dtm(dtm, precision=Hl7DtmPrecision.DAY)
 
 
 @string_filter
 def format_as_date_time(dtm: str) -> str:
     if not dtm:
         return dtm
-    return hl7.hl7_to_fhir_dtm(dtm)
+    return hl7_to_fhir_dtm(dtm)
 
 
 @string_filter
 def now(_: str) -> str:
-    return hl7.to_fhir_dtm(datetime.now(timezone.utc))
+    return to_fhir_dtm(datetime.now(timezone.utc))
 
 
 @string_filter
@@ -92,13 +101,13 @@ def get_property(
 def get_first_ccda_sections_by_template_id(data: dict, template_ids: str) -> dict:
     sections, search_template_ids = {}, list(filter(None, template_ids.split("|")))
     if search_template_ids:
-        components = hl7.get_ccda_components(data)
+        components = get_ccda_components(data)
         if components:
             for template_id in search_template_ids:
-                template_id_key = hl7.get_template_id_key(template_id)
+                template_id_key = get_template_id_key(template_id)
                 for component in components:
-                    for id in hl7.get_ccda_section_template_ids(component):
-                        if hl7.is_template_id(id, template_id):
+                    for id in get_ccda_section_template_ids(component):
+                        if is_template_id(id, template_id):
                             sections[template_id_key] = component["section"]
                             break
                     if template_id_key in sections:
@@ -116,10 +125,10 @@ def get_ccda_section_by_template_id(
 
     search_template_ids = list(filter(None, search_template_ids))
     if search_template_ids:
-        for component in hl7.get_ccda_components(data):
-            for id in hl7.get_ccda_section_template_ids(component):
+        for component in get_ccda_components(data):
+            for id in get_ccda_section_template_ids(component):
                 for template_id in search_template_ids:
-                    if hl7.is_template_id(id, template_id):
+                    if is_template_id(id, template_id):
                         return component["section"]
     return {}
 
@@ -139,7 +148,7 @@ def batch_render(
         return buffer.getvalue()
 
 
-all: list[tuple[str, Callable]] = [
+all_filters: list[tuple[str, Callable]] = [
     ("to_json_string", to_json_string),
     ("to_array", to_array),
     ("match", match),
@@ -157,6 +166,6 @@ all: list[tuple[str, Callable]] = [
 ]
 
 
-def register(env: Environment, filters: list[tuple[str, Callable]]) -> None:
+def register_filters(env: Environment, filters: list[tuple[str, Callable]]) -> None:
     for name, func in filter(lambda f: not f[0] in env.filters, filters):
         env.add_filter(name, func)

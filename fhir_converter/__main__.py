@@ -14,7 +14,16 @@ from typing import Any, Optional
 from liquid import Environment
 from psutil import Process
 
-from fhir_converter import loaders, renderers
+from fhir_converter.loaders import get_file_system_loader
+from fhir_converter.renderers import (
+    CcdaRenderer,
+    DataRenderer,
+    RenderErrorHandler,
+    fail,
+    get_environment,
+    render_files_to_dir,
+    render_to_dir,
+)
 
 
 def main(argv: Sequence[str], prog: Optional[str] = None) -> None:
@@ -47,9 +56,9 @@ def print_summary(success: bool) -> None:
     print(dedent(summary).strip())
 
 
-def get_renderer(args: argparse.Namespace) -> renderers.DataRenderer:
+def get_renderer(args: argparse.Namespace) -> DataRenderer:
     return partial(
-        renderers.CcdaRenderer(get_user_defined_environment(args)).render_fhir,
+        CcdaRenderer(get_user_defined_environment(args)).render_fhir,
         args.template_name,
         **get_user_defined_options(args),
     )
@@ -57,8 +66,8 @@ def get_renderer(args: argparse.Namespace) -> renderers.DataRenderer:
 
 def get_user_defined_environment(args: argparse.Namespace) -> Optional[Environment]:
     if args.template_dir:
-        return renderers.get_environment(
-            loader=loaders.get_file_system_loader(search_path=args.template_dir)
+        return get_environment(
+            loader=get_file_system_loader(search_path=args.template_dir)
         )
     return None
 
@@ -70,9 +79,12 @@ def get_user_defined_options(args: argparse.Namespace) -> Mapping[str, Any]:
     return options
 
 
-def render(render: renderers.DataRenderer, args: argparse.Namespace) -> None:
+def render(render: DataRenderer, args: argparse.Namespace) -> None:
+    if not args.to_dir.is_dir():
+        args.to_dir.mkdir()
+
     if args.from_dir:
-        renderers.render_files_to_dir(
+        render_files_to_dir(
             render,
             from_dir=args.from_dir,
             to_dir=args.to_dir,
@@ -80,7 +92,7 @@ def render(render: renderers.DataRenderer, args: argparse.Namespace) -> None:
             path_filter=lambda p: p.suffix in (".ccda", ".xml"),
         )
     else:
-        renderers.render_to_dir(
+        render_to_dir(
             render,
             from_file=args.from_file,
             to_dir=args.to_dir,
@@ -88,8 +100,8 @@ def render(render: renderers.DataRenderer, args: argparse.Namespace) -> None:
         )
 
 
-def get_onerror(args: argparse.Namespace) -> renderers.RenderErrorHandler:
-    return print_exception if args.continue_on_error else renderers.fail
+def get_onerror(args: argparse.Namespace) -> RenderErrorHandler:
+    return print_exception if args.continue_on_error else fail
 
 
 def get_argparser(prog: Optional[str] = None) -> argparse.ArgumentParser:
