@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
 
-from fhir_converter import loaders, renderers
+from fhir_converter import loaders, renderers, utils
 
 builtin_templates = (
     "CCD",
@@ -37,7 +37,7 @@ def main() -> None:
     from cProfile import Profile
     from pstats import SortKey, Stats
 
-    mkdir_if_not_exists(data_out_dir)
+    utils.mkdir_if_not_exists(data_out_dir)
     mkdirs_if_not_exists(data_builtin_dir, builtin_templates)
     mkdirs_if_not_exists(data_user_defined_dir, user_defined_templates)
     mkdirs_if_not_exists(data_all_dir, all_templates)
@@ -62,19 +62,14 @@ def main() -> None:
         with open(data_out_dir.joinpath("stats.log"), "w") as stats_log:
             Stats(pr, stream=stats_log).sort_stats(SortKey.CUMULATIVE).print_stats()
     print(
-        f"Took {round((time.perf_counter_ns() - before) / 1000000000, ndigits=3)} seconds."
+        f"Took {round((time.perf_counter_ns() - before) / 1000000000, ndigits=3)} seconds"
     )
 
 
-def mkdir_if_not_exists(dir: Path) -> None:
-    if not dir.is_dir():
-        dir.mkdir()
-
-
 def mkdirs_if_not_exists(root: Path, dirnames: Sequence[str]) -> None:
-    mkdir_if_not_exists(root)
+    utils.mkdir_if_not_exists(root)
     for dirname in dirnames:
-        mkdir_if_not_exists(root.joinpath(dirname))
+        utils.mkdir_if_not_exists(root.joinpath(dirname))
 
 
 def render_samples(

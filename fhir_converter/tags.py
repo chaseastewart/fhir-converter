@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from functools import partial
 from sys import intern
 from typing import Optional, TextIO
@@ -130,9 +130,7 @@ class EvaluateTag(Tag):
         tok = next(stream)
         expect(stream, TOKEN_EXPRESSION)
 
-        expr_stream = ExprTokenStream(
-            tokenize_evaluate_expression(stream.current.value)
-        )
+        expr_stream = ExprTokenStream(tokenize_evaluate_expression(stream.current.value))
         name = str(parse_string_or_identifier(expr_stream))
         next(expr_stream)
 
@@ -176,9 +174,9 @@ def _parse_argument(stream: ExprTokenStream) -> tuple[str, Expression]:
     return key, val
 
 
-all: list[type[Tag]] = [EvaluateTag]
+all_tags: Sequence[type[Tag]] = [EvaluateTag]
 
 
-def register(env: Environment, tags: Iterable[type[Tag]]) -> None:
-    for tag in filter(lambda tag: not tag.name in env.tags, tags):
+def register_tags(env: Environment, tags: Iterable[type[Tag]]) -> None:
+    for tag in filter(lambda tag: tag.name not in env.tags, tags):
         env.add_tag(tag)

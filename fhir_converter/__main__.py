@@ -14,7 +14,17 @@ from typing import Any, Optional
 from liquid import Environment
 from psutil import Process
 
-from fhir_converter import loaders, renderers
+from fhir_converter.loaders import get_file_system_loader
+from fhir_converter.renderers import (
+    CcdaRenderer,
+    DataRenderer,
+    RenderErrorHandler,
+    fail,
+    get_environment,
+    render_files_to_dir,
+    render_to_dir,
+)
+from fhir_converter.utils import mkdir_if_not_exists, rmdir_if_empty
 
 
 def main(argv: Sequence[str], prog: Optional[str] = None) -> None:
@@ -41,15 +51,15 @@ def print_summary(success: bool) -> None:
     {banner_bar}
     Total time: {time() - process.create_time():.2f}s
     Finished at: {datetime.now()}
-    Final Memory: {process.memory_info().rss / (1024*1024):.0f}M
+    Final Memory: {process.memory_info().rss / (1024 * 1024):.0f}M
     {banner_bar}
     """
     print(dedent(summary).strip())
 
 
-def get_renderer(args: argparse.Namespace) -> renderers.DataRenderer:
+def get_renderer(args: argparse.Namespace) -> DataRenderer:
     return partial(
-        renderers.CcdaRenderer(get_user_defined_environment(args)).render_fhir,
+        CcdaRenderer(get_user_defined_environment(args)).render_fhir,
         args.template_name,
         **get_user_defined_options(args),
     )
@@ -57,8 +67,8 @@ def get_renderer(args: argparse.Namespace) -> renderers.DataRenderer:
 
 def get_user_defined_environment(args: argparse.Namespace) -> Optional[Environment]:
     if args.template_dir:
-        return renderers.get_environment(
-            loader=loaders.get_file_system_loader(search_path=args.template_dir)
+        return get_environment(
+            loader=get_file_system_loader(search_path=args.template_dir)
         )
     return None
 
@@ -70,26 +80,38 @@ def get_user_defined_options(args: argparse.Namespace) -> Mapping[str, Any]:
     return options
 
 
-def render(render: renderers.DataRenderer, args: argparse.Namespace) -> None:
-    if args.from_dir:
-        renderers.render_files_to_dir(
-            render,
-            from_dir=args.from_dir,
-            to_dir=args.to_dir,
-            onerror=get_onerror(args),
-            path_filter=lambda p: p.suffix in (".ccda", ".xml"),
-        )
-    else:
-        renderers.render_to_dir(
-            render,
-            from_file=args.from_file,
-            to_dir=args.to_dir,
-            onerror=get_onerror(args),
-        )
+def render(render: DataRenderer, args: argparse.Namespace) -> None:
+    to_dir_created = mkdir_if_not_exists(args.to_dir)
+    try:
+        if args.from_dir:
+            render_files_to_dir(
+                render,
+                from_dir=args.from_dir,
+                to_dir=args.to_dir,
+                flatten=args.flatten_to_dir,
+                onerror=get_onerror(args),
+                path_filter=is_ccda_file,
+            )
+        else:
+            render_to_dir(
+                render,
+                from_file=args.from_file,
+                to_dir=args.to_dir,
+                onerror=get_onerror(args),
+            )
+    finally:
+        if to_dir_created:
+            rmdir_if_empty(args.to_dir)
 
 
-def get_onerror(args: argparse.Namespace) -> renderers.RenderErrorHandler:
-    return print_exception if args.continue_on_error else renderers.fail
+def get_onerror(args: argparse.Namespace) -> RenderErrorHandler:
+    if args.continue_on_error:
+        return print_exception
+    return fail
+
+
+def is_ccda_file(path: Path) -> bool:
+    return path.suffix in (".ccda", ".xml")
 
 
 def get_argparser(prog: Optional[str] = None) -> argparse.ArgumentParser:
@@ -150,7 +172,12 @@ def get_argparser(prog: Optional[str] = None) -> argparse.ArgumentParser:
     parser.add_argument(
         "--continue_on_error",
         action="store_true",
-        help="Prevent the render from failing when rendering a file fails. ",
+        help="Prevent the render from failing when rendering a file fails.",
+    )
+    parser.add_argument(
+        "--flatten_to_dir",
+        action="store_true",
+        help="Ignore the nested file system structure in --from-dir.",
     )
     return parser
 

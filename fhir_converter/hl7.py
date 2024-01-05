@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, MutableMapping, Sequence
 from datetime import datetime, timedelta, tzinfo
 from enum import IntEnum
 from math import copysign
@@ -7,7 +8,7 @@ from re import compile as re_compile
 from re import sub as re_sub
 from typing import NamedTuple, Optional
 
-from fhir_converter import utils
+from fhir_converter.utils import merge_mappings, parse_json, to_list
 
 DTM_REGEX = re_compile(r"(\d+(?:\.\d+)?)(?:([+-]\d{2})(\d{2}))?")
 
@@ -90,7 +91,7 @@ def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
     tzh = dt_match.group(2)
     tzm = dt_match.group(3)
     if tzh and tzm:
-        minutes = int(tzh) * 60
+        minutes = int(tzh) * 60.0
         minutes += copysign(int(tzm), minutes)
         tzinfo = UTCOffset(minutes)
     else:
@@ -161,20 +162,20 @@ def to_fhir_dtm(dt: datetime, precision: Optional[FhirDtmPrecision] = None) -> s
     return iso_dtm[: FhirDtmPrecision.YEAR]
 
 
-def parse_fhir(json_input: str, encoding: str = "utf-8") -> dict:
-    json_data = utils.parse_json(json_input, encoding)
-    unique_entrys = {}
+def parse_fhir(json_input: str, encoding: str = "utf-8") -> MutableMapping:
+    json_data = parse_json(json_input, encoding)
+    unique_entrys: dict[str, dict] = {}
     for entry in json_data.get("entry", []):
         key = get_fhir_entry_key(entry)
         if key in unique_entrys:
-            utils.merge_dict(unique_entrys[key], entry)
+            merge_mappings(unique_entrys[key], entry)
         else:
             unique_entrys[key] = entry
     json_data["entry"] = list(unique_entrys.values())
     return json_data
 
 
-def get_fhir_entry_key(entry: dict) -> str:
+def get_fhir_entry_key(entry: Mapping) -> str:
     resource = entry.get("resource", {})
     return "_".join(
         filter(
@@ -188,8 +189,8 @@ def get_fhir_entry_key(entry: dict) -> str:
     )
 
 
-def get_ccda_components(data: dict) -> list:
-    return utils.to_list(
+def get_ccda_components(data: Mapping) -> Sequence:
+    return to_list(
         data.get("ClinicalDocument", {})
         .get("component", {})
         .get("structuredBody", {})
@@ -197,8 +198,8 @@ def get_ccda_components(data: dict) -> list:
     )
 
 
-def get_ccda_section_template_ids(component: dict) -> list:
-    return utils.to_list(component.get("section", {}).get("templateId", []))
+def get_ccda_section_template_ids(component: Mapping) -> Sequence:
+    return to_list(component.get("section", {}).get("templateId", []))
 
 
 def get_template_id_key(template_id: str) -> str:

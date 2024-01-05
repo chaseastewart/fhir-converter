@@ -1,23 +1,63 @@
+from base64 import b64encode
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import datetime, timezone
+from functools import wraps
 from hashlib import sha1, sha256
 from re import findall as re_findall
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 from uuid import UUID
 from zlib import compress as z_compress
 
 from liquid import Environment
-from liquid.builtin.filters.string import base64_encode
 from liquid.context import Context
-from liquid.filter import liquid_filter, string_filter, with_context
+from liquid.exceptions import FilterArgumentError
+from liquid.filter import (
+    flatten,
+    liquid_filter,
+    sequence_filter,
+    string_filter,
+    with_context,
+)
 from liquid.undefined import Undefined
 from pyjson5 import dumps as json5_dumps
 
-from fhir_converter import hl7, utils
+from fhir_converter.hl7 import (
+    Hl7DtmPrecision,
+    get_ccda_components,
+    get_ccda_section_template_ids,
+    get_template_id_key,
+    hl7_to_fhir_dtm,
+    is_template_id,
+    to_fhir_dtm,
+)
+from fhir_converter.utils import to_list
+
+
+def str_arg(val: Optional[Any], default: str = "") -> str:
+    if not val:
+        return default
+    elif not isinstance(val, str):
+        return str(val)
+    return val
+
+
+def mapping_filter(_filter: Callable[..., Any]) -> Callable[..., Any]:
+    @wraps(_filter)
+    def wrapper(val: object, *args: Any, **kwargs: Any) -> Any:
+        if not isinstance(val, Mapping):
+            raise FilterArgumentError(f"expected a mapping, found {type(val).__name__}")
+
+        try:
+            return _filter(val, *args, **kwargs)
+        except TypeError as err:
+            raise FilterArgumentError(err) from err
+
+    return wrapper
 
 
 @liquid_filter
 def to_json_string(data: Any) -> str:
-    if isinstance(data, Undefined):
+    if isinstance(data, Undefined) or not data:
         return ""
     return json5_dumps(data)
 
@@ -26,19 +66,19 @@ def to_json_string(data: Any) -> str:
 def to_array(obj: Any) -> list:
     if isinstance(obj, Undefined):
         return []
-    return utils.to_list(obj)
+    return to_list(obj)
 
 
 @string_filter
-def match(data: str, regex: str) -> list:
+def match(data: str, regex: Any) -> list:
     if not data:
         return []
-    return re_findall(regex, data)
+    return re_findall(str_arg(regex), data)
 
 
 @string_filter
 def gzip(data: str) -> str:
-    return base64_encode(z_compress(data.encode()))
+    return b64encode(z_compress(data.encode())).decode()
 
 
 @string_filter
@@ -50,32 +90,35 @@ def sha1_hash(data: str) -> str:
 def add_hyphens_date(dtm: str) -> str:
     if not dtm:
         return dtm
-    return hl7.hl7_to_fhir_dtm(dtm, precision=hl7.Hl7DtmPrecision.DAY)
+    return hl7_to_fhir_dtm(dtm, precision=Hl7DtmPrecision.DAY)
 
 
 @string_filter
 def format_as_date_time(dtm: str) -> str:
     if not dtm:
         return dtm
-    return hl7.hl7_to_fhir_dtm(dtm)
+    return hl7_to_fhir_dtm(dtm)
 
 
 @string_filter
 def now(_: str) -> str:
-    return hl7.to_fhir_dtm(datetime.now(timezone.utc))
+    return to_fhir_dtm(datetime.now(timezone.utc))
 
 
 @string_filter
 def generate_uuid(data: str) -> str:
+    if not data:
+        return ""
     return str(UUID(bytes=sha256(data.encode()).digest()[:16]))
 
 
 @with_context
 @string_filter
 def get_property(
-    code: str, mapping_key: str, property: Optional[str] = "code", *, context: Context
+    code: str, mapping_key: Any, property: Optional[Any] = None, *, context: Context
 ) -> str:
-    mapping = context.resolve("code_mapping", default={}).get(mapping_key, None)
+    property = str_arg(property, default="code")
+    mapping = context.resolve("code_mapping", default={}).get(str_arg(mapping_key), None)
     if mapping:
         code_mapping = mapping.get(code, None)
         if not code_mapping:
@@ -88,17 +131,19 @@ def get_property(
     return code if property in ("code", "display") else ""
 
 
-@liquid_filter
-def get_first_ccda_sections_by_template_id(data: dict, template_ids: str) -> dict:
-    sections, search_template_ids = {}, list(filter(None, template_ids.split("|")))
-    if search_template_ids:
-        components = hl7.get_ccda_components(data)
+@mapping_filter
+def get_first_ccda_sections_by_template_id(data: Mapping, template_ids: Any) -> Mapping:
+    sections, search_template_ids = {}, list(
+        filter(None, str_arg(template_ids).split("|"))
+    )
+    if search_template_ids and data:
+        components = get_ccda_components(data)
         if components:
             for template_id in search_template_ids:
-                template_id_key = hl7.get_template_id_key(template_id)
+                template_id_key = get_template_id_key(template_id)
                 for component in components:
-                    for id in hl7.get_ccda_section_template_ids(component):
-                        if hl7.is_template_id(id, template_id):
+                    for id in get_ccda_section_template_ids(component):
+                        if is_template_id(id, template_id):
                             sections[template_id_key] = component["section"]
                             break
                     if template_id_key in sections:
@@ -106,47 +151,45 @@ def get_first_ccda_sections_by_template_id(data: dict, template_ids: str) -> dic
     return sections
 
 
-@liquid_filter
+@mapping_filter
 def get_ccda_section_by_template_id(
-    data: dict, template_id: str, *template_ids: str
-) -> dict:
+    data: Mapping, template_id: Any, *template_ids: Any
+) -> Mapping:
     search_template_ids = [template_id]
     if template_ids:
         search_template_ids += template_ids
 
-    search_template_ids = list(filter(None, search_template_ids))
-    if search_template_ids:
-        for component in hl7.get_ccda_components(data):
-            for id in hl7.get_ccda_section_template_ids(component):
+    search_template_ids = list(filter(None, map(str_arg, flatten(search_template_ids))))
+    if search_template_ids and data:
+        for component in get_ccda_components(data):
+            for id in get_ccda_section_template_ids(component):
                 for template_id in search_template_ids:
-                    if hl7.is_template_id(id, template_id):
+                    if is_template_id(id, template_id):
                         return component["section"]
     return {}
 
 
 @with_context
-@liquid_filter
+@sequence_filter
 def batch_render(
-    batch: list, template_name: str, arg_name: str, *, context: Context
+    batch: Sequence, template_name: Any, arg_name: Any, *, context: Context
 ) -> str:
     if not batch:
         return ""
-    template = context.get_template_with_context(template_name)
+    template = context.get_template_with_context(str_arg(template_name))
     with context.get_buffer() as buffer:
         for data in batch:
-            with context.extend(namespace={arg_name: data}, template=template):
+            with context.extend(namespace={str_arg(arg_name): data}, template=template):
                 template.render_with_context(context, buffer, partial=True)
         return buffer.getvalue()
 
 
-all: list[tuple[str, Callable]] = [
+all_filters: Sequence[tuple[str, Callable]] = [
     ("to_json_string", to_json_string),
     ("to_array", to_array),
     ("match", match),
     ("gzip", gzip),
     ("sha1_hash", sha1_hash),
-    ("generate_uuid", generate_uuid),
-    ("batch_render", batch_render),
     ("add_hyphens_date", add_hyphens_date),
     ("format_as_date_time", format_as_date_time),
     ("now", now),
@@ -154,9 +197,10 @@ all: list[tuple[str, Callable]] = [
     ("get_property", get_property),
     ("get_first_ccda_sections_by_template_id", get_first_ccda_sections_by_template_id),
     ("get_ccda_section_by_template_id", get_ccda_section_by_template_id),
+    ("batch_render", batch_render),
 ]
 
 
-def register(env: Environment, filters: list[tuple[str, Callable]]) -> None:
-    for name, func in filter(lambda f: not f[0] in env.filters, filters):
+def register_filters(env: Environment, filters: Iterable[tuple[str, Callable]]) -> None:
+    for name, func in filter(lambda f: f[0] not in env.filters, filters):
         env.add_filter(name, func)

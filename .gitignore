@@ -28,3 +28,10 @@ __pycache__/
 
 # mypy
 .mypy_cache/
+
+#pytest
+.coverage*
+coverage.xml
+junit/
+htmlcov/
+.pytest_cache
