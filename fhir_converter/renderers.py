@@ -5,6 +5,7 @@ from json import dump as json_dump
 from os import remove as os_remove
 from os import walk as os_walk
 from pathlib import Path
+from io import StringIO
 from typing import IO, Any, NoReturn, Optional, Union
 
 from frozendict import frozendict
@@ -48,7 +49,7 @@ class CcdaRenderer:
         has already been registered.
 
     Args:
-        env (Environment, optional): Optional rendering environment. A rendering 
+        env (Environment, optional): Optional rendering environment. A rendering
             environment will be constructed with builtin defaults when env is None.
             Defaults to None.
         template_globals (Mapping, optional): Optional mapping that will be added to
@@ -77,6 +78,17 @@ class CcdaRenderer:
             )
             template_globals["code_mapping"] = frozendict(value_set.get("Mapping", {}))
         return frozendict(template_globals)
+
+    def render_fhir_string(
+        self,
+        template_name: str,
+        xml_in: DataInput,
+        encoding: str = "utf-8",
+        **kwargs,
+    ) -> str:
+        with StringIO() as buffer:
+            self.render_fhir(template_name, xml_in, buffer, encoding, **kwargs)
+            return buffer.getvalue()
 
     def render_fhir(
         self,
@@ -134,10 +146,10 @@ def get_environment(
     Keyword arguments will be forwarded to the rendering environment
 
     Args:
-        auto_reload (bool, optional): If `True`, loaders that have an `uptodate` 
+        auto_reload (bool, optional): If `True`, loaders that have an `uptodate`
             callable will reload template source data automatically. Defaults to False.
         cache_size (int, optional): The capacity of the template cache in number of
-            templates. cache_size is None or less than 1 disables caching. 
+            templates. cache_size is None or less than 1 disables caching.
             Defaults to 250.
         loader (Optional[BaseLoader], optional): The loader to use when loading the
             reandering temples. Templates will be loaded from the default loader when
