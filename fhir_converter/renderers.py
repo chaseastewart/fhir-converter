@@ -36,23 +36,24 @@ class CcdaRenderer:
     Filters:
         The module provides builtin filters to support the default templates provided
         within the module. Custom filters may be added for user defined templates.
-        Consumers must provide the rendering environment with the custom filters registered.
-        The builtin filters will be added unless a filter with the same name has already
-        been registered.
+        Consumers must provide the rendering environment with the custom filters
+        registered. The builtin filters will be added unless a filter with the same
+        name has already been registered.
 
     Tags:
         The module provides builtin tags to support the default templates provided
         within the module. Custom tags may be added for user defined templates.
-        Consumers must provide the rendering environment with the custom tag(s) registered.
-        The builtin tag(s) will be added unless a tag with the same name has already
-        been registered.
+        Consumers must provide the rendering environment with the custom tag(s)
+        registered. The builtin tag(s) will be added unless a tag with the same name
+        has already been registered.
 
     Args:
-        env (Environment, optional): Optional rendering environment. A rendering environment
-            will be constructed with builtin defaults when env is None. Defaults to None.
-        template_globals (Mapping, optional): Optional mapping that will be added to the
-            render context. Code mappings from ValueSet/ValueSet.json will be loaded
-            from the module when template_globals is None. Defaults to None.
+        env (Environment, optional): Optional rendering environment. A rendering 
+            environment will be constructed with builtin defaults when env is None.
+            Defaults to None.
+        template_globals (Mapping, optional): Optional mapping that will be added to
+            the render context. Code mappings from ValueSet/ValueSet.json will be
+            loaded from the module when template_globals is None. Defaults to None.
     """
 
     def __init__(
@@ -70,7 +71,7 @@ class CcdaRenderer:
 
     def _make_globals(self, globals: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
         template_globals = dict(globals or {})
-        if not "code_mapping" in template_globals:
+        if "code_mapping" not in template_globals:
             value_set = json5_loads(
                 read_text(self.env, filename="ValueSet/ValueSet.json")
             )
@@ -85,14 +86,15 @@ class CcdaRenderer:
         encoding: str = "utf-8",
         **kwargs,
     ) -> None:
-        """Renders the XML to FHIR writing the generated output to the supplied file like object.
-        Keyword arguments will be forwarded to the json serializer
+        """Renders the XML to FHIR writing the generated output to the supplied file
+        like object. Keyword arguments will be forwarded to the json serializer
 
         Args:
             template_name (str): The rendering template
             xml_in (DataInput): The XML input. Either a string or file like object
             fhir_out (DataOutput): The file like object to write the rendered output
-            encoding (str, optional): The encoding to use when parsing the XML input. Defaults to "utf-8".
+            encoding (str, optional): The encoding to use when parsing the XML input.
+                Defaults to "utf-8".
         """
         json_dump(
             obj=self.render_to_fhir(template_name, xml_in, encoding),
@@ -108,7 +110,8 @@ class CcdaRenderer:
         Args:
             template_name (str): The rendering template
             xml_in (DataInput): The XML input. Either a string or file like object
-            encoding (str, optional): The encoding to use when parsing the XML input. Defaults to "utf-8".
+            encoding (str, optional): The encoding to use when parsing the XML input.
+                Defaults to "utf-8".
 
         Returns:
             dict: The rendered FHIR bundle
@@ -127,20 +130,21 @@ def get_environment(
     defaults_loader: Optional[BaseLoader] = None,
     **kwargs,
 ) -> Environment:
-    """Factory for creating rendering environments with builtin configurations. Keyword arguments
-    will be forwarded to the rendering environment
+    """Factory for creating rendering environments with builtin configurations.
+    Keyword arguments will be forwarded to the rendering environment
 
     Args:
-        auto_reload (bool, optional): If `True`, loaders that have an `uptodate` callable will
-            reload template source data automatically. Defaults to False.
-        cache_size (int, optional): The capacity of the template cache in number of templates.
-            cache_size is None or less than 1 disables caching. Defaults to 250.
+        auto_reload (bool, optional): If `True`, loaders that have an `uptodate` 
+            callable will reload template source data automatically. Defaults to False.
+        cache_size (int, optional): The capacity of the template cache in number of
+            templates. cache_size is None or less than 1 disables caching. 
+            Defaults to 250.
         loader (Optional[BaseLoader], optional): The loader to use when loading the
             reandering temples. Templates will be loaded from the default loader when
             loader is None. Defaults to None.
-        defaults_loader (Optional[BaseLoader], optional): The default loader to use when a template
-            can not be resolved by the loader. Defaults will be loaded from the module when
-            defaults_loader is None. Defaults to None.
+        defaults_loader (Optional[BaseLoader], optional): The default loader to use
+            when a template can not be resolved by the loader. Defaults will be loaded
+            from the module when defaults_loader is None. Defaults to None.
 
     Returns:
         Environment: the rendering environment

@@ -101,7 +101,9 @@ def render(render: DataRenderer, args: argparse.Namespace) -> None:
 
 
 def get_onerror(args: argparse.Namespace) -> RenderErrorHandler:
-    return print_exception if args.continue_on_error else fail
+    if args.continue_on_error:
+        return print_exception
+    return fail
 
 
 def get_argparser(prog: Optional[str] = None) -> argparse.ArgumentParser:

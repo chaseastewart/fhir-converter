@@ -90,7 +90,7 @@ def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
     tzh = dt_match.group(2)
     tzm = dt_match.group(3)
     if tzh and tzm:
-        minutes = int(tzh) * 60
+        minutes = int(tzh) * 60.0
         minutes += copysign(int(tzm), minutes)
         tzinfo = UTCOffset(minutes)
     else:
@@ -163,7 +163,7 @@ def to_fhir_dtm(dt: datetime, precision: Optional[FhirDtmPrecision] = None) -> s
 
 def parse_fhir(json_input: str, encoding: str = "utf-8") -> dict:
     json_data = parse_json(json_input, encoding)
-    unique_entrys = {}
+    unique_entrys: dict[str, dict] = {}
     for entry in json_data.get("entry", []):
         key = get_fhir_entry_key(entry)
         if key in unique_entrys:
