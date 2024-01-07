@@ -33,3 +33,4 @@ __pycache__/
 .coverage*
 coverage.xml
 junit/
+.pytest_cache

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Generator, Mapping
+from io import StringIO
 from json import dump as json_dump
 from os import remove as os_remove
 from os import walk as os_walk
 from pathlib import Path
-from io import StringIO
 from typing import IO, Any, NoReturn, Optional, Union
 
 from frozendict import frozendict
@@ -188,21 +188,43 @@ def render_files_to_dir(
     render: DataRenderer,
     from_dir: Path,
     to_dir: Path,
+    flatten: bool = False,
     extension: str = ".json",
     encoding: str = "utf-8",
     onerror: RenderErrorHandler = fail,
     path_filter: Optional[Callable[[Path], bool]] = None,
 ) -> None:
-    def walk_dir() -> Generator[Path, Any, None]:
+    def files_to_render() -> Generator[Path, Any, None]:
         for root, _, filenames in os_walk(from_dir, onerror=fail):
             for file_path in filter(path_filter, map(Path, filenames)):
                 yield Path(root).joinpath(file_path)
 
+    def empty_subdirs() -> Generator[Path, Any, None]:
+        for root, dirs, filenames in os_walk(to_dir):
+            if not dirs and not filenames:
+                dir = Path(root)
+                if dir != to_dir:
+                    yield dir
+
     try:
-        for from_file in walk_dir():
-            render_to_dir(render, from_file, to_dir, extension, encoding, onerror)
+        for from_file in files_to_render():
+            if not flatten and from_dir != from_file.parent:
+                to_file_dir = to_dir.joinpath(
+                    *[p for p in from_file.parts[:-1] if p not in from_dir.parts]
+                )
+                if not to_file_dir.is_dir():
+                    to_file_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                to_file_dir = to_dir
+            render_to_dir(render, from_file, to_file_dir, extension, encoding, onerror)
     except Exception as e:
         onerror(RenderingError(f"Failed to render {from_dir}", e))
+    finally:
+        for dir in empty_subdirs():
+            try:
+                dir.rmdir()
+            except OSError:
+                pass
 
 
 def render_to_dir(
