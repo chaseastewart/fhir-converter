@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="./logo.png" width="360" />
+  <img src="https://chaseastewart.github.io/fhir-converter/logo.png" width="360" alt="Python FHIR Converter"/>
 </p>
 <p align="center">
     <em>Python FHIR converter, fastish, most nuts and bolts included, ready for production</em>
 </p>
 <p align="center">
-<a href="https://github.com/jg-rp/liquid/blob/main/LICENSE" target="_blank">
+<a href="https://github.com/chaseastewart/fhir-converter/blob/main/LICENSE" target="_blank">
   <img src="https://img.shields.io/pypi/l/python-liquid.svg?style=flat-square" alt="License">
 </a>
 <a href="https://pypi.org/project/python-fhir-converter/" target="_blank">
@@ -13,6 +13,13 @@
 </a>
 <a href="https://pypi.org/project/python-fhir-converter" target="_blank">
   <img src="https://img.shields.io/pypi/pyversions/python-fhir-converter.svg?style=flat-square" alt="Python versions">
+</a>
+<br>
+<a href="https://github.com/chaseastewart/fhir-converter/actions?query=workflow%3Apython-package">
+    <img src="https://img.shields.io/github/actions/workflow/status/chaseastewart/fhir-converter/python-package.yml?style=flat-square&brach=main" />
+</a>
+<a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/chaseastewart/fhir-converter" target="_blank">
+    <img src="https://coverage-badge.samuelcolvin.workers.dev/chaseastewart/fhir-converter.svg" alt="Coverage">
 </a>
 <a href="https://black.readthedocs.io/en/stable/index.html" target="_blank">
   <img src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square" />
@@ -46,6 +53,8 @@ Built on the back of:
 - [Links](#links)
 - [Basic Usage](#basic-usage)
 - [Command line interface](#command-line-interface)
+- [Templates](#templates)
+- [Benchmark](#benchmark)
 - [Related Projects](#related-projects)
 
 
@@ -71,55 +80,15 @@ $ pip install python-fhir-converter
 
 
 ## Basic Usage
-Source can be found [here](./scripts/examples.py)
+See [examples](./scripts/examples.py) for more indepth usage / usecases.
 
 ```python
-from functools import partial
-from pathlib import Path
+from fhir_converter.renderers import  CcdaRenderer
 
-from fhir_converter.loaders import get_file_system_loader
-from fhir_converter.renderers import (
-    CcdaRenderer,
-    get_environment,
-    render_files_to_dir,
-    render_to_dir,
-)
-from fhir_converter.utils import mkdir_if_not_exists
-
-templates_dir, sample_data_dir, data_out_dir = (
-    Path("data/templates/ccda"),
-    Path("data/sample/ccda"),
-    Path("data/out"),
-)
-
-from_file = sample_data_dir.joinpath("CCD.ccda")
-mkdir_if_not_exists(data_out_dir)
-
-# Render the file to string using the rendering defaults indenting the output
-with open(from_file) as xml_in:
+# Render the file to string using the rendering defaults
+with open("data/sample/ccda/ccd.ccda") as xml_in:
     # indent is provided, any other kwargs supported by dump may be provided
     print(CcdaRenderer().render_fhir_string("CCD", xml_in, indent=1))
-
-# Create a renderer that will load the user defined templates into the rendering env
-renderer = CcdaRenderer(
-    get_environment(loader=get_file_system_loader(search_path=templates_dir))
-)
-
-# Render the file to the output directory using the default CCD template
-render_to_dir(
-    render=partial(renderer.render_fhir, "CCD"),
-    from_file=from_file,
-    to_dir=data_out_dir,
-)
-
-# Render all of the sample files to the output directory using the user defined
-# pampi (problems, allergies, meds, procedures, immunizations) template
-render_files_to_dir(
-    render=partial(renderer.render_fhir, "pampi"),
-    from_dir=sample_data_dir,
-    to_dir=data_out_dir,
-    path_filter=lambda p: p.suffix in (".ccda", ".xml"),
-)
 ```
 
 ## Command line interface
@@ -146,6 +115,12 @@ Finished at: 2024-01-11 10:49:44.182033
 Final Memory: 37M
 ---------------------------------------------------------------
 ```
+
+
+## Templates
+
+Templates can be loaded from any python-liquid supported mechanism. To make packaging easier a ResourceLoader is provided. When a rendering environment is not provided, templates will be loaded from the [module](/fhir_converter/templates/). To ease the creation of user defined templates a TemplateSystemLoader is provided that allows templates to be loaded from a primary and optionally default location. This allows user defined templates to reference templates in the default location. The example user defined [templates](data/templates/ccda) reuse the default section / header templates.
+
 
 ## Benchmark
 

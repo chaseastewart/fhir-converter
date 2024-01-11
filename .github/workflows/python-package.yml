@@ -1,6 +1,3 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
 name: Python package
 
 on:
@@ -8,6 +5,9 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+
+permissions:
+  statuses: write
 
 jobs:
   linting-check:
@@ -34,8 +34,8 @@ jobs:
       run: |
         # stop the build if there are Python syntax errors or undefined names
         poetry run flake8 fhir_converter --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 90 chars wide
-        poetry run flake8 fhir_converter --count --ignore=E203,E721 --exit-zero --max-complexity=10 --max-line-length=90 --statistics
+        # exit-zero treats all errors as warnings
+        poetry run flake8 fhir_converter --count --ignore=E203,E721 --exit-zero --max-complexity=10 --max-line-length=120 --statistics
 
   type-check:
     needs: linting-check
@@ -88,3 +88,35 @@ jobs:
     - name: Run tests
       run: |
         poetry run pytest
+
+  cov:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+    - name: Install project
+      run: poetry install --no-interaction
+    - name: Build Coverage Report
+      run: |
+        poetry run pytest --cov=fhir_converter --cov-report=html
+    - run: poetry run smokeshow upload htmlcov
+      env:
+        SMOKESHOW_GITHUB_STATUS_DESCRIPTION: Coverage {coverage-percentage}
+        SMOKESHOW_GITHUB_COVERAGE_THRESHOLD: 10
+        SMOKESHOW_GITHUB_CONTEXT: coverage
+        SMOKESHOW_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SMOKESHOW_AUTH_KEY: ${{ secrets.SMOKESHOW_AUTH_KEY }}

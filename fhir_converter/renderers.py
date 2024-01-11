@@ -137,7 +137,7 @@ class CcdaRenderer:
 
 def get_environment(
     auto_reload: bool = False,
-    cache_size: int = 250,
+    cache_size: int = 300,
     loader: Optional[BaseLoader] = None,
     defaults_loader: Optional[BaseLoader] = None,
     **kwargs,
@@ -150,7 +150,7 @@ def get_environment(
             callable will reload template source data automatically. Defaults to False.
         cache_size (int, optional): The capacity of the template cache in number of
             templates. cache_size is None or less than 1 disables caching.
-            Defaults to 250.
+            Defaults to 300.
         loader (Optional[BaseLoader], optional): The loader to use when loading the
             reandering temples. Templates will be loaded from the default loader when
             loader is None. Defaults to None.

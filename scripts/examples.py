@@ -1,6 +1,8 @@
 from functools import partial
 from pathlib import Path
 
+from liquid.loaders import DictLoader
+
 from fhir_converter.loaders import get_file_system_loader
 from fhir_converter.renderers import (
     CcdaRenderer,
@@ -26,7 +28,8 @@ with open(from_file) as xml_in:
 
 # Create a renderer that will load the user defined templates into the rendering env
 renderer = CcdaRenderer(
-    get_environment(loader=get_file_system_loader(search_path=templates_dir))
+    # Since a default loader is not provided, the default location will be the module
+    env=get_environment(loader=get_file_system_loader(search_path=templates_dir))
 )
 
 # Render the file to the output directory using the default CCD template
@@ -44,3 +47,19 @@ render_files_to_dir(
     to_dir=data_out_dir,
     path_filter=lambda p: p.suffix in (".ccda", ".xml"),
 )
+
+
+# Static / Dictonary loader
+static_templates = {
+    "RESULTS": """{
+    "resourceType": "Bundle",
+    "type": "batch",
+    "entry": [ {% include 'Section/Result' %} ]
+}"""
+}
+renderer = CcdaRenderer(
+    env=get_environment(loader=DictLoader(templates=static_templates))
+)
+with open(from_file) as xml_in:
+    # Render the results section with no patient / header information
+    print(renderer.render_fhir_string("RESULTS", xml_in))
