@@ -37,10 +37,10 @@ def main() -> None:
     from cProfile import Profile
     from pstats import SortKey, Stats
 
-    utils.mkdir_if_not_exists(data_out_dir)
-    mkdirs_if_not_exists(data_builtin_dir, builtin_templates)
-    mkdirs_if_not_exists(data_user_defined_dir, user_defined_templates)
-    mkdirs_if_not_exists(data_all_dir, all_templates)
+    utils.mkdir(data_out_dir)
+    utils.mkdirs(data_builtin_dir, builtin_templates)
+    utils.mkdirs(data_user_defined_dir, user_defined_templates)
+    utils.mkdirs(data_all_dir, all_templates)
 
     before = time.perf_counter_ns()
     with Profile() as pr:
@@ -57,19 +57,13 @@ def main() -> None:
             templates=user_defined_templates,
             to_dir=data_user_defined_dir,
         )
-        render_samples(renderer, templates=all_templates, to_dir=data_all_dir, indent=2)
+        render_samples(renderer, templates=all_templates, to_dir=data_all_dir)
 
         with open(data_out_dir.joinpath("stats.log"), "w") as stats_log:
             Stats(pr, stream=stats_log).sort_stats(SortKey.CUMULATIVE).print_stats()
     print(
         f"Took {round((time.perf_counter_ns() - before) / 1000000000, ndigits=3)} seconds"
     )
-
-
-def mkdirs_if_not_exists(root: Path, dirnames: Sequence[str]) -> None:
-    utils.mkdir_if_not_exists(root)
-    for dirname in dirnames:
-        utils.mkdir_if_not_exists(root.joinpath(dirname))
 
 
 def render_samples(

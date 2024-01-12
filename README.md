@@ -32,10 +32,10 @@ Provides a python native version of [FHIR-Converter](https://github.com/microsof
 
 The key features are:
 
-* **Fastish**: Leverages Cython where possible 
+* **Fastish**: Minimize overhead outside the rendering engine 
 * **Move fast**: Designed to be extensibile. Use the thin rendering API or leverage the builtin parts
-* **Easy**: Designed to be easy to use, extend and deploy.
-* **Robust**: Get production-ready code.
+* **Easy**: Designed to be easy to use, extend and deploy
+* **Robust**: Get production-ready code
 
 Limitations:
 * **Only CDA->FHIR** is currently builtin. Additional work is needed to implement the filters, etc to support FHIR->FHIR and HL7v2->FHIR and back.
@@ -80,15 +80,13 @@ $ pip install python-fhir-converter
 
 
 ## Basic Usage
-See [examples](./scripts/examples.py) for more indepth usage / usecases.
+See [examples](https://github.com/chaseastewart/fhir-converter/blob/main/scripts/examples.py) for more indepth usage / usecases.
 
 ```python
 from fhir_converter.renderers import  CcdaRenderer
 
-# Render the file to string using the rendering defaults
 with open("data/sample/ccda/ccd.ccda") as xml_in:
-    # indent is provided, any other kwargs supported by dump may be provided
-    print(CcdaRenderer().render_fhir_string("CCD", xml_in, indent=1))
+    print(CcdaRenderer().render_fhir_string("CCD", xml_in))
 ```
 
 ## Command line interface
@@ -119,23 +117,22 @@ Final Memory: 37M
 
 ## Templates
 
-Templates can be loaded from any python-liquid supported mechanism. To make packaging easier a ResourceLoader is provided. When a rendering environment is not provided, templates will be loaded from the [module](/fhir_converter/templates/). To ease the creation of user defined templates a TemplateSystemLoader is provided that allows templates to be loaded from a primary and optionally default location. This allows user defined templates to reference templates in the default location. The example user defined [templates](data/templates/ccda) reuse the default section / header templates.
+Templates can be loaded from any python-liquid supported mechanism. To make packaging easier a [ResourceLoader](https://github.com/chaseastewart/fhir-converter/blob/main/fhir_converter/loaders.py#L119) is provided. When a rendering environment is not provided, templates will be loaded from the module [resources](https://github.com/chaseastewart/fhir-converter/tree/main/fhir_converter/templates/ccda). To ease the creation of user defined templates a [TemplateSystemLoader](https://github.com/chaseastewart/fhir-converter/blob/main/fhir_converter/loaders.py#L21) is provided that allows templates to be loaded from a primary and optionally default location. This allows user defined templates to reference templates in the default location. The example user defined [templates](https://github.com/chaseastewart/fhir-converter/tree/main/data/templates/ccda) reuse the default section / header templates.
 
 
 ## Benchmark
 
-You can run the [benchmark](./scripts/benchmark.py) from the root of the source tree. Test rig is a 14-inch, 2021 Macbook Pro with the binned M1 PRO not in low power mode.
+You can run the [benchmark](https://github.com/chaseastewart/fhir-converter/blob/main/scripts/benchmark.py) from the root of the source tree. Test rig is a 16-inch, 2023 Macbook Pro with the M3 Pro not in low power mode. Python version is 3.12.1.
 ```text
    Ordered by: cumulative time
 
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-        3    0.000    0.000   16.998    5.666 ../scripts/benchmark.py:75(render_samples)
-       22    0.003    0.000   16.997    0.773 ../fhir-converter/fhir_converter/renderers.py:187(render_files_to_dir)
-      484    0.002    0.000   16.968    0.035 ../fhir-converter/fhir_converter/renderers.py:220(render_to_dir)
-      484    0.010    0.000   16.842    0.035 ../fhir-converter/fhir_converter/renderers.py:93(render_fhir)
-      484    0.003    0.000   14.674    0.030 ../fhir-converter/fhir_converter/renderers.py:117(render_to_fhir)
+        3    0.000    0.000   12.273    4.091 ./scripts/benchmark.py:75(render_samples)
+       22    0.003    0.000   12.272    0.558 ./fhir-converter/fhir_converter/renderers.py:187(render_files_to_dir)
+      484    0.002    0.000   12.258    0.025 ./fhir-converter/fhir_converter/renderers.py:220(render_to_dir)
+      484    0.010    0.000   12.172    0.025 ./fhir-converter/fhir_converter/renderers.py:93(render_fhir)
+      484    0.003    0.000   12.004    0.025 ./fhir-converter/fhir_converter/renderers.py:117(render_to_fhir)
 ```
-The test fixture profiles the converter using a single thread. The samples are rendered using all of the builtin templates along with the handful of user defined templates. The percall time is relative to the rendering template being used, the number of files being rendered (there is some warm up) and the size of the files to be rendered. In a 60 minute period in similar conditions a little over 100K CDA documents could be rendered into FHIR bundles. Note: including the original CDA document in the bundle as a DocumentReference adds noticable overhead to the render. Omitting this via a user defined template is recommended if this is not required for your usecase.
 
 
 ## Related Projects

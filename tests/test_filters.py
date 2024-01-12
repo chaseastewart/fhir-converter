@@ -181,32 +181,20 @@ class AddHyphensDateTest(TestCase, FilterTest):
 class FormatAsDateTimeTest(TestCase, FilterTest):
     template = """{{ date | format_as_date_time }}"""
 
-    @fixture(autouse=True, scope="function")
-    def hl7_to_fhir_dtm_mock(self, mocker):
-        mocked = mocker.patch(
-            "fhir_converter.filters.hl7_to_fhir_dtm",
-            return_value="2024-01-10T06:35:57.920Z",
-        )
-        self._hl7_to_fhir_dtm_mock = mocked
-        return mocked
-
     def setUp(self) -> None:
         self.setup_template()
 
     def test_undefined(self) -> None:
         result = self.bound_template.render()
         self.assertEqual(result, "")
-        self._hl7_to_fhir_dtm_mock.assert_not_called()
 
     def test_empty_date(self) -> None:
         result = self.bound_template.render(date="")
         self.assertEqual(result, "")
-        self._hl7_to_fhir_dtm_mock.assert_not_called()
 
     def test(self) -> None:
         result = self.bound_template.render(date="20240110063557.920+0000")
         self.assertEqual(result, "2024-01-10T06:35:57.920Z")
-        self._hl7_to_fhir_dtm_mock.assert_called_once_with("20240110063557.920+0000")
 
 
 class NowTest(TestCase, FilterTest):
@@ -252,22 +240,22 @@ class GenerateUuidTest(TestCase, FilterTest):
 class GetPropertTest(TestCase, FilterTest):
     template = """{{ status | get_property: key, property }}"""
 
-    def setUp(self) -> None:
-        self.setup_template(
-            globals={
-                "code_mapping": {
-                    "RequestStatus": {
-                        "fatal": {"code": "severe", "display": "very severe"},
-                        "retry": {"other": "retrying"},
-                        "__default__": {
-                            "code": "bad",
-                            "display": "very bad",
-                            "other": "could be worse",
-                        },
-                    }
-                }
+    template_globals: dict = {
+        "code_mapping": {
+            "RequestStatus": {
+                "fatal": {"code": "severe", "display": "very severe"},
+                "retry": {"other": "retrying"},
+                "__default__": {
+                    "code": "bad",
+                    "display": "very bad",
+                    "other": "could be worse",
+                },
             }
-        )
+        }
+    }
+
+    def setUp(self) -> None:
+        self.setup_template(globals=self.template_globals)
 
     def test_undefined(self) -> None:
         result = self.bound_template.render()

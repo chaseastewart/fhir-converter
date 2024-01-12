@@ -1,26 +1,24 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Generator, Mapping, MutableMapping
+from collections.abc import Callable, Mapping, MutableMapping
 from io import StringIO
-from json import dump as json_dump
-from os import remove as os_remove
-from os import walk as os_walk
 from pathlib import Path
-from typing import IO, Any, NoReturn, Optional, Union
+from typing import IO, Any, NoReturn, Optional, TextIO, Union
 
 from frozendict import frozendict
 from liquid import Environment
 from liquid.loaders import BaseLoader
-from pyjson5 import loads as json5_loads
+from pyjson5 import encode_io
+from pyjson5 import loads as json_loads
 
 from fhir_converter.filters import all_filters, register_filters
 from fhir_converter.hl7 import parse_fhir
 from fhir_converter.loaders import TemplateSystemLoader, get_resource_loader, read_text
 from fhir_converter.tags import all_tags, register_tags
-from fhir_converter.utils import parse_xml, remove_empty_dirs
+from fhir_converter.utils import apply_dir, mkdir, parse_xml, rm_empty_dirs, rm_path
 
 DataInput = Union[str, IO]
-DataOutput = IO
+DataOutput = TextIO
 DataRenderer = Callable[[DataInput, DataOutput, str], None]
 RenderErrorHandler = Callable[[Exception], None]
 
@@ -73,21 +71,15 @@ class CcdaRenderer:
     def _make_globals(self, globals: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
         template_globals = dict(globals or {})
         if "code_mapping" not in template_globals:
-            value_set = json5_loads(
-                read_text(self.env, filename="ValueSet/ValueSet.json")
-            )
+            value_set = json_loads(read_text(self.env, filename="ValueSet/ValueSet.json"))
             template_globals["code_mapping"] = frozendict(value_set.get("Mapping", {}))
         return frozendict(template_globals)
 
     def render_fhir_string(
-        self,
-        template_name: str,
-        xml_in: DataInput,
-        encoding: str = "utf-8",
-        **kwargs,
+        self, template_name: str, xml_in: DataInput, encoding: str = "utf-8"
     ) -> str:
         with StringIO() as buffer:
-            self.render_fhir(template_name, xml_in, buffer, encoding, **kwargs)
+            self.render_fhir(template_name, xml_in, buffer, encoding)
             return buffer.getvalue()
 
     def render_fhir(
@@ -96,10 +88,9 @@ class CcdaRenderer:
         xml_in: DataInput,
         fhir_out: DataOutput,
         encoding: str = "utf-8",
-        **kwargs,
     ) -> None:
         """Renders the XML to FHIR writing the generated output to the supplied file
-        like object. Keyword arguments will be forwarded to the json serializer
+        like object
 
         Args:
             template_name (str): The rendering template
@@ -108,10 +99,10 @@ class CcdaRenderer:
             encoding (str, optional): The encoding to use when parsing the XML input.
                 Defaults to "utf-8".
         """
-        json_dump(
-            obj=self.render_to_fhir(template_name, xml_in, encoding),
-            fp=fhir_out,
-            **kwargs,
+        encode_io(
+            self.render_to_fhir(template_name, xml_in, encoding),
+            fp=fhir_out,  # type: ignore
+            supply_bytes=False,
         )
 
     def render_to_fhir(
@@ -131,7 +122,6 @@ class CcdaRenderer:
         template = self.env.get_template(template_name, globals=self.template_globals)
         return parse_fhir(
             json_input=template.render({"msg": parse_xml(xml_input, encoding)}),
-            encoding=encoding,
         )
 
 
@@ -194,27 +184,25 @@ def render_files_to_dir(
     onerror: RenderErrorHandler = fail,
     path_filter: Optional[Callable[[Path], bool]] = None,
 ) -> None:
-    def files_to_render() -> Generator[Path, Any, None]:
-        for root, _, filenames in os_walk(from_dir, onerror=fail):
-            for file_path in filter(path_filter, map(Path, filenames)):
-                yield Path(root).joinpath(file_path)
-
-    try:
-        for from_file in files_to_render():
-            if not flatten and from_dir != from_file.parent:
+    def render_files(root: Path, _, filenames: list[str]) -> None:
+        for file_path in filter(path_filter, map(Path, filenames)):
+            from_file = root.joinpath(file_path)
+            if not flatten and from_dir != root:
                 to_file_dir = to_dir.joinpath(
                     *[p for p in from_file.parts[:-1] if p not in from_dir.parts]
                 )
-                if not to_file_dir.is_dir():
-                    to_file_dir.mkdir(parents=True, exist_ok=True)
+                mkdir(to_file_dir, parents=True, exist_ok=True)
             else:
                 to_file_dir = to_dir
             render_to_dir(render, from_file, to_file_dir, extension, encoding, onerror)
+
+    try:
+        apply_dir(render_files, from_dir)
     except Exception as e:
         onerror(RenderingError(f"Failed to render {from_dir}", e))
     finally:
         if not flatten:
-            remove_empty_dirs(to_dir)
+            rm_empty_dirs(to_dir)
 
 
 def render_to_dir(
@@ -232,10 +220,7 @@ def render_to_dir(
                 with open(out_path, "w", encoding=encoding) as data_out:
                     render(data_in, data_out, encoding)
             except Exception as e:
-                try:
-                    os_remove(out_path)
-                except OSError:
-                    pass
+                rm_path(out_path)
                 raise e
     except Exception as e:
         onerror(RenderingError(f"Failed to render {from_file}", e))

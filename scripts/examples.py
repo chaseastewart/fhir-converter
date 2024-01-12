@@ -10,7 +10,7 @@ from fhir_converter.renderers import (
     render_files_to_dir,
     render_to_dir,
 )
-from fhir_converter.utils import mkdir_if_not_exists
+from fhir_converter.utils import mkdir
 
 templates_dir, sample_data_dir, data_out_dir = (
     Path("data/templates/ccda"),
@@ -19,12 +19,11 @@ templates_dir, sample_data_dir, data_out_dir = (
 )
 
 from_file = sample_data_dir.joinpath("CCD.ccda")
-mkdir_if_not_exists(data_out_dir)
+mkdir(data_out_dir)
 
-# Render the file to string using the rendering defaults indenting the output
+# Render the file to string using the rendering defaults
 with open(from_file) as xml_in:
-    # indent is provided, any other kwargs supported by dump may be provided
-    print(CcdaRenderer().render_fhir_string("CCD", xml_in, indent=1))
+    print(CcdaRenderer().render_fhir_string("CCD", xml_in))
 
 # Create a renderer that will load the user defined templates into the rendering env
 renderer = CcdaRenderer(

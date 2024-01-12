@@ -1,27 +1,28 @@
-from collections.abc import Callable, Generator, MutableMapping
+from collections.abc import Callable, MutableMapping, Sequence
+from os import remove as os_remove
 from os import walk as os_walk
 from pathlib import Path
 from re import compile as re_compile
 from typing import IO, Any, Union
 
-from pyjson5 import loads as json5_loads
+from pyjson5 import loads as json_loads
 from xmltodict import parse as xmltodict_parse
 
 line_endings_regex = re_compile(r"\r\n?|\n")
 
 
-def apply(
-    data: MutableMapping, func: Callable[[MutableMapping, tuple], None]
+def apply_mapping(
+    func: Callable[[MutableMapping, tuple], None], data: MutableMapping
 ) -> MutableMapping:
     for key in set(data.keys()):
         val = data[key]
         if isinstance(val, MutableMapping):
-            apply(val, func)
+            apply_mapping(func, val)
         elif isinstance(val, list):
             new_list = []
             for el in val:
                 if isinstance(el, MutableMapping):
-                    apply(el, func)
+                    apply_mapping(func, el)
                 if el:
                     new_list.append(el)
             if new_list:
@@ -34,15 +35,6 @@ def apply(
         else:
             del data[key]
     return data
-
-
-def remove_null_empty(data: MutableMapping) -> MutableMapping:
-    def _remove_null_empty(d: MutableMapping, key_val: tuple) -> None:
-        key, val = key_val
-        if not val:
-            del d[key]
-
-    return apply(data, _remove_null_empty)
 
 
 def merge_mappings(a: MutableMapping, b: MutableMapping) -> MutableMapping:
@@ -63,17 +55,20 @@ def merge_mappings(a: MutableMapping, b: MutableMapping) -> MutableMapping:
 
 
 def to_list(obj: Any) -> list:
-    if obj is None:
+    if obj is None or not obj:
         return []
     elif isinstance(obj, list):
         return obj
     return [obj]
 
 
-def parse_json(json_input: str, encoding: str = "utf-8") -> MutableMapping:
-    return remove_null_empty(
-        json5_loads(json_input.strip(), encoding=encoding),
-    )
+def parse_json(json_input: str) -> MutableMapping:
+    def remove_null_empty(json: MutableMapping, key_val: tuple) -> None:
+        key, val = key_val
+        if not val:
+            del json[key]
+
+    return apply_mapping(remove_null_empty, json_loads(json_input.strip()))
 
 
 def parse_xml(xml_input: Union[str, IO], encoding: str = "utf-8") -> MutableMapping:
@@ -99,28 +94,42 @@ def parse_xml(xml_input: Union[str, IO], encoding: str = "utf-8") -> MutableMapp
     return data
 
 
-def remove_empty_dirs(parent: Path) -> None:
-    def empty_dirs() -> Generator[Path, Any, None]:
-        for root, dirs, filenames in os_walk(parent):
-            if not dirs and not filenames:
-                dir = Path(root)
-                if dir != parent:
-                    yield dir
+def rm_empty_dirs(parent: Path) -> None:
+    def rmdir(root: Path, dirs: list[str], filenames: list[str]) -> None:
+        if root != parent and not dirs and not filenames:
+            try:
+                root.rmdir()
+            except OSError:
+                pass
 
-    for dir in empty_dirs():
-        try:
-            dir.rmdir()
-        except OSError:
-            pass
+    apply_dir(rmdir, parent)
 
 
-def mkdir_if_not_exists(dir: Path, **kwargs) -> bool:
+def rmdir_if_empty(dir: Path) -> None:
+    if next(dir.iterdir(), None) is None:
+        dir.rmdir()
+
+
+def rm_path(path: Path) -> None:
+    try:
+        os_remove(path)
+    except OSError:
+        pass
+
+
+def apply_dir(func: Callable[[Path, list[str], list[str]], None], dir: Path) -> None:
+    for root, dirs, filenames in os_walk(dir):
+        func(Path(root), dirs, filenames)
+
+
+def mkdir(dir: Path, **kwargs) -> bool:
     if not dir.is_dir():
         dir.mkdir(**kwargs)
         return True
     return False
 
 
-def rmdir_if_empty(dir: Path) -> None:
-    if next(dir.iterdir(), None) is None:
-        dir.rmdir()
+def mkdirs(root: Path, dirnames: Sequence[str], **kwargs) -> None:
+    mkdir(root, **kwargs)
+    for dirname in dirnames:
+        mkdir(root.joinpath(dirname), **kwargs)

@@ -19,15 +19,13 @@ from liquid.filter import (
     with_context,
 )
 from liquid.undefined import Undefined
-from pyjson5 import dumps as json5_dumps
+from pyjson5 import dumps as json_dumps
 
 from fhir_converter.hl7 import (
     Hl7DtmPrecision,
-    get_ccda_components,
-    get_ccda_section_template_ids,
+    get_ccda_section,
     get_template_id_key,
     hl7_to_fhir_dtm,
-    is_template_id,
     to_fhir_dtm,
 )
 from fhir_converter.utils import to_list
@@ -59,7 +57,7 @@ def mapping_filter(_filter: Callable[..., Any]) -> Callable[..., Any]:
 def to_json_string(data: Any) -> str:
     if isinstance(data, Undefined) or not data:
         return ""
-    return json5_dumps(data)
+    return json_dumps(data)
 
 
 @liquid_filter
@@ -132,41 +130,27 @@ def get_property(
 
 
 @mapping_filter
-def get_first_ccda_sections_by_template_id(data: Mapping, template_ids: Any) -> Mapping:
+def get_first_ccda_sections_by_template_id(msg: Mapping, template_ids: Any) -> Mapping:
     sections, search_template_ids = {}, list(
         filter(None, str_arg(template_ids).split("|"))
     )
-    if search_template_ids and data:
-        components = get_ccda_components(data)
-        if components:
-            for template_id in search_template_ids:
-                template_id_key = get_template_id_key(template_id)
-                for component in components:
-                    for id in get_ccda_section_template_ids(component):
-                        if is_template_id(id, template_id):
-                            sections[template_id_key] = component["section"]
-                            break
-                    if template_id_key in sections:
-                        break
+    for template_id in search_template_ids:
+        section = get_ccda_section(msg, search_template_ids=[template_id])
+        if section:
+            sections[get_template_id_key(template_id)] = section
     return sections
 
 
 @mapping_filter
 def get_ccda_section_by_template_id(
-    data: Mapping, template_id: Any, *template_ids: Any
+    msg: Mapping, template_id: Any, *template_ids: Any
 ) -> Mapping:
     search_template_ids = [template_id]
     if template_ids:
         search_template_ids += template_ids
-
     search_template_ids = list(filter(None, map(str_arg, flatten(search_template_ids))))
-    if search_template_ids and data:
-        for component in get_ccda_components(data):
-            for id in get_ccda_section_template_ids(component):
-                for template_id in search_template_ids:
-                    if is_template_id(id, template_id):
-                        return component["section"]
-    return {}
+    section = get_ccda_section(msg, search_template_ids)
+    return section or {}
 
 
 @with_context

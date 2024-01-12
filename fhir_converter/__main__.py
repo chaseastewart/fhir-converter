@@ -1,7 +1,7 @@
 import argparse
 import os
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -9,7 +9,7 @@ from shutil import get_terminal_size
 from textwrap import dedent, indent
 from time import time
 from traceback import print_exception
-from typing import Any, Optional
+from typing import Optional
 
 from liquid import Environment
 from psutil import Process
@@ -24,7 +24,7 @@ from fhir_converter.renderers import (
     render_files_to_dir,
     render_to_dir,
 )
-from fhir_converter.utils import mkdir_if_not_exists, rmdir_if_empty
+from fhir_converter.utils import mkdir, rmdir_if_empty
 
 
 def main(argv: Sequence[str], prog: Optional[str] = None) -> None:
@@ -61,7 +61,6 @@ def get_renderer(args: argparse.Namespace) -> DataRenderer:
     return partial(
         CcdaRenderer(get_user_defined_environment(args)).render_fhir,
         args.template_name,
-        **get_user_defined_options(args),
     )
 
 
@@ -73,15 +72,8 @@ def get_user_defined_environment(args: argparse.Namespace) -> Optional[Environme
     return None
 
 
-def get_user_defined_options(args: argparse.Namespace) -> Mapping[str, Any]:
-    options = {}
-    if args.indent:
-        options["indent"] = args.indent
-    return options
-
-
 def render(render: DataRenderer, args: argparse.Namespace) -> None:
-    to_dir_created = mkdir_if_not_exists(args.to_dir)
+    to_dir_created = mkdir(args.to_dir)
     try:
         if args.from_dir:
             render_files_to_dir(
@@ -162,12 +154,6 @@ def get_argparser(prog: Optional[str] = None) -> argparse.ArgumentParser:
         metavar="<str>",
         help="The liquid template to use when rendering the file",
         required=True,
-    )
-    parser.add_argument(
-        "--indent",
-        type=int,
-        metavar="<int>",
-        help="The indentation amount or level. 0 is none.",
     )
     parser.add_argument(
         "--continue_on_error",
