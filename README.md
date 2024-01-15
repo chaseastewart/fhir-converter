@@ -1,5 +1,6 @@
+<!--intro-start-->
 <p align="center">
-  <img src="https://chaseastewart.github.io/fhir-converter/logo.png" width="360" alt="Python FHIR Converter"/>
+  <img src="https://github.com/chaseastewart/fhir-converter/blob/main/logo.png?raw=true" width="360" alt="Python FHIR Converter"/>
 </p>
 <p align="center">
     <em>Python FHIR converter, fastish, most nuts and bolts included, ready for production</em>
@@ -28,25 +29,26 @@
 
 ---
 
-Provides a python native version of [FHIR-Converter](https://github.com/microsoft/FHIR-Converter) written in C#.
+Provides a python implementation of [FHIR-Converter](https://github.com/microsoft/FHIR-Converter) written in **C#**. This allows the data transformation to live
+and breath as any other python module in your favorite python based data pipeline framework
 
-The key features are:
+Key features:
 
-* **Fastish**: Minimize overhead outside the rendering engine 
+* **Fast**: Speed is relative. Minimizes overhead outside the rendering engine
 * **Move fast**: Designed to be extensibile. Use the thin rendering API or leverage the builtin parts
-* **Easy**: Designed to be easy to use, extend and deploy
-* **Robust**: Get production-ready code
+* **Easy**: Designed to be easy to use, extend and deploy. Use what's bundled or manage the environment your way
 
 Limitations:
-* **Only CDA->FHIR** is currently builtin. Additional work is needed to implement the filters, etc to support FHIR->FHIR and HL7v2->FHIR and back.
-* **Python-liquid requires** a comma between parameters to filters. This does not appear to be a restriction with DotLiquid. As a result templates brought to this environment may need commas added.
+
+* **Only CDA->FHIR** is currently builtin. Additional work is needed to implement the filters, etc to support FHIR->FHIR and HL7v2->FHIR.
+* **Python-liquid requires** a comma between parameters. This does not appear to be a restriction with DotLiquid. As a result templates brought to this environment may need commas added.
 
 Built on the back of:
 
 * [FHIR-Converter](https://github.com/microsoft/FHIR-Converter)
 * [python-liquid](https://github.com/jg-rp/liquid)
 
-
+<!--intro-end-->
 **Table of Contents**
 
 - [Install](#install)
@@ -58,6 +60,7 @@ Built on the back of:
 - [Related Projects](#related-projects)
 
 
+<!--body-start-->
 ## Install
 
 Install Python FHIR Converter using [Pipenv](https://pipenv.pypa.io/en/latest/):
@@ -72,11 +75,13 @@ Or [pip](https://pip.pypa.io/en/stable/getting-started/):
 $ pip install python-fhir-converter
 ```
 
+
 ## Links
 
-- PyPi: https://pypi.org/project/python-fhir-converter/
-- Source Code: https://github.com/chaseastewart/fhir-converter
-- Issue Tracker: https://github.com/chaseastewart/fhir-converter/issues
+- [Documentation](https://chaseastewart.github.io/fhir-converter/): https://chaseastewart.github.io/fhir-converter/
+- [PyPi](https://pypi.org/project/python-fhir-converter/): https://pypi.org/project/python-fhir-converter/
+- [Source](https://github.com/chaseastewart/fhir-converter): https://github.com/chaseastewart/fhir-converter 
+- [Issues](https://github.com/chaseastewart/fhir-converter/issues): https://github.com/chaseastewart/fhir-converter/issues
 
 
 ## Basic Usage
@@ -103,21 +108,12 @@ Total time: 0.14s
 Finished at: 2024-01-11 10:49:44.182033
 Final Memory: 32M
 ---------------------------------------------------------------
-
-fhir-converter % fhir_converter_cli --template-dir ./data/templates/ccda --from-dir ./data/sample/ccda --to-dir ./data/out --template-name pampi
----------------------------------------------------------------
-RENDER SUCCESS
----------------------------------------------------------------
-Total time: 0.32s
-Finished at: 2024-01-11 10:49:44.182033
-Final Memory: 37M
----------------------------------------------------------------
 ```
 
 
 ## Templates
 
-Templates can be loaded from any python-liquid supported mechanism. To make packaging easier a [ResourceLoader](https://github.com/chaseastewart/fhir-converter/blob/main/fhir_converter/loaders.py#L119) is provided. When a rendering environment is not provided, templates will be loaded from the module [resources](https://github.com/chaseastewart/fhir-converter/tree/main/fhir_converter/templates/ccda). To ease the creation of user defined templates a [TemplateSystemLoader](https://github.com/chaseastewart/fhir-converter/blob/main/fhir_converter/loaders.py#L21) is provided that allows templates to be loaded from a primary and optionally default location. This allows user defined templates to reference templates in the default location. The example user defined [templates](https://github.com/chaseastewart/fhir-converter/tree/main/data/templates/ccda) reuse the default section / header templates.
+Templates can be loaded from any python-liquid supported mechanism. To make packaging easier a [ResourceLoader](https://chaseastewart.github.io/fhir-converter/docstrings/loaders/#class-resourceloader) is provided. When a rendering environment is not provided, templates will be loaded from the module [resources](https://github.com/chaseastewart/fhir-converter/tree/main/fhir_converter/templates/ccda). To ease the creation / resue of templates a [TemplateSystemLoader](https://chaseastewart.github.io/fhir-converter/docstrings/loaders/#class-templatesystemloader) is provided that handles the template name conventions establised by [FHIR-Converter](https://github.com/microsoft/FHIR-Converter). This allows user defined templates to reference existing templates without change. The example user defined [templates](https://github.com/chaseastewart/fhir-converter/tree/main/data/templates/ccda) reuse the default section / header templates.
 
 
 ## Benchmark
@@ -127,11 +123,11 @@ You can run the [benchmark](https://github.com/chaseastewart/fhir-converter/blob
    Ordered by: cumulative time
 
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-        3    0.000    0.000   12.273    4.091 ./scripts/benchmark.py:75(render_samples)
-       22    0.003    0.000   12.272    0.558 ./fhir-converter/fhir_converter/renderers.py:187(render_files_to_dir)
-      484    0.002    0.000   12.258    0.025 ./fhir-converter/fhir_converter/renderers.py:220(render_to_dir)
-      484    0.010    0.000   12.172    0.025 ./fhir-converter/fhir_converter/renderers.py:93(render_fhir)
-      484    0.003    0.000   12.004    0.025 ./fhir-converter/fhir_converter/renderers.py:117(render_to_fhir)
+        3    0.000    0.000   11.164    3.721 ./scripts/benchmark.py:75(render_samples)
+       22    0.003    0.000   11.164    0.507 ./fhir-converter/fhir_converter/renderers.py:187(render_files_to_dir)
+      484    0.002    0.000   11.154    0.023 ./fhir-converter/fhir_converter/renderers.py:220(render_to_dir)
+      484    0.010    0.000   11.017    0.023 ./fhir-converter/fhir_converter/renderers.py:93(render_fhir)
+      484    0.003    0.000   10.876    0.022 ./fhir-converter/fhir_converter/renderers.py:117(render_to_fhir)
 ```
 
 
@@ -141,3 +137,4 @@ You can run the [benchmark](https://github.com/chaseastewart/fhir-converter/blob
 - [python-liquid](https://github.com/jg-rp/liquid)
 - [pyjson5](https://github.com/Kijewski/pyjson5)
 - [xmltodict](https://github.com/martinblech/xmltodict)
+<!--body-end-->

@@ -299,7 +299,7 @@ class ParseFhirTest(TestCase):
                 '"id":"8c92075f-ae59-6be3-037f-e2d87e29185a","meta":{"profile":',
                 '["http://hl7.org/fhir/us/core/StructureDefinition/us-core-observationresults"]},',
                 '"identifier":[{"system":"urn:ietf:rfc:3986","value":"urn:uuid:c03e5445-af1b-4911-a419-e2782f21448c"}]',
-                '}},{"fullUrl":"urn:uuid:8c92075f-ae59-6be3-037f-e2d87e29185a","resource":{"resourceType":',
+                '}},{"fullUrl":"urn:uuid:8c92075f-ae59-6be3-037f","resource":{"resourceType":',
                 '"Observation","id":"8c92075f-ae59-6be3-037f-e2d87e29185a","effectiveDateTime":',
                 '"2014-10-01T10:30:26-05:00","bodySite":{"coding":[{"code":"302509004","display":',
                 '"Entire Heart","system":"http://snomed.info/sct"}]}}}]}',

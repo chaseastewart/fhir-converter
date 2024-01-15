@@ -1,44 +1,45 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 from importlib_resources import Package, files
 from liquid import BoundTemplate, Context, Environment
 from liquid.exceptions import TemplateNotFound
-from liquid.loaders import (
-    BaseLoader,
-    FileExtensionLoader,
-    FileSystemLoader,
-    TemplateNamespace,
-    TemplateSource,
-)
+from liquid.loaders import BaseLoader, ChoiceLoader, TemplateNamespace, TemplateSource
 from liquid.utils import LRUCache
 
 
-class TemplateSystemLoader(BaseLoader):
+class CachedChoiceLoader(ChoiceLoader):
+    """A choice loader that caches parsed templates in memory
+
+    Args:
+        loaders: A list of loaders implementing `liquid.loaders.BaseLoader`
+        auto_reload (bool, optional): If `True`, automatically reload a cached template
+            if it has been updated. Defaults to True
+        cache_size (int, optional): The maximum number of templates to hold in the cache
+            before removing the least recently used template. Defaults to 300
+    """
+
     caching_loader = True
 
     def __init__(
         self,
-        loader: BaseLoader,
+        loaders: list[BaseLoader],
         auto_reload: bool = True,
         cache_size: int = 300,
-        defaults_loader: Optional[BaseLoader] = None,
     ) -> None:
-        self.loader = loader
-        self.defaults_loader = defaults_loader
+        super().__init__(loaders)
         self.auto_reload = auto_reload
         self.is_caching = cache_size > 0
-        self.cache = LRUCache(capacity=cache_size)
+        self.cache = LRUCache(capacity=cache_size) if self.is_caching else {}
 
     def load(
-        self, env: Environment, name: str, globals: TemplateNamespace = None
+        self, env: Environment, name: str, globals: Optional[TemplateNamespace] = None
     ) -> BoundTemplate:
-        return self.check_cache(
-            env,
+        return self._check_cache(
             cache_key=name,
             globals=globals,
             load_func=partial(super().load, env, name, globals),
@@ -51,8 +52,7 @@ class TemplateSystemLoader(BaseLoader):
         globals: Optional[TemplateNamespace] = None,
         **kwargs: object,
     ) -> BoundTemplate:
-        return self.check_cache(
-            env,
+        return self._check_cache(
             cache_key=name,
             globals=globals,
             load_func=partial(super().load_with_args, env, name, globals, **kwargs),
@@ -61,8 +61,7 @@ class TemplateSystemLoader(BaseLoader):
     def load_with_context(
         self, context: Context, name: str, **kwargs: str
     ) -> BoundTemplate:
-        return self.check_cache(
-            context.env,
+        return self._check_cache(
             cache_key=name,
             globals=context.globals,
             load_func=partial(
@@ -70,9 +69,8 @@ class TemplateSystemLoader(BaseLoader):
             ),
         )
 
-    def check_cache(
+    def _check_cache(
         self,
-        env: Environment,
         cache_key: str,
         globals: TemplateNamespace,
         load_func: Callable[[], BoundTemplate],
@@ -93,36 +91,25 @@ class TemplateSystemLoader(BaseLoader):
                 self.cache[cache_key] = template
             return template
 
-    def get_source(
-        self,
-        env: Environment,
-        name: str,
-    ) -> TemplateSource:
-        template_name = self.resolve_template_name(name)
-        try:
-            return self.loader.get_source(env, template_name)
-        except TemplateNotFound as e:
-            if self.defaults_loader:
-                return self.defaults_loader.get_source(env, template_name)
-            raise e
-
-    def resolve_template_name(self, template_name: str) -> str:
-        template_path = Path(template_name)
-        parts = template_path.parts
-        if len(parts) > 1:
-            tail = parts[-1]
-            if not tail.endswith(".json") and not tail.startswith("_"):
-                template_path = template_path.with_name("_" + tail)
-        return str(template_path)
-
 
 class ResourceLoader(BaseLoader):
+    """A template loader that will load templates from the package resources
+
+    Args:
+        search_package (Package): The package to load templates from
+        encoding (str, optional): The encoding to use loading the template source
+                Defaults to "utf-8".
+        ext (str, optional): The extension to use when one isn't provided
+                Defaults to ".liquid".
+    """
+
     def __init__(
         self,
         search_package: Package,
         encoding: str = "utf-8",
         ext: str = ".liquid",
     ) -> None:
+        super().__init__()
         self.search_package = search_package
         self.encoding = encoding
         self.ext = ext
@@ -142,19 +129,49 @@ class ResourceLoader(BaseLoader):
             raise TemplateNotFound(template_name)
 
 
+class TemplateSystemLoader(CachedChoiceLoader):
+    """TemplateSystemLoader allows templates to be loaded from a primary and optionally secondary
+    location(s). This allows templates to include / render templates from the other location(s)
+
+    Template Names Resolution:
+    Any template (non json file) that is in a subdirectory will have _ prepended to the name
+    Ex: Section/Immunization -> Section/_Immunization
+
+    See ``CachedChoiceLoader`` for more information
+    """
+
+    def get_source(
+        self,
+        env: Environment,
+        name: str,
+    ) -> TemplateSource:
+        return super().get_source(env, self._resolve_template_name(name))
+
+    def _resolve_template_name(self, template_name: str) -> str:
+        template_path = Path(template_name)
+        parts = template_path.parts
+        if len(parts) > 1:
+            tail = parts[-1]
+            if not tail.endswith(".json") and not tail.startswith("_"):
+                template_path = template_path.with_name("_" + tail)
+        return str(template_path)
+
+
 def read_text(env: Environment, filename: str) -> str:
-    return env.loader.get_source(env, filename).source
+    """read_text Reads the text from the given filename using the Environment's
+    loader to retrieve the file's contents
 
+    Args:
+        env (Environment): the rendering environment
+        filename (str): the name of the file
 
-def get_file_system_loader(
-    search_path: Union[str, Path, Iterable[Union[str, Path]]],
-    **kwargs,
-) -> FileSystemLoader:
-    return FileExtensionLoader(search_path=search_path, **kwargs)
+    Returns:
+        str: the contents of the file if the file could be found
 
-
-def get_resource_loader(
-    search_package: Package,
-    **kwargs,
-) -> ResourceLoader:
-    return ResourceLoader(search_package=search_package, **kwargs)
+    Raises:
+        FileNotFoundError: when the file could not be found
+    """
+    try:
+        return env.loader.get_source(env, filename).source
+    except TemplateNotFound:
+        raise FileNotFoundError(f"File not found {filename}")

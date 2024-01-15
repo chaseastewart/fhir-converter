@@ -1,7 +1,6 @@
 import argparse
 import os
 import sys
-from collections.abc import Sequence
 from datetime import datetime
 from functools import partial
 from pathlib import Path
@@ -11,10 +10,9 @@ from time import time
 from traceback import print_exception
 from typing import Optional
 
-from liquid import Environment
+from liquid import Environment, FileExtensionLoader
 from psutil import Process
 
-from fhir_converter.loaders import get_file_system_loader
 from fhir_converter.renderers import (
     CcdaRenderer,
     DataRenderer,
@@ -24,10 +22,10 @@ from fhir_converter.renderers import (
     render_files_to_dir,
     render_to_dir,
 )
-from fhir_converter.utils import mkdir, rmdir_if_empty
+from fhir_converter.utils import del_path_quietly, mkdir
 
 
-def main(argv: Sequence[str], prog: Optional[str] = None) -> None:
+def main(argv: list[str], prog: Optional[str] = None) -> None:
     argparser = get_argparser(prog)
     try:
         args = parse_args(argparser, argv)
@@ -66,9 +64,7 @@ def get_renderer(args: argparse.Namespace) -> DataRenderer:
 
 def get_user_defined_environment(args: argparse.Namespace) -> Optional[Environment]:
     if args.template_dir:
-        return get_environment(
-            loader=get_file_system_loader(search_path=args.template_dir)
-        )
+        return get_environment(loader=FileExtensionLoader(search_path=args.template_dir))
     return None
 
 
@@ -92,8 +88,9 @@ def render(render: DataRenderer, args: argparse.Namespace) -> None:
                 onerror=get_onerror(args),
             )
     finally:
+        # clean up the to_dir if its empty
         if to_dir_created:
-            rmdir_if_empty(args.to_dir)
+            del_path_quietly(args.to_dir)
 
 
 def get_onerror(args: argparse.Namespace) -> RenderErrorHandler:
@@ -172,9 +169,7 @@ def absolute_path(path: str) -> Path:
     return Path(path).absolute()
 
 
-def parse_args(
-    argparser: argparse.ArgumentParser, argv: Sequence[str]
-) -> argparse.Namespace:
+def parse_args(argparser: argparse.ArgumentParser, argv: list[str]) -> argparse.Namespace:
     args = argparser.parse_args(argv)
     if not args.from_dir and not args.from_file:
         argparser.error("Either --from-file or --from-dir must be specified.")

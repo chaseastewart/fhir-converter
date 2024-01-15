@@ -17,6 +17,9 @@ from fhir_converter.hl7 import Hl7DtmPrecision
 
 
 class FilterTest:
+    """Base Test that doesn't extend TestCase to avoid the generic
+    test(s) from being executed on the base"""
+
     template: str
     bound_template: BoundTemplate
 
@@ -115,11 +118,11 @@ class GzipTest(TestCase, FilterTest):
 
     def test_undefined(self) -> None:
         result = self.bound_template.render()
-        self.assertEqual("", self.decode(result))
+        self.assertEqual("", result)
 
     def test_empty_content(self) -> None:
         result = self.bound_template.render(content="")
-        self.assertEqual("", self.decode(result))
+        self.assertEqual("", result)
 
     def test_content(self) -> None:
         result = self.bound_template.render(content="test")
@@ -134,11 +137,11 @@ class Sha1HashTest(TestCase, FilterTest):
 
     def test_undefined(self) -> None:
         result = self.bound_template.render()
-        self.assertEqual(result, "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+        self.assertEqual("", result)
 
     def test_empty_content(self) -> None:
         result = self.bound_template.render(content="")
-        self.assertEqual(result, "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+        self.assertEqual("", result)
 
     def test_content(self) -> None:
         result = self.bound_template.render(content="test")

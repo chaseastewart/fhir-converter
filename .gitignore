@@ -35,3 +35,7 @@ coverage.xml
 junit/
 htmlcov/
 .pytest_cache
+
+#mkdocs
+site/
+docs/docstrings/

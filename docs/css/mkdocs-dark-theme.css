@@ -1,0 +1,175 @@
+@import url("github-dark-dimmed.css");
+
+html {
+    --color-scale-white: #ffffff;
+    --color-scale-gray-0: #f0f6fc; 
+    --color-scale-gray-1: #c9d1d9;
+    --color-scale-gray-2: #b1bac4;
+    --color-scale-gray-3: #8b949e;
+    --color-scale-gray-4: #6e7681;
+    --color-scale-gray-5: #484f58;
+    --color-scale-gray-6: #30363d;
+    --color-scale-gray-7: #21262d;
+    --color-scale-gray-8: #161b22;
+    --color-scale-gray-9: #0d1117;
+    --color-scale-black: #010409;
+    --color-scale-blue-0: #cae8ff;
+    --color-scale-blue-1: #a5d6ff;
+    --color-scale-blue-2: #79c0ff;
+    --color-scale-blue-3: #58a6ff;
+    --color-scale-blue-4: #388bfd;
+    --color-scale-blue-5: #1f6feb;
+    --color-scale-blue-6: #1158c7;
+    --color-scale-blue-7: #0d419d;
+    --color-scale-blue-8: #0c2d6b;
+    --color-scale-blue-9: #051d4d;
+    --color-scale-purple-0: #eddeff;
+    --color-scale-purple-1: #e2c5ff;
+    --color-scale-purple-2: #d2a8ff;
+    --color-scale-purple-3: #bc8cff;
+    --color-scale-purple-4: #a371f7;
+    --color-scale-purple-5: #8957e5;
+    --color-scale-purple-6: #6e40c9;
+    --color-scale-purple-7: #553098;
+    --color-scale-purple-8: #3c1e70;
+    --color-scale-purple-9: #271052;
+}
+
+html,
+body {
+    background-color: var(--color-scale-gray-9);
+    color: var(--color-scale-gray-0);
+}
+
+html .md-nav--primary .md-nav__title~.md-nav__list {
+    background-color: var(--color-scale-gray-9);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--color-scale-gray-0) !important;
+}
+
+.wy-nav-content-wrap {
+    background: var(--color-scale-gray-9);
+}
+
+.wy-nav-content {
+    background: var(--color-scale-gray-9);
+}
+
+.wy-nav-top {
+    background: var(--color-scale-gray-9);
+}
+
+.wy-side-nav-search {
+    background: var(--color-scale-gray-9);
+}
+
+.wy-nav-side {
+    background: var(--color-scale-gray-8);
+}
+
+.rst-content code {
+    border: None;
+    background-color: var(--color-scale-gray-8) !important;
+    color: var(--color-scale-gray-1) !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+}
+
+.rst-content :not(dl.option-list)>:not(dt):not(kbd):not(.kbd)>.kbd,
+.rst-content :not(dl.option-list)>:not(dt):not(kbd):not(.kbd)>kbd {
+    background-color: var(--color-scale-gray-8) !important;
+    border: None;
+    box-shadow: None;
+}
+
+a:visited {
+    color: var(--color-scale-blue-5);
+}
+
+.wy-side-nav-search a:visited {
+    color: var(--color-scale-gray-0);
+}
+
+a:hover {
+    color: var(--color-scale-blue-5);
+}
+
+a {
+    color: var(--color-scale-blue-5);
+}
+
+.wy-menu-vertical header,
+.wy-menu-vertical p.caption {
+    color: var(--color-scale-purple-5);
+}
+
+.wy-menu-vertical li.current>a,
+.wy-menu-vertical li.on a {
+    background-color: var(--color-scale-gray-9);
+    color: var(--color-scale-gray-0);
+}
+
+.wy-menu-vertical li.current>a:hover,
+.wy-menu-vertical li.on a:hover {
+    background: var(--color-scale-gray-7);
+}
+
+.wy-menu-vertical li.current {
+    background: var(--color-scale-gray-8);
+}
+
+.wy-menu-vertical a:hover {
+    background-color: var(--color-scale-gray-7);
+}
+
+.wy-menu-vertical li.current a:hover {
+    background: var(--color-scale-gray-7)
+}
+
+.wy-menu-vertical li.current li.toctree-l2.current a:hover {
+    background: var(--color-scale-gray-7)
+}
+
+
+.wy-menu-vertical li.toctree-l1.current>a {
+    border-bottom: None;
+    border-top: None;
+    background: var(--color-scale-gray-8)
+}
+
+.wy-menu-vertical li.toctree-l2 a,
+.wy-menu-vertical li.toctree-l3 a,
+.wy-menu-vertical li.toctree-l4 a,
+.wy-menu-vertical li.toctree-l5 a,
+.wy-menu-vertical li.toctree-l6 a,
+.wy-menu-vertical li.toctree-l7 a,
+.wy-menu-vertical li.toctree-l8 a,
+.wy-menu-vertical li.toctree-l9 a,
+.wy-menu-vertical li.toctree-l10 a {
+    color: var(--color-scale-gray-0);
+}
+
+.wy-menu-vertical li.toctree-l2.current>a,
+.wy-menu-vertical li.toctree-l2.current li.toctree-l3>a {
+    background: var(--color-scale-gray-8)
+}
+
+.wy-menu-vertical li.toctree-l3.current>a,
+.wy-menu-vertical li.toctree-l3.current li.toctree-l4>a {
+    background: var(--color-scale-gray-8)
+}   
+
+.wy-side-nav-search input[type=text] {
+    color: var(--color-scale-black);
+}
+
+.wy-form ::placeholder {
+    color: var(--color-scale-black);
+}

@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "python-fhir-converter"
-version = "0.0.18"
+version = "0.0.19"
 authors = ["Chase Stewart <chase.a.stewart@outlook.com>"]
 description = "Transformation utility to translate data formats into FHIR"
 readme = "README.md"
@@ -49,6 +49,9 @@ types-psutil = "^5.9.5.17"
 flake8 = "^7.0.0"
 mypy = "^1.8.0"
 smokeshow = "^0.4.0"
+lazydocs = "^0.4.8"
+mkdocs-awesome-pages-plugin = "^2.9.2"
+mkdocs-include-markdown-plugin = "^6.0.4"
 
 [tool.poetry.scripts]
 fhir_converter_cli  = "fhir_converter.__main__:entrypoint"

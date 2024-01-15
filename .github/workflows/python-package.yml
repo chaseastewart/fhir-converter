@@ -9,6 +9,10 @@ on:
 permissions:
   statuses: write
 
+concurrency:
+    group: "package"
+    cancel-in-progress: false
+
 jobs:
   linting-check:
     runs-on: ubuntu-latest

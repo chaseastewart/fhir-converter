@@ -108,6 +108,7 @@ class EvaluateNode(Node):
                 linenum=self.tok.linenum,
                 node=None,
                 expression=self.template_name,
+                template_scope=[self.name],
                 block_scope=block_scope,
                 load_mode="include",
                 load_context={"tag": "evaluate"},
@@ -175,8 +176,16 @@ def _parse_argument(stream: ExprTokenStream) -> tuple[str, Expression]:
 
 
 all_tags: Sequence[type[Tag]] = [EvaluateTag]
+"""Sequence[type[Tag]]: All of the tags provided by the module"""
 
 
 def register_tags(env: Environment, tags: Iterable[type[Tag]]) -> None:
+    """register_tags Adds the given tags to the Environment as long as a tag
+    with the same name has not already been added
+
+    Args:
+        env (Environment): The rendering environment
+        tags (Iterable[type[Tag]]): The tags to register / add
+    """
     for tag in filter(lambda tag: tag.name not in env.tags, tags):
         env.add_tag(tag)

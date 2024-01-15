@@ -1,0 +1,16 @@
+site_name: " "
+site_url: https://chaseastewart.github.io/fhir-converter
+site_author: Chase Stewart
+repo_url: https://github.com/chaseastewart/fhir-converter
+edit_uri: edit/main/docs/
+
+plugins:
+    - include-markdown
+    - awesome-pages
+    - search
+
+theme:
+  name: readthedocs
+
+extra_css:
+  - 'css/mkdocs-dark-theme.css'

@@ -1,11 +1,18 @@
 import time
-from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
 
-from fhir_converter import loaders, renderers, utils
+from liquid import FileExtensionLoader
 
-builtin_templates = (
+from fhir_converter.renderers import (
+    CcdaRenderer,
+    ccda_default_loader,
+    get_environment,
+    render_files_to_dir,
+)
+from fhir_converter.utils import mkdir
+
+builtin_templates = [
     "CCD",
     "ConsultationNote",
     "DischargeSummary",
@@ -15,9 +22,9 @@ builtin_templates = (
     "ProgressNote",
     "ReferralNote",
     "TransferSummary",
-)
+]
 
-user_defined_templates = ("LabsandVitals", "Pampi")
+user_defined_templates = ["LabsandVitals", "Pampi"]
 all_templates = builtin_templates + user_defined_templates
 
 templates_dir, sample_data_dir = (
@@ -37,19 +44,20 @@ def main() -> None:
     from cProfile import Profile
     from pstats import SortKey, Stats
 
-    utils.mkdir(data_out_dir)
-    utils.mkdirs(data_builtin_dir, builtin_templates)
-    utils.mkdirs(data_user_defined_dir, user_defined_templates)
-    utils.mkdirs(data_all_dir, all_templates)
+    mkdir(data_out_dir)
+    mkdirs(data_builtin_dir, builtin_templates)
+    mkdirs(data_user_defined_dir, user_defined_templates)
+    mkdirs(data_all_dir, all_templates)
 
     before = time.perf_counter_ns()
     with Profile() as pr:
-        renderer = renderers.CcdaRenderer()
+        renderer = CcdaRenderer()
         render_samples(renderer, templates=builtin_templates, to_dir=data_builtin_dir)
 
-        renderer = renderers.CcdaRenderer(
-            renderers.get_environment(
-                loader=loaders.get_file_system_loader(search_path=templates_dir)
+        renderer = CcdaRenderer(
+            env=get_environment(
+                loader=FileExtensionLoader(search_path=templates_dir),
+                additional_loaders=[ccda_default_loader],
             )
         )
         render_samples(
@@ -67,15 +75,21 @@ def main() -> None:
 
 
 def render_samples(
-    renderer: renderers.CcdaRenderer, templates: Sequence[str], to_dir: Path, **kwargs
+    renderer: CcdaRenderer, templates: list[str], to_dir: Path, **kwargs
 ) -> None:
     for template in templates:
-        renderers.render_files_to_dir(
+        render_files_to_dir(
             render=partial(renderer.render_fhir, template, **kwargs),
             from_dir=sample_data_dir,
             to_dir=to_dir.joinpath(template),
             path_filter=lambda p: p.suffix in (".ccda", ".xml"),
         )
+
+
+def mkdirs(path: Path, dirnames: list[str], **kwargs) -> None:
+    mkdir(path, **kwargs)
+    for dirname in dirnames:
+        mkdir(path.joinpath(dirname), **kwargs)
 
 
 if __name__ == "__main__":
