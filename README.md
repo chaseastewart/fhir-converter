@@ -1,6 +1,6 @@
 <!--intro-start-->
 <p align="center">
-  <img src="https://github.com/chaseastewart/fhir-converter/blob/main/logo.png?raw=true" width="360" alt="Python FHIR Converter"/>
+  <img src="https://github.com/chaseastewart/fhir-converter/blob/main/logo.png?raw=true" width="400" alt="Python FHIR Converter"/>
 </p>
 <p align="center">
     <em>Python FHIR converter, fastish, most nuts and bolts included, ready for production</em>
@@ -25,23 +25,34 @@
 <a href="https://black.readthedocs.io/en/stable/index.html" target="_blank">
   <img src="https://img.shields.io/badge/code%20style-black-000000.svg?style=flat-square" />
 </a>
+<br>
+<a href="https://pepy.tech/project/python-fhir-converter" target="_blank">
+  <img src="https://static.pepy.tech/badge/python-fhir-converter/month" />
+</a>
 </p>
 
 ---
 
-Provides a python implementation of [FHIR-Converter](https://github.com/microsoft/FHIR-Converter) written in **C#**. This allows the data transformation to live
-and breath as any other python module in your favorite python based data pipeline framework
+Provides a python implementation of [FHIR-Converter](https://github.com/microsoft/FHIR-Converter) written in **C#**. This allows the data transformation to live and breath as any other python module in your favorite python based data pipeline framework
+
+Whats supported:
+
+* **CDA->FHIR R4**
+* **STU3->FHIR R4**
 
 Key features:
 
-* **Fast**: Speed is relative. Minimizes overhead outside the rendering engine
-* **Move fast**: Designed to be extensibile. Use the thin rendering API or leverage the builtin parts
-* **Easy**: Designed to be easy to use, extend and deploy. Use what's bundled or manage the environment your way
+* **Fast.** Speed is relative. Minimizes overhead outside the rendering engine
+* **Designed to be extensibile.** Use the thin rendering API or leverage the builtin parts
+* **Designed to be easy to use, extend and deploy.** Use what's bundled or manage the environment your way
+* **Multiple enhancement / bug corrections** included with the packaged CDA->R4 templates.
 
 Limitations:
 
-* **Only CDA->FHIR** is currently builtin. Additional work is needed to implement the filters, etc to support FHIR->FHIR and HL7v2->FHIR.
-* **Python-liquid requires** a comma between parameters. This does not appear to be a restriction with DotLiquid. As a result templates brought to this environment may need commas added.
+* **Additional work** is needed to support JSON->FHIR, HL7v2->FHIR and FHIR->HL7v2.
+* **Comma between parameters**. Python-liquid **requires** a comma between parameters. Templates brought to this environment may need commas added.
+* **Variable names when passing variables to a snippet**. Python-liquid **requires** the identifier / variable name. Templates brought to this environment may need changes. See [Resource.liquid](https://github.com/chaseastewart/fhir-converter/blob/main/fhir_converter/templates/stu3/Resource.liquid) as an example of a template that has been updated.
+* **C# date format strings** are supported to an extent to mimimize the impact of migrating templates. See [filters](https://github.com/chaseastewart/fhir-converter/blob/cf3311cc2cc0acd3e9105dfc5ba23bb1d06d8393/fhir_converter/filters.py) for more information.
 
 Built on the back of:
 
@@ -113,7 +124,7 @@ Final Memory: 32M
 
 ## Templates
 
-Templates can be loaded from any python-liquid supported mechanism. To make packaging easier a [ResourceLoader](https://chaseastewart.github.io/fhir-converter/docstrings/loaders/#class-resourceloader) is provided. When a rendering environment is not provided, templates will be loaded from the module [resources](https://github.com/chaseastewart/fhir-converter/tree/main/fhir_converter/templates/ccda). To ease the creation / resue of templates a [TemplateSystemLoader](https://chaseastewart.github.io/fhir-converter/docstrings/loaders/#class-templatesystemloader) is provided that handles the template name conventions establised by [FHIR-Converter](https://github.com/microsoft/FHIR-Converter). This allows user defined templates to reference existing templates without change. The example user defined [templates](https://github.com/chaseastewart/fhir-converter/tree/main/data/templates/ccda) reuse the default section / header templates.
+Templates can be loaded from any python-liquid supported mechanism. To make packaging easier a [ResourceLoader](https://chaseastewart.github.io/fhir-converter/docstrings/loaders/#class-resourceloader) is provided. When a rendering environment is not provided, templates will be loaded from the module [resources](https://github.com/chaseastewart/fhir-converter/tree/main/fhir_converter/templates/). To ease the creation / reuse of templates a [TemplateSystemLoader](https://chaseastewart.github.io/fhir-converter/docstrings/loaders/#class-templatesystemloader) is provided that handles the template name conventions establised by [FHIR-Converter](https://github.com/microsoft/FHIR-Converter). This allows user defined templates to reference existing templates without change. The example user defined [templates](https://github.com/chaseastewart/fhir-converter/tree/main/data/templates/ccda) reuse the default section / header templates.
 
 
 ## Benchmark

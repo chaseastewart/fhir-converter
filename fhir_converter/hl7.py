@@ -3,14 +3,18 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from enum import IntEnum
 from math import copysign
+from re import Pattern
 from re import compile as re_compile
 from re import sub as re_sub
-from typing import Any, Dict, Mapping, NamedTuple, Optional, Sequence
+from typing import Any, Dict, Final, Mapping, NamedTuple, Optional, Sequence
 
 from fhir_converter.utils import merge_dict, parse_json, to_list_or_empty
 
-DTM_REGEX = re_compile(r"(\d+(?:\.\d*)?)(?:([+-]\d{2})(\d{2}))?")
-""" The HL7 DTM REGEX for parsing date / times """
+dtm_pattern: Final[Pattern] = re_compile(r"(\d+(?:\.\d*)?)(?:([+-]\d{2})(\d{2}))?")
+"""Final[Pattern]: The HL7 DTM REGEX for parsing date / times """
+
+zero_time_delta: Final[timedelta] = timedelta(0)
+"""Final[timedelta]: Timedelta of zero"""
 
 
 class FhirDtmPrecision(IntEnum):
@@ -111,7 +115,7 @@ def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
     Returns:
         The parsed ``Hl7ParsedDtm``
     """
-    dt_match = DTM_REGEX.match(hl7_input.strip())
+    dt_match = dtm_pattern.match(hl7_input.strip())
     if not dt_match:
         raise ValueError("Malformed HL7 datetime {0}".format(hl7_input))
 
@@ -206,8 +210,7 @@ def to_fhir_dtm(dt: datetime, precision: Optional[FhirDtmPrecision] = None) -> s
         precision = FhirDtmPrecision.SEC
 
     iso_dtm = dt.isoformat(timespec=precision.timespec)
-    off = dt.utcoffset()
-    if off is not None and int(off.total_seconds()) == 0:
+    if dt.utcoffset() == zero_time_delta:
         iso_dtm = iso_dtm[:-6] + "Z"
 
     # TODO HOUR, MIN, SEC

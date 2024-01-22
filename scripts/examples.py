@@ -5,7 +5,9 @@ from liquid import FileExtensionLoader
 from liquid.loaders import DictLoader
 
 from fhir_converter.renderers import (
+    BaseFhirRenderer,
     CcdaRenderer,
+    Stu3FhirRenderer,
     ccda_default_loader,
     get_environment,
     render_files_to_dir,
@@ -14,42 +16,27 @@ from fhir_converter.renderers import (
 from fhir_converter.utils import mkdir
 
 templates_dir, sample_data_dir, data_out_dir = (
-    Path("data/templates/ccda"),
-    Path("data/sample/ccda"),
+    Path("data/templates"),
+    Path("data/sample"),
     Path("data/out"),
 )
-
-from_file = sample_data_dir.joinpath("CCD.ccda")
 mkdir(data_out_dir)
 
-# Render the file to string using the rendering defaults
+ccda_templates_dir = templates_dir.joinpath("ccda")
+ccda_sample_dir = sample_data_dir.joinpath("ccda")
+ccda_data_out_dir = data_out_dir.joinpath("ccda")
+mkdir(ccda_data_out_dir)
+
+stu3_sample_dir = sample_data_dir.joinpath("stu3")
+stu3_data_out_dir = data_out_dir.joinpath("stu3")
+mkdir(stu3_data_out_dir)
+
+renderer: BaseFhirRenderer = CcdaRenderer()
+
+print("Render the ccda file to string using the rendering defaults")
+from_file = ccda_sample_dir.joinpath("CCD.ccda")
 with from_file.open() as xml_in:
-    print(CcdaRenderer().render_fhir_string("CCD", xml_in))
-
-# Create a renderer that will load the user defined templates into the rendering env
-renderer = CcdaRenderer(
-    # Since a default loader is not provided, the default location will be the module
-    env=get_environment(
-        loader=FileExtensionLoader(search_path=templates_dir),
-        additional_loaders=[ccda_default_loader],
-    )
-)
-
-# Render the file to the output directory using the default CCD template
-render_to_dir(
-    render=partial(renderer.render_fhir, "CCD"),
-    from_file=from_file,
-    to_dir=data_out_dir,
-)
-
-# Render all of the sample files to the output directory using the user defined
-# pampi (problems, allergies, meds, procedures, immunizations) template
-render_files_to_dir(
-    render=partial(renderer.render_fhir, "Pampi"),
-    from_dir=sample_data_dir,
-    to_dir=data_out_dir,
-    path_filter=lambda p: p.suffix in (".ccda", ".xml"),
-)
+    print(renderer.render_fhir_string("CCD", xml_in))
 
 
 # Static / Dictonary loader
@@ -66,6 +53,53 @@ renderer = CcdaRenderer(
         additional_loaders=[ccda_default_loader],
     )
 )
+
+print("\nRender the results section with no patient / header information")
 with from_file.open() as xml_in:
-    # Render the results section with no patient / header information
     print(renderer.render_fhir_string("RESULTS", xml_in))
+
+
+# Create a renderer that will load the user defined templates into the rendering env
+renderer = CcdaRenderer(
+    env=get_environment(
+        loader=FileExtensionLoader(search_path=ccda_templates_dir),
+        additional_loaders=[ccda_default_loader],
+    )
+)
+
+print("\nRender the ccda file to the output directory using the CCD template")
+render_to_dir(
+    render=partial(renderer.render_fhir, "CCD"),
+    from_file=from_file,
+    to_dir=ccda_data_out_dir,
+)
+
+print("\nRender all sample ccda files to the output directory using the Pampi template")
+render_files_to_dir(
+    render=partial(renderer.render_fhir, "Pampi"),
+    from_dir=ccda_sample_dir,
+    to_dir=ccda_data_out_dir,
+    path_filter=lambda p: p.suffix in (".ccda", ".xml"),
+)
+
+
+renderer = Stu3FhirRenderer()
+
+print("\nRender the stu3 file to string")
+from_file = stu3_sample_dir.joinpath("Patient.json")
+with from_file.open() as fhir_in:
+    print(renderer.render_fhir_string("Patient", fhir_in))
+
+print("\nRender the stu3 files to the output directory")
+render_to_dir(
+    render=partial(renderer.render_fhir, "Patient"),
+    from_file=from_file,
+    to_dir=stu3_data_out_dir,
+)
+
+from_file = stu3_sample_dir.joinpath("AllergyIntolerance.json")
+render_to_dir(
+    render=partial(renderer.render_fhir, "AllergyIntolerance"),
+    from_file=from_file,
+    to_dir=stu3_data_out_dir,
+)

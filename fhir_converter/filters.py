@@ -1,13 +1,19 @@
 from base64 import b64encode
 from datetime import datetime, timezone
-from functools import wraps
+from functools import partial, wraps
 from hashlib import sha1, sha256
+from re import Match, Pattern
+from re import compile as re_compile
 from re import findall as re_findall
-from typing import Any, Callable, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Callable, Final, Iterable, List, Mapping, Sequence, Tuple
 from uuid import UUID
 from zlib import compress as z_compress
 
+from dateutil import parser
+from frozendict import frozendict
+from isodate import isotzinfo, parse_datetime
 from liquid import Environment
+from liquid.builtin.filters.misc import date as liquid_date
 from liquid.context import Context
 from liquid.exceptions import FilterArgumentError
 from liquid.filter import (
@@ -16,6 +22,7 @@ from liquid.filter import (
     sequence_filter,
     string_filter,
     with_context,
+    with_environment,
 )
 from pyjson5 import dumps as json_dumps
 
@@ -26,19 +33,59 @@ from fhir_converter.hl7 import (
     hl7_to_fhir_dtm,
     to_fhir_dtm,
 )
-from fhir_converter.utils import is_none_or_empty, to_list_or_empty
+from fhir_converter.utils import is_undefined_none_or_blank, tail, to_list_or_empty
 
 FilterT = Callable[..., Any]
 """Callable[..., Any]: A liquid filter function"""
 
+date_format_map: Final[Mapping[str, str]] = frozendict(
+    {
+        "yyyy": "%Y",
+        "MM": "%m",
+        "dd": "%d",
+        "HH": "%H",
+        "mm": "%M",
+        "ss": "%S",
+        "%K": "zzz",  # map directive to format code
+    }
+)
+"""Mapping[str, str]: C# reference format to Python format map"""
 
-def str_arg(val: Optional[Any], default: str = "") -> str:
+strf_map: Final[Mapping[str, Callable[[datetime], str]]] = frozendict(
+    {
+        "ffffff": lambda dt: "%06d" % dt.microsecond,
+        "fff": lambda dt: "%03d" % (dt.microsecond // 1000),
+        "zzz": lambda dt: isotzinfo.tz_isoformat(dt, "%Z"),
+        "zz": lambda dt: isotzinfo.tz_isoformat(dt, "%h"),
+    }
+)
+"""Mapping[str, Callable[[datetime], str]]: Format to strf formatting map"""
+
+format_pattern: Final[Pattern] = re_compile(
+    "|".join(["y+", "M+", "d+", "H+", "m+", "s+", "%K"])
+)
+"""C# Date Format Regex Pattern"""
+
+iso_format_pattern: Final[Pattern] = re_compile("|".join(["f+", "z+"]))
+"""ISO format Regex Pattern"""
+
+
+def _repl_format(m: Match) -> str:
+    return date_format_map.get(m.group(0), m.group(0))
+
+
+def _repl_strf_format(dt: datetime, m: Match) -> str:
+    format_f = strf_map.get(m.group(0), None)
+    if format_f is not None:
+        return format_f(dt)
+    return m.group(0)
+
+
+def str_arg(val: Any, default: str = "") -> str:
     """Return `val` as an str or `default` if `val` is none or empty"""
-    if is_none_or_empty(val):
+    if is_undefined_none_or_blank(val):
         return default
-    elif not isinstance(val, str):
-        return str(val)
-    return val
+    return str(val)
 
 
 def mapping_filter(_filter: FilterT) -> FilterT:
@@ -48,11 +95,7 @@ def mapping_filter(_filter: FilterT) -> FilterT:
     def wrapper(val: Any, *args: Any, **kwargs: Any) -> Any:
         if not isinstance(val, Mapping):
             raise FilterArgumentError(f"expected a mapping, found {type(val).__name__}")
-
-        try:
-            return _filter(val, *args, **kwargs)
-        except TypeError as err:
-            raise FilterArgumentError(err) from err
+        return _filter(val, *args, **kwargs)
 
     return wrapper
 
@@ -60,7 +103,7 @@ def mapping_filter(_filter: FilterT) -> FilterT:
 @liquid_filter
 def to_json_string(obj: Any) -> str:
     """Serialize the given object to json"""
-    if is_none_or_empty(obj):
+    if is_undefined_none_or_blank(obj):
         return ""
     return json_dumps(obj)
 
@@ -74,7 +117,7 @@ def to_array(obj: Any) -> List[Any]:
 @string_filter
 def match(data: str, regex: Any) -> List[str]:
     """Find all / match the regex in data"""
-    if is_none_or_empty(data):
+    if is_undefined_none_or_blank(data):
         return []
     return re_findall(str_arg(regex), data)
 
@@ -82,7 +125,7 @@ def match(data: str, regex: Any) -> List[str]:
 @string_filter
 def gzip(data: str) -> str:
     """Compress the string using zlib base64 encoding the output"""
-    if is_none_or_empty(data):
+    if is_undefined_none_or_blank(data):
         return ""
     return b64encode(z_compress(data.encode())).decode()
 
@@ -90,7 +133,7 @@ def gzip(data: str) -> str:
 @string_filter
 def sha1_hash(data: str) -> str:
     """Compute the sha1 hash for the string"""
-    if is_none_or_empty(data):
+    if is_undefined_none_or_blank(data):
         return ""
     return sha1(data.encode()).hexdigest()
 
@@ -98,7 +141,7 @@ def sha1_hash(data: str) -> str:
 @string_filter
 def add_hyphens_date(dtm: str) -> str:
     """Convert the hl7 v2 dtm to a FHIR hl7 v3 dtm with day precision"""
-    if is_none_or_empty(dtm):
+    if is_undefined_none_or_blank(dtm):
         return ""
     return hl7_to_fhir_dtm(dtm, precision=Hl7DtmPrecision.DAY)
 
@@ -106,7 +149,7 @@ def add_hyphens_date(dtm: str) -> str:
 @string_filter
 def format_as_date_time(dtm: str) -> str:
     """Convert the hl7 v2 dtm to a FHIR hl7 v3 dtm"""
-    if is_none_or_empty(dtm):
+    if is_undefined_none_or_blank(dtm):
         return ""
     return hl7_to_fhir_dtm(dtm)
 
@@ -117,10 +160,64 @@ def now(_: str) -> str:
     return to_fhir_dtm(datetime.now(timezone.utc))
 
 
+@with_environment
+@liquid_filter
+def date(
+    input: Any,
+    format: Any,
+    *,
+    environment: Environment,
+) -> str:
+    """date Format the given input date with the provided format
+
+    Compatibility:
+    This filter losely attempts to bridge templates migrating from DotLiquid
+    that use the C# date format codes. This only works for strings that
+    can be parsed to a datetime. The special strings such as today or int
+    values are suppported. Not all possible C# format codes are supported
+
+    Args:
+        input (Any): The input date to format
+        format (Any): The format string
+        environment (Environment): The rendering environment
+
+    Returns:
+        str: the formatted date
+    """
+    if is_undefined_none_or_blank(input):
+        return input
+
+    format = str_arg(format)
+    if not format:
+        return input
+    format = format_pattern.sub(_repl_format, format)
+
+    dat = input
+    if isinstance(dat, str):
+        if dat in ("now", "today"):
+            dat = datetime.now()
+        else:
+            try:
+                dat = parse_datetime(dat)  # strictly iso8601
+            except Exception:
+                try:
+                    dat = parser.parse(dat)  # a bit more flexibility
+                except Exception:
+                    pass
+
+    formatted = liquid_date(dat, format, environment=environment)
+    if not isinstance(dat, datetime):
+        return formatted
+    return iso_format_pattern.sub(
+        partial(_repl_strf_format, dat),
+        formatted,
+    )
+
+
 @string_filter
 def generate_uuid(data: str) -> str:
     """Generate a UUID using the sha256 hash of the given data string"""
-    if is_none_or_empty(data):
+    if is_undefined_none_or_blank(data):
         return ""
     return str(UUID(bytes=sha256(data.encode()).digest()[:16]))
 
@@ -160,6 +257,7 @@ def get_property(
     return code if property in ("code", "display") else ""
 
 
+@liquid_filter
 @mapping_filter
 def get_first_ccda_sections_by_template_id(msg: Mapping, template_ids: Any) -> Mapping:
     """get_first_ccda_sections_by_template_id Get the sections that match the given
@@ -183,6 +281,7 @@ def get_first_ccda_sections_by_template_id(msg: Mapping, template_ids: Any) -> M
     return sections
 
 
+@liquid_filter
 @mapping_filter
 def get_ccda_section_by_template_id(
     msg: Mapping[Any, Any], template_id: Any, *template_ids: Any
@@ -226,13 +325,16 @@ def batch_render(
     Returns:
         str: the rendered output
     """
-    if is_none_or_empty(batch):
+    if is_undefined_none_or_blank(batch):
         return ""
     template = context.get_template_with_context(str_arg(template_name))
     with context.get_buffer() as buffer:
         for data in batch:
             with context.extend(namespace={str_arg(arg_name): data}, template=template):
                 template.render_with_context(context, buffer, partial=True)
+            last_n = tail(buffer).rstrip()
+            if last_n and not last_n.endswith(","):
+                buffer.write(",")
         return buffer.getvalue()
 
 
@@ -245,6 +347,7 @@ all_filters: Sequence[Tuple[str, FilterT]] = [
     ("add_hyphens_date", add_hyphens_date),
     ("format_as_date_time", format_as_date_time),
     ("now", now),
+    ("date", date),
     ("generate_uuid", generate_uuid),
     ("get_property", get_property),
     ("get_first_ccda_sections_by_template_id", get_first_ccda_sections_by_template_id),
@@ -254,13 +357,17 @@ all_filters: Sequence[Tuple[str, FilterT]] = [
 """Sequence[tuple[str, FilterT]]: All of the filters provided by the module"""
 
 
-def register_filters(env: Environment, filters: Iterable[Tuple[str, FilterT]]) -> None:
+def register_filters(
+    env: Environment, filters: Iterable[Tuple[str, FilterT]], replace: bool = False
+) -> None:
     """register_filters Registers the given filters with the supplied Environment. Will not
     replace a filter with the same name already registered with the environment.
 
     Args:
         env (Environment): the environment
         filters (Iterable[tuple[str, FilterT]]): the filters to register
+        replace (bool, optional): whether to replace existing filters. Defaults to False
     """
-    for name, func in filter(lambda f: f[0] not in env.filters, filters):
+    it = filters if replace else filter(lambda f: f[0] not in env.filters, filters)
+    for name, func in it:
         env.add_filter(name, func)

@@ -1,7 +1,10 @@
+from io import BytesIO, StringIO
 from pathlib import Path
+from typing import Mapping
 from unittest import TestCase
 from unittest.mock import patch
 
+from liquid import Undefined
 from pyexpat import ExpatError
 from pyjson5 import Json5EOF
 from pytest import raises
@@ -11,59 +14,63 @@ from fhir_converter.utils import (
     blank_str_to_empty,
     del_empty_dirs_quietly,
     del_path_quietly,
-    is_none_or_empty,
+    is_undefined_none_or_blank,
     join_subpath,
     merge_dict,
     mkdir,
     parse_json,
     parse_xml,
+    tail,
     to_list_or_empty,
     walk_path,
 )
 
 
-class IsNoneOrEmptyTest(TestCase):
+class IsUndefinedNoneOrBlankTest(TestCase):
+    def test_undefined(self) -> None:
+        self.assertTrue(is_undefined_none_or_blank(Undefined("")))
+
     def test_none(self) -> None:
-        self.assertTrue(is_none_or_empty(None))
+        self.assertTrue(is_undefined_none_or_blank(None))
 
     def test_false(self) -> None:
-        self.assertFalse(is_none_or_empty(False))
+        self.assertFalse(is_undefined_none_or_blank(False))
 
     def test_true(self) -> None:
-        self.assertFalse(is_none_or_empty(True))
+        self.assertFalse(is_undefined_none_or_blank(True))
 
     def test_zero(self) -> None:
-        self.assertFalse(is_none_or_empty(0))
+        self.assertFalse(is_undefined_none_or_blank(0))
 
     def test_one(self) -> None:
-        self.assertFalse(is_none_or_empty(1))
+        self.assertFalse(is_undefined_none_or_blank(1))
 
     def test_str_empty(self) -> None:
-        self.assertTrue(is_none_or_empty(""))
+        self.assertTrue(is_undefined_none_or_blank(""))
 
     def test_str_blank(self) -> None:
-        self.assertTrue(is_none_or_empty(" "))
+        self.assertTrue(is_undefined_none_or_blank(" "))
 
     def test_str(self) -> None:
-        self.assertFalse(is_none_or_empty("test"))
+        self.assertFalse(is_undefined_none_or_blank("test"))
 
     def test_list_empty(self) -> None:
-        self.assertTrue(is_none_or_empty([]))
+        self.assertTrue(is_undefined_none_or_blank([]))
 
     def test_list(self) -> None:
-        self.assertFalse(is_none_or_empty(["test"]))
+        self.assertFalse(is_undefined_none_or_blank(["test"]))
 
     def test_tuple_empty(self) -> None:
-        self.assertTrue(is_none_or_empty(()))
+        self.assertTrue(is_undefined_none_or_blank(()))
 
     def test_tuple(self) -> None:
-        self.assertFalse(is_none_or_empty(("test", "ok")))
+        self.assertFalse(is_undefined_none_or_blank(("test", "ok")))
 
     def test_dict_empty(self) -> None:
-        self.assertTrue(is_none_or_empty({}))
+        self.assertTrue(is_undefined_none_or_blank({}))
 
     def test_dict(self) -> None:
-        self.assertFalse(is_none_or_empty({"test": "ok"}))
+        self.assertFalse(is_undefined_none_or_blank({"test": "ok"}))
 
 
 class ToListOrEmptyTest(TestCase):
@@ -187,6 +194,12 @@ class MergeDictTest(TestCase):
 
 
 class ParseJsonTest(TestCase):
+    stu3_file = Path("tests/data/stu3/Person.json")
+
+    def validate_fhir(self, fhir: Mapping) -> None:
+        self.assertIn("gender", fhir)
+        self.assertEqual("male", fhir["gender"])
+
     def test_empty(self) -> None:
         with raises(Json5EOF):
             parse_json("")
@@ -256,41 +269,74 @@ class ParseJsonTest(TestCase):
             parse_json('   {"name": [{"family": "Relative","given": ["Ralph"]}]}   '),
         )
 
+    def test_include_empty_fields(self) -> None:
+        self.assertEqual(
+            {"name": [{"family": "", "given": [""]}]},
+            parse_json(
+                '{"name": [{"family": "","given": [""]}]}', ignore_empty_fields=False
+            ),
+        )
+
+    def test_text(self) -> None:
+        self.validate_fhir(parse_json(self.stu3_file.read_text()))
+
+    def test_bytes(self) -> None:
+        self.validate_fhir(parse_json(self.stu3_file.read_bytes()))
+
+    def test_text_io(self) -> None:
+        with self.stu3_file.open() as stu3_in:
+            self.validate_fhir(parse_json(stu3_in))
+
+    def test_binary_io(self) -> None:
+        with self.stu3_file.open("rb") as stu3_in:
+            self.validate_fhir(parse_json(stu3_in))
+
 
 class ParseXmlTest(TestCase):
-    def test_empty_str(self) -> None:
+    ccda_file = Path("tests/data/ccda/CCD.ccda")
+    empty_file = Path("tests/data/bad_data/empty.ccda")
+
+    def validate_ccda(self, xml: Mapping) -> None:
+        self.assertIn("ClinicalDocument", xml)
+        self.assertIsNotNone(
+            get_ccda_section(xml, search_template_ids="2.16.840.1.113883.10.20.22.2.6.1")
+        )
+
+    def test_empty_text(self) -> None:
         with raises(ExpatError):
             parse_xml("")
 
-    def test_blank_str(self) -> None:
+    def test_blank_text(self) -> None:
         with raises(ExpatError):
             parse_xml(" ")
 
-    def test_empty_file(self) -> None:
+    def test_empty_bytes(self) -> None:
         with raises(ExpatError):
-            with Path("tests/data/bad_data/empty.ccda").open() as xml_in:
+            parse_xml(bytes())
+
+    def test_empty_text_io(self) -> None:
+        with raises(ExpatError):
+            with self.empty_file.open() as xml_in:
                 parse_xml(xml_in)
 
-    def test_empty_file_binary(self) -> None:
+    def test_empty_binary_io(self) -> None:
         with raises(ExpatError):
-            with Path("tests/data/bad_data/empty.ccda").open("rb") as xml_in:
+            with self.empty_file.open("rb") as xml_in:
                 parse_xml(xml_in)
 
-    def test_file(self) -> None:
-        with Path("tests/data/ccda/CCD.ccda").open() as xml_in:
-            xml = parse_xml(xml_in)
-        self.assertIn("ClinicalDocument", xml)
-        self.assertIsNotNone(
-            get_ccda_section(xml, search_template_ids="2.16.840.1.113883.10.20.22.2.6.1")
-        )
+    def test_text(self) -> None:
+        self.validate_ccda(parse_xml(self.ccda_file.read_text()))
 
-    def test_file_binary(self) -> None:
-        with Path("tests/data/ccda/CCD.ccda").open("rb") as xml_in:
-            xml = parse_xml(xml_in)
-        self.assertIn("ClinicalDocument", xml)
-        self.assertIsNotNone(
-            get_ccda_section(xml, search_template_ids="2.16.840.1.113883.10.20.22.2.6.1")
-        )
+    def test_bytes(self) -> None:
+        self.validate_ccda(parse_xml(self.ccda_file.read_bytes()))
+
+    def test_text_io(self) -> None:
+        with self.ccda_file.open() as xml_in:
+            self.validate_ccda(parse_xml(xml_in))
+
+    def test_binary_io(self) -> None:
+        with self.ccda_file.open("rb") as xml_in:
+            self.validate_ccda(parse_xml(xml_in))
 
 
 class JoinSubpathTest(TestCase):
@@ -483,3 +529,43 @@ class WalkPathTest(TestCase):
 
         with raises(StopIteration):
             next(walk)
+
+
+class TailTest(TestCase):
+    def test_empty_text(self) -> None:
+        buffer = StringIO()
+        self.assertEqual("", tail(buffer))
+
+    def test_empty_bytes(self) -> None:
+        buffer = BytesIO()
+        self.assertEqual("", tail(buffer))
+
+    def test_read_all_text(self) -> None:
+        buffer = StringIO()
+        buffer.write("This is a test.")
+        self.assertEqual("This is a test.", tail(buffer))
+
+    def test_read_last_n_text(self) -> None:
+        buffer = StringIO()
+        buffer.write("This is a test.")
+        self.assertEqual("st.", tail(buffer, last_n=3))
+
+    def test_read_last_n_is_negative(self) -> None:
+        buffer = StringIO()
+        buffer.write("This is a test.")
+        self.assertEqual("", tail(buffer, last_n=-3))
+
+    def test_read_last_n_is_zero(self) -> None:
+        buffer = StringIO()
+        buffer.write("This is a test.")
+        self.assertEqual("", tail(buffer, last_n=0))
+
+    def test_read_all_bytes(self) -> None:
+        buffer = BytesIO()
+        buffer.write(b"This is a test.")
+        self.assertEqual("This is a test.", tail(buffer))
+
+    def test_read_last_n_bytes(self) -> None:
+        buffer = BytesIO()
+        buffer.write(b"This is a test.")
+        self.assertEqual("st.", tail(buffer, last_n=3))

@@ -1,0 +1,220 @@
+{% case msg.resourceType -%}
+  {% when "Account" %}
+    {% include 'Account' msg: msg %}
+  {% when "ActivityDefinition" %}
+    {% include 'ActivityDefinition' msg: msg %}
+  {% when "Address" %}
+    {% include 'Address' msg: msg %}
+  {% when "AdverseEvent" %}
+    {% include 'AdverseEvent' msg: msg %}
+  {% when "AllergyIntolerance" %}
+    {% include 'AllergyIntolerance' msg: msg %}
+  {% when "Appointment" %}
+    {% include 'Appointment' msg: msg %}
+  {% when "AppointmentResponse" %}
+    {% include 'AppointmentResponse' msg: msg %}
+  {% when "AuditEvent" %}
+    {% include 'AuditEvent' msg: msg %}
+  {% when "Basic" %}
+    {% include 'Basic' msg: msg %}
+  {% when "Binary" %}
+    {% include 'Binary' msg: msg %}
+  {% when "BodySite" %}
+    {% include 'BodySite' msg: msg %}
+  {% when "Bundle" %}
+    {% include 'Bundle' msg: msg %}
+  {% when "CapabilityStatement" %}
+    {% include 'CapabilityStatement' msg: msg %}
+  {% when "CarePlan" %}
+    {% include 'CarePlan' msg: msg %}
+  {% when "CareTeam" %}
+    {% include 'CareTeam' msg: msg %}
+  {% when "ChargeItem" %}
+    {% include 'ChargeItem' msg: msg %}
+  {% when "Claim" %}
+    {% include 'Claim' msg: msg %}
+  {% when "ClaimResponse" %}
+    {% include 'ClaimResponse' msg: msg %}
+  {% when "ClinicalImpression" %}
+    {% include 'ClinicalImpression' msg: msg %}
+  {% when "CodeSystem" %}
+    {% include 'CodeSystem' msg: msg %}
+  {% when "Communication" %}
+    {% include 'Communication' msg: msg %}
+  {% when "CommunicationRequest" %}
+    {% include 'CommunicationRequest' msg: msg %}
+  {% when "CompartmentDefinition" %}
+    {% include 'CompartmentDefinition' msg: msg %}
+  {% when "Composition" %}
+    {% include 'Composition' msg: msg %}
+  {% when "ConceptMap" %}
+    {% include 'ConceptMap' msg: msg %}
+  {% when "Condition" %}
+    {% include 'Condition' msg: msg %}
+  {% when "Consent" %}
+    {% include 'Consent' msg: msg %}
+  {% when "Contract" %}
+    {% include 'Contract' msg: msg %}
+  {% when "Coverage" %}
+    {% include 'Coverage' msg: msg %}
+  {% when "DetectedIssue" %}
+    {% include 'DetectedIssue' msg: msg %}
+  {% when "Device" %}
+    {% include 'Device' msg: msg %}
+  {% when "DeviceMetric" %}
+    {% include 'DeviceMetric' msg: msg %}
+  {% when "DeviceRequest" %}
+    {% include 'DeviceRequest' msg: msg %}
+  {% when "DeviceUseStatement" %}
+    {% include 'DeviceUseStatement' msg: msg %}
+  {% when "DiagnosticReport" %}
+    {% include 'DiagnosticReport' msg: msg %}
+  {% when "DocumentManifest" %}
+    {% include 'DocumentManifest' msg: msg %}
+  {% when "DocumentReference" %}
+    {% include 'DocumentReference' msg: msg %}
+  {% when "EligibilityRequest" %}
+    {% include 'EligibilityRequest' msg: msg %}
+  {% when "EligibilityResponse" %}
+    {% include 'EligibilityResponse' msg: msg %}
+  {% when "Encounter" %}
+    {% include 'Encounter' msg: msg %}
+  {% when "Endpoint" %}
+    {% include 'Endpoint' msg: msg %}
+  {% when "EnrollmentRequest" %}
+    {% include 'EnrollmentRequest' msg: msg %}
+  {% when "EnrollmentResponse" %}
+    {% include 'EnrollmentResponse' msg: msg %}
+  {% when "EpisodeOfCare" %}
+    {% include 'EpisodeOfCare' msg: msg %}
+  {% when "ExplanationOfBenefit" %}
+    {% include 'ExplanationOfBenefit' msg: msg %}
+  {% when "FamilyMemberHistory" %}
+    {% include 'FamilyMemberHistory' msg: msg %}
+  {% when "Flag" %}
+    {% include 'Flag' msg: msg %}
+  {% when "Goal" %}
+    {% include 'Goal' msg: msg %}
+  {% when "GraphDefinition" %}
+    {% include 'GraphDefinition' msg: msg %}
+  {% when "Group" %}
+    {% include 'Group' msg: msg %}
+  {% when "GuidanceResponse" %}
+    {% include 'GuidanceResponse' msg: msg %}
+  {% when "HealthcareService" %}
+    {% include 'HealthcareService' msg: msg %}
+  {% when "ImagingStudy" %}
+    {% include 'ImagingStudy' msg: msg %}
+  {% when "Immunization" %}
+    {% include 'Immunization' msg: msg %}
+  {% when "ImmunizationRecommendation" %}
+    {% include 'ImmunizationRecommendation' msg: msg %}
+  {% when "ImplementationGuide" %}
+    {% include 'ImplementationGuide' msg: msg %}
+  {% when "Library" %}
+    {% include 'Library' msg: msg %}
+  {% when "Linkage" %}
+    {% include 'Linkage' msg: msg %}
+  {% when "List" %}
+    {% include 'List' msg: msg %}
+  {% when "Location" %}
+    {% include 'Location' msg: msg %}
+  {% when "Measure" %}
+    {% include 'Measure' msg: msg %}
+  {% when "MeasureReport" %}
+    {% include 'MeasureReport' msg: msg %}
+  {% when "Media" %}
+    {% include 'Media' msg: msg %}
+  {% when "Medication" %}
+    {% include 'Medication' msg: msg %}
+  {% when "MedicationAdministration" %}
+    {% include 'MedicationAdministration' msg: msg %}
+  {% when "MedicationDispense" %}
+    {% include 'MedicationDispense' msg: msg %}
+  {% when "MedicationRequest" %}
+    {% include 'MedicationRequest' msg: msg %}
+  {% when "MedicationStatement" %}
+    {% include 'MedicationStatement' msg: msg %}
+  {% when "MessageDefinition" %}
+    {% include 'MessageDefinition' msg: msg %}
+  {% when "MessageHeader" %}
+    {% include 'MessageHeader' msg: msg %}
+  {% when "NamingSystem" %}
+    {% include 'NamingSystem' msg: msg %}
+  {% when "NutritionOrder" %}
+    {% include 'NutritionOrder' msg: msg %}
+  {% when "Observation" %}
+    {% include 'Observation' msg: msg %}
+  {% when "OperationDefinition" %}
+    {% include 'OperationDefinition' msg: msg %}
+  {% when "OperationOutcome" %}
+    {% include 'OperationOutcome' msg: msg %}
+  {% when "Organization" %}
+    {% include 'Organization' msg: msg %}
+  {% when "Parameters" %}
+    {% include 'Parameters' msg: msg %}
+  {% when "Patient" %}
+    {% include 'Patient' msg: msg %}
+  {% when "PaymentNotice" %}
+    {% include 'PaymentNotice' msg: msg %}
+  {% when "PaymentReconciliation" %}
+    {% include 'PaymentReconciliation' msg: msg %}
+  {% when "Person" %}
+    {% include 'Person' msg: msg %}
+  {% when "PlanDefinition" %}
+    {% include 'PlanDefinition' msg: msg %}
+  {% when "Practitioner" %}
+    {% include 'Practitioner' msg: msg %}
+  {% when "PractitionerRole" %}
+    {% include 'PractitionerRole' msg: msg %}
+  {% when "Procedure" %}
+    {% include 'Procedure' msg: msg %}
+  {% when "Provenance" %}
+    {% include 'Provenance' msg: msg %}
+  {% when "Questionnaire" %}
+    {% include 'Questionnaire' msg: msg %}
+  {% when "QuestionnaireResponse" %}
+    {% include 'QuestionnaireResponse' msg: msg %}
+  {% when "RelatedPerson" %}
+    {% include 'RelatedPerson' msg: msg %}
+  {% when "RequestGroup" %}
+    {% include 'RequestGroup' msg: msg %}
+  {% when "ResearchStudy" %}
+    {% include 'ResearchStudy' msg: msg %}
+  {% when "ResearchSubject" %}
+    {% include 'ResearchSubject' msg: msg %}
+  {% when "RiskAssessment" %}
+    {% include 'RiskAssessment' msg: msg %}
+  {% when "Schedule" %}
+    {% include 'Schedule' msg: msg %}
+  {% when "SearchParameter" %}
+    {% include 'SearchParameter' msg: msg %}
+  {% when "Sequence" %}
+    {% include 'Sequence' msg: msg %}
+  {% when "Slot" %}
+    {% include 'Slot' msg: msg %}
+  {% when "Specimen" %}
+    {% include 'Specimen' msg: msg %}
+  {% when "StructureDefinition" %}
+    {% include 'StructureDefinition' msg: msg %}
+  {% when "StructureMap" %}
+    {% include 'StructureMap' msg: msg %}
+  {% when "Subscription" %}
+    {% include 'Subscription' msg: msg %}
+  {% when "Substance" %}
+    {% include 'Substance' msg: msg %}
+  {% when "SupplyDelivery" %}
+    {% include 'SupplyDelivery' msg: msg %}
+  {% when "SupplyRequest" %}
+    {% include 'SupplyRequest' msg: msg %}
+  {% when "Task" %}
+    {% include 'Task' msg: msg %}
+  {% when "TestReport" %}
+    {% include 'TestReport' msg: msg %}
+  {% when "TestScript" %}
+    {% include 'TestScript' msg: msg %}
+  {% when "ValueSet" %}
+    {% include 'ValueSet' msg: msg %}
+  {% when "VisionPrescription" %}
+    {% include 'VisionPrescription' msg: msg %}
+{% endcase -%}

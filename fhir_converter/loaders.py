@@ -142,9 +142,16 @@ class TemplateSystemLoader(CachedChoiceLoader):
     def get_source(
         self,
         env: Environment,
-        name: str,
+        template_name: str,
     ) -> TemplateSource:
-        return super().get_source(env, self._resolve_template_name(name))
+        return super().get_source(env, self._resolve_template_name(template_name))
+
+    def get_source_with_context(
+        self, context: Context, template_name: str, **kwargs: str
+    ) -> TemplateSource:
+        return super().get_source_with_context(
+            context, self._resolve_template_name(template_name), **kwargs
+        )
 
     def _resolve_template_name(self, template_name: str) -> str:
         template_path = Path(template_name)

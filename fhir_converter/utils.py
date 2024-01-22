@@ -1,19 +1,25 @@
 from os import remove as os_remove
 from os import walk as os_walk
 from pathlib import Path
+from re import Pattern
 from re import compile as re_compile
-from typing import IO, Any, Dict, Generator, List, Tuple, Union
+from typing import IO, Any, AnyStr, Dict, Final, Generator, List, Tuple, Union
 
+from liquid import Undefined
 from pyjson5 import loads as json_loads
 from xmltodict import parse as xmltodict_parse
 
-line_endings_regex = re_compile(r"\r\n?|\n")
+DataIn = Union[IO, AnyStr]
+
+line_endings_pattern: Final[Pattern] = re_compile(r"\r\n?|\n")
 
 
-def is_none_or_empty(obj: Any) -> bool:
-    """is_none_or_empty returns whether the object is none or empty
+def is_undefined_none_or_blank(obj: Any) -> bool:
+    """is_undefined_none_or_blank returns whether the object is undefined,
+    none or blank
 
     Will return True for the following::
+        - Undefined
         - None
         - '' (empty string)
         - ' ' (blank string)
@@ -25,9 +31,11 @@ def is_none_or_empty(obj: Any) -> bool:
         obj (Any): the object to check
 
     Returns:
-        bool: returns True if the object is none or empty, otherwise, False
+        bool: returns True if the object is undefined, none or empty, otherwise, False
     """
-    if type(obj) in (int, float, bool):
+    if isinstance(obj, Undefined):
+        return True
+    elif type(obj) in (int, float, bool):
         return False
     elif isinstance(obj, str):
         obj = blank_str_to_empty(obj)
@@ -47,7 +55,7 @@ def to_list_or_empty(obj: Any) -> List[Any]:
     """
     if isinstance(obj, list):
         return obj
-    elif is_none_or_empty(obj):
+    elif is_undefined_none_or_blank(obj):
         return []
     return [obj]
 
@@ -113,7 +121,7 @@ def _remove_empty_json_list(obj: List[Any]) -> List[Any]:
     new_list = []
     for val in obj:
         val = _remove_empty_json(val)
-        if not is_none_or_empty(val):
+        if not is_undefined_none_or_blank(val):
             new_list.append(val)
     return new_list
 
@@ -133,7 +141,7 @@ def _remove_empty_json_dict(obj: Dict[Any, Any]) -> Dict[Any, Any]:
     """
     for key in list(obj.keys()):
         val = _remove_empty_json(obj[key])
-        if not is_none_or_empty(val):
+        if not is_undefined_none_or_blank(val):
             obj[key] = val
         else:
             del obj[key]
@@ -164,21 +172,49 @@ def _remove_empty_json(obj: Any) -> Any:
     return obj
 
 
-def parse_json(json_input: str) -> Any:
-    """parse_json parses the JSON string using a JSON 5 compliant decoder
+def _read_text(data: DataIn, encoding: str = "utf-8") -> str:
+    """read_text Reads the given data using the supplied encoding if the data
+    is not already a string
+
+    Args:
+        data (DataIn): the data to read
+        encoding (str, optional): The character encoding to use. Defaults to "utf-8"
+
+    Returns:
+        str: the text content
+    """
+    if isinstance(data, str):
+        return data
+
+    content = data
+    if not isinstance(content, bytes):
+        content = content.read()
+        if isinstance(content, str):
+            return content
+    return str(content, encoding=encoding)
+
+
+def parse_json(
+    json_in: DataIn, encoding: str = "utf-8", ignore_empty_fields: bool = True
+) -> Any:
+    """parse_json Parses the JSON string using a JSON 5 compliant decoder
 
     Any empty JSON will be removed from decoded output. See remove_empty_json
 
     Args:
-        json_input (str): the json to decode
+        json_in (DataIn): the json to decode
+        encoding (str, optional): The character encoding to use. Defaults to "utf-8"
+        ignore_empty_fields (bool): Whether to ignore empty fields. Defaults to True
 
     Returns:
         Any: the decoded output
     """
-    return _remove_empty_json(json_loads(json_input))
+
+    json = json_loads(_read_text(json_in, encoding))
+    return _remove_empty_json(json) if ignore_empty_fields else json
 
 
-def parse_xml(xml_input: Union[str, IO], encoding: str = "utf-8") -> Dict[str, Any]:
+def parse_xml(xml_in: DataIn, encoding: str = "utf-8") -> Dict[str, Any]:
     """parse_xml Parses the xml imput string or text/binary IO
 
     Wraps xmltodict customizing the output as follows::
@@ -188,20 +224,13 @@ def parse_xml(xml_input: Union[str, IO], encoding: str = "utf-8") -> Dict[str, A
         - Replaces any : characters in keys with _
 
     Args:
-        xml_input (Union[str, IO]): the xml input
+        xml_in (DataIn): the xml input
         encoding (str, optional): The character encoding to use. Defaults to "utf-8"
 
     Returns:
         Dict[str, Any]: the parsed xml
     """
-    if isinstance(xml_input, str):
-        xml = xml_input
-    else:
-        xml = xml_input.read()
-        if not isinstance(xml, str):
-            xml = xml.decode(encoding)
-    xml = line_endings_regex.sub("", xml.strip())
-
+    xml = line_endings_pattern.sub("", _read_text(xml_in))
     data = xmltodict_parse(
         xml,
         encoding=encoding,
@@ -217,7 +246,7 @@ def parse_xml(xml_input: Union[str, IO], encoding: str = "utf-8") -> Dict[str, A
 
 
 def join_subpath(path: Path, parent: Path, child: Path) -> Path:
-    """join_subpath joins the parts from the child relative to the parent
+    """join_subpath Joins the parts from the child relative to the parent
     path to the supplied path. The final file part from child will be
     excluded if child is a file
 
@@ -305,3 +334,22 @@ def walk_path(
     """
     for dir, dirs, filenames in os_walk(path):
         yield (Path(dir), dirs, filenames)
+
+
+def tail(buffer: IO, last_n: int = 25, encoding: str = "utf-8") -> str:
+    """tail Reads the tail from the given file like object
+
+    Args:
+        buffer (IO): the file like object to read from
+        last_n (int, optional): The last n to read up to. Defaults to 25.
+        encoding (str, optional): The character encoding to use. Defaults to "utf-8"
+
+    Returns:
+        str: up to the last n from the file like object or empty string if
+        the object is empty
+    """
+    pos = buffer.tell()
+    if pos <= 0:
+        return ""
+    buffer.seek(pos - min(pos, last_n))
+    return _read_text(buffer, encoding)

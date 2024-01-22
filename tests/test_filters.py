@@ -1,5 +1,5 @@
 from base64 import b64decode
-from datetime import timezone
+from datetime import datetime, timezone
 from unittest import TestCase
 from zlib import decompress
 
@@ -25,15 +25,15 @@ class FilterTest:
 
     def setup_template(self, **kwargs) -> None:
         Environment.output_stream_limit = None
-        env = Environment(strict_filters=True, **kwargs)
-        register_filters(env, all_filters)
-
-        self.template = self.template.strip()
+        env = Environment(**kwargs)
+        register_filters(env, all_filters, replace=True)
         self.bound_template = env.from_string(self.template)
 
     def test_unregistered(self) -> None:
         with raises(NoSuchFilterFunc):
-            Environment().from_string(self.template).render()
+            env = Environment()
+            env.filters.clear()
+            env.from_string(self.template).render()
 
 
 class ToJsonStringTest(TestCase, FilterTest):
@@ -62,7 +62,7 @@ class ToArrayTest(TestCase, FilterTest):
     template = """
         {% assign keys = el.key | to_array -%}
         {% for key in keys -%}{{key}},{% endfor -%}
-        """
+        """.strip()
 
     def setUp(self) -> None:
         self.setup_template()
@@ -198,6 +198,236 @@ class FormatAsDateTimeTest(TestCase, FilterTest):
     def test(self) -> None:
         result = self.bound_template.render(date="20240110063557.920+0000")
         self.assertEqual(result, "2024-01-10T06:35:57.920Z")
+
+
+class DateTest(TestCase, FilterTest):
+    template = """{{ dt | date: format }}"""
+    iso_datetime_complete = "2014-10-09T11:58:10.001981+08:00"
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_undefined(self) -> None:
+        result = self.bound_template.render()
+        self.assertEqual(result, "")
+
+    def test_format_undefined(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete)
+        self.assertEqual(result, self.iso_datetime_complete)
+
+    def test_format_empty_str(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="")
+        self.assertEqual(result, self.iso_datetime_complete)
+
+    def test_format_not_str(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format=[])
+        self.assertEqual(result, self.iso_datetime_complete)
+
+    def test_liquid_date_str(self) -> None:
+        result = self.bound_template.render(dt="March 14, 2016", format="%b %d, %y")
+        self.assertEqual(result, "Mar 14, 16")
+
+    def test_liquid_date_datetime(self) -> None:
+        result = self.bound_template.render(
+            dt=datetime(2002, 1, 1, 11, 45, 13), format="%a, %b %d, %y"
+        )
+        self.assertEqual(result, "Tue, Jan 01, 02")
+
+    def test_liquid_date_now(self) -> None:
+        result = self.bound_template.render(dt="now", format="%Y")
+        self.assertEqual(result, datetime.now().strftime("%Y"))
+
+    def test_liquid_date_today(self) -> None:
+        result = self.bound_template.render(dt="today", format="%Y")
+        self.assertEqual(result, datetime.now().strftime("%Y"))
+
+    def test_liquid_date_unsupported_format(self) -> None:
+        result = self.bound_template.render(dt="today", format="YYYY")
+        self.assertEqual(result, "YYYY")
+
+    def test_unsupported_format(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="ffff")
+        self.assertEqual(result, "ffff")
+
+    def test_year(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="yyyy")
+        self.assertEqual(result, "2014")
+
+    def test_year_python(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%Y")
+        self.assertEqual(result, "2014")
+
+    def test_without_century(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%y")
+        self.assertEqual(result, "14")
+
+    def test_month(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="MM")
+        self.assertEqual(result, "10")
+
+    def test_month_python(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%m")
+        self.assertEqual(result, "10")
+
+    def test_month_locale(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%b")
+        self.assertEqual(result, "Oct")
+
+    def test_month_locale_full(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%B")
+        self.assertEqual(result, "October")
+
+    def test_day(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="dd")
+        self.assertEqual(result, "09")
+
+    def test_day_python(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%d")
+        self.assertEqual(result, "09")
+
+    def test_hour(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="HH")
+        self.assertEqual(result, "11")
+
+    def test_hour_python(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%H")
+        self.assertEqual(result, "11")
+
+    def test_minute(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="mm")
+        self.assertEqual(result, "58")
+
+    def test_minute_python(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%M")
+        self.assertEqual(result, "58")
+
+    def test_second(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="ss")
+        self.assertEqual(result, "10")
+
+    def test_second_python(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%S")
+        self.assertEqual(result, "10")
+
+    def test_milli(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="fff")
+        self.assertEqual(result, "001")
+
+    def test_micro(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="ffffff"
+        )
+        self.assertEqual(result, "001981")
+
+    def test_micro_python(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%f")
+        self.assertEqual(result, "001981")
+
+    def test_k_specifier_tz_undefined(self) -> None:
+        result = self.bound_template.render(dt="2014-10-09T11:58:10", format="%K")
+        self.assertEqual(result, "")
+
+    def test_k_specifier_tz_offset(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%K")
+        self.assertEqual(result, "+08:00")
+
+    def test_k_specifier_tz_offset_zero(self) -> None:
+        result = self.bound_template.render(dt="2014-10-09T11:58:10+00:00", format="%K")
+        self.assertEqual(result, "Z")
+
+    def test_k_specifier_tz_utc(self) -> None:
+        result = self.bound_template.render(dt="2014-10-09T11:58:10Z", format="%K")
+        self.assertEqual(result, "Z")
+
+    def test_tz_hour_min_offset(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="zzz")
+        self.assertEqual(result, "+08:00")
+
+    def test_tz_hour_min_offset_python(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="%z")
+        self.assertEqual(result, "+0800")
+
+    def test_tz_hour_offset(self) -> None:
+        result = self.bound_template.render(dt=self.iso_datetime_complete, format="zz")
+        self.assertEqual(result, "+08")
+
+    def test_year_month(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM"
+        )
+        self.assertEqual(result, "2014-10")
+
+    def test_year_month_day(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM-dd"
+        )
+        self.assertEqual(result, "2014-10-09")
+
+    def test_year_month_day_python(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="%Y-%m-%d"
+        )
+        self.assertEqual(result, "2014-10-09")
+
+    def test_year_month_day_hour(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM-ddTHH"
+        )
+        self.assertEqual(result, "2014-10-09T11")
+
+    def test_year_month_day_hour_minute(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM-ddTHH:mm"
+        )
+        self.assertEqual(result, "2014-10-09T11:58")
+
+    def test_year_month_day_hour_minute_second(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM-ddTHH:mm:ss"
+        )
+        self.assertEqual(result, "2014-10-09T11:58:10")
+
+    def test_year_month_day_hour_minute_second_python(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="%Y-%m-%dT%H:%M:%S"
+        )
+        self.assertEqual(result, "2014-10-09T11:58:10")
+
+    def test_year_month_day_hour_minute_second_k_specifier(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM-ddTHH:mm:ss%K"
+        )
+        self.assertEqual(result, "2014-10-09T11:58:10+08:00")
+
+    def test_year_month_day_hour_minute_second_milli(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM-ddTHH:mm:ss.fff"
+        )
+        self.assertEqual(result, "2014-10-09T11:58:10.001")
+
+    def test_year_month_day_hour_minute_second_milli_k_specifier(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM-ddTHH:mm:ss.fff%K"
+        )
+        self.assertEqual(result, "2014-10-09T11:58:10.001+08:00")
+
+    def test_year_month_day_hour_minute_second_milli_micro(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM-ddTHH:mm:ss.ffffff"
+        )
+        self.assertEqual(result, "2014-10-09T11:58:10.001981")
+
+    def test_year_month_day_hour_minute_second_milli_micro_python(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="%Y-%m-%dT%H:%M:%S.%f"
+        )
+        self.assertEqual(result, "2014-10-09T11:58:10.001981")
+
+    def test_year_month_day_hour_minute_second_milli_micro_k_specifier(self) -> None:
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy-MM-ddTHH:mm:ss.ffffff%K"
+        )
+        self.assertEqual(result, "2014-10-09T11:58:10.001981+08:00")
 
 
 class NowTest(TestCase, FilterTest):
@@ -472,7 +702,7 @@ class GetCcdaSectionByTemplateIdTest(TestCase, FilterTest):
 
 class BatchRenderTest(TestCase, FilterTest):
     template = """{{ batch | batch_render: template, 'data' }}"""
-    inner_template = """{{ data }},"""
+    inner_template = """{{ data }}"""
 
     def setUp(self) -> None:
         self.setup_template(loader=DictLoader({"__template__": self.inner_template}))
@@ -494,6 +724,18 @@ class BatchRenderTest(TestCase, FilterTest):
             batch=["one", "two", "three"], template="__template__"
         )
         self.assertEqual(result, "one,two,three,")
+
+    def test_batch_with_trailing_comma(self) -> None:
+        result = self.bound_template.render(
+            batch=["one,", "two,", "three,"], template="__template__"
+        )
+        self.assertEqual(result, "one,two,three,")
+
+    def test_batch_with_trailing_comma_blank_space_line_endings(self) -> None:
+        result = self.bound_template.render(
+            batch=["one, \n", "two,  \n\n", "three,   \n\n\n"], template="__template__"
+        )
+        self.assertEqual(result, "one, \ntwo,  \n\nthree,   \n\n\n")
 
     def test_template_not_found(self) -> None:
         with raises(TemplateNotFound):

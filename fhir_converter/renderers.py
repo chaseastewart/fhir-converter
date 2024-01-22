@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from io import StringIO
 from pathlib import Path
 from typing import (
     IO,
     Any,
+    AnyStr,
     Callable,
+    Final,
     Iterable,
     Mapping,
     MutableMapping,
@@ -13,6 +16,7 @@ from typing import (
     Optional,
     Sequence,
     TextIO,
+    TypedDict,
     Union,
 )
 
@@ -31,11 +35,12 @@ from fhir_converter.utils import (
     del_path_quietly,
     join_subpath,
     mkdir,
+    parse_json,
     parse_xml,
     walk_path,
 )
 
-DataInput = Union[str, IO]
+DataInput = Union[IO, AnyStr]
 """ Union[str, IO]: The rendering data input types"""
 
 DataOutput = TextIO
@@ -47,8 +52,15 @@ DataRenderer = Callable[[DataInput, DataOutput, str], None]
 RenderErrorHandler = Callable[[Exception], None]
 """Callable[[Exception], None]: Rendering error handling function"""
 
-ccda_default_loader = ResourceLoader(search_package="fhir_converter.templates.ccda")
+ccda_default_loader: Final[ResourceLoader] = ResourceLoader(
+    search_package="fhir_converter.templates.ccda"
+)
 """ResourceLoader: The default loader for the ccda templates"""
+
+stu3_default_loader: Final[ResourceLoader] = ResourceLoader(
+    search_package="fhir_converter.templates.stu3"
+)
+"""ResourceLoader: The default loader for the stu3 templates"""
 
 
 class RenderingError(Exception):
@@ -60,15 +72,23 @@ class RenderingError(Exception):
             self.__cause__ = cause
 
 
-class CcdaRenderer:
-    """Consolidated CDA document renderer. Supports rendering the documents to FHIR
+class FhirRendererDefaults(TypedDict):
+    """The Renderer Defaults"""
+
+    loader: BaseLoader
+
+
+class BaseFhirRenderer(ABC):
+    """Base renderer. Supports rendering data to FHIR
 
     Filters:
         The module provides builtin filters to support the default templates provided
         within the module. Custom filters may be added for user defined templates.
         Consumers must provide the rendering environment with the custom filters
         registered. The builtin filters will be added unless a filter with the same
-        name has already been registered.
+        name has already been registered. This includes filters provided by liquid
+        that are overridden. These overrides are not made since its unknown if the
+        filter is provided by liquid or is custom. See get_environment
 
     Tags:
         The module provides builtin tags to support the default templates provided
@@ -81,23 +101,133 @@ class CcdaRenderer:
         env (Environment, optional): Optional rendering environment. A rendering
             environment will be constructed with builtin defaults when env is None.
             Defaults to None.
-        template_globals (Mapping, optional): Optional mapping that will be added to
-            the render context. Code mappings from ValueSet/ValueSet.json will be
-            loaded from the module when template_globals is None. Defaults to None.
     """
+
+    def __init__(
+        self,
+        env: Optional[Environment] = None,
+    ) -> None:
+        if not env:
+            env = get_environment(**self.defaults())
+        else:
+            register_filters(env, all_filters)  # register if missing
+            register_tags(env, all_tags)
+        self.env = env
+
+    @staticmethod
+    @abstractmethod
+    def defaults() -> FhirRendererDefaults:
+        """_defaults The defaults when a rendering environment is not provided
+
+        Returns:
+            FhirRendererDefaults: The rendering defaults for the renderer
+        """
+        pass
+
+    def render_fhir_string(
+        self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
+    ) -> str:
+        """render_fhir_string Renders the given data to a FHIR
+
+        Args:
+            template_name (str): The rendering template
+            data_in (DataInput): The data input. Either a string or file like object
+            encoding (str, optional): The encoding to use when parsing the data input.
+                Defaults to "utf-8".
+
+        Returns:
+            str: The rendered FHIR as a string
+        """
+        with StringIO() as buffer:
+            self.render_fhir(template_name, data_in, buffer, encoding)
+            return buffer.getvalue()
+
+    def render_fhir(
+        self,
+        template_name: str,
+        data_in: DataInput,
+        data_out: DataOutput,
+        encoding: str = "utf-8",
+    ) -> None:
+        """render_fhir Renders the given data to FHIR writing the generated output
+        to the supplied file like object
+
+        Args:
+            template_name (str): The rendering template
+            data_in (DataInput): The data input. Either a string or file like object
+            data_out (DataOutput): The file like object to write the rendered output
+            encoding (str, optional): The encoding to use when parsing the data input.
+                Defaults to "utf-8".
+
+        Raises:
+            RenderingError: when an error occurs while rendering the input data
+        """
+        fhir = self.render_to_fhir(template_name, data_in, encoding)
+        try:
+            encode_io(
+                fhir,
+                fp=data_out,  # type: ignore
+                supply_bytes=False,
+            )
+        except Exception as e:
+            raise RenderingError("Failed to serialize FHIR", e)
+
+    def render_to_fhir(
+        self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
+    ) -> MutableMapping:
+        """render_to_fhir Renders the given data to FHIR
+
+        Args:
+            template_name (str): The rendering template
+            data_in (DataInput): The data input. Either a string or file like object
+            encoding (str, optional): The encoding to use when parsing the JSON input.
+                Defaults to "utf-8".
+
+        Returns:
+            MutableMapping: The rendered FHIR mappings
+
+        Raises:
+            RenderingError: when an error occurs while rendering the input data
+        """
+        try:
+            return self._render_to_fhir_internal(template_name, data_in, encoding)
+        except Exception as e:
+            raise RenderingError("Failed to render FHIR", e)
+
+    @abstractmethod
+    def _render_to_fhir_internal(
+        self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
+    ) -> MutableMapping:
+        """render_to_fhir_internal Renders the given data to FHIR
+
+        Args:
+            template_name (str): The rendering template
+            data_in (DataInput): The data input. Either a string or file like object
+            encoding (str, optional): The encoding to use when parsing the JSON input.
+                Defaults to "utf-8".
+
+        Returns:
+            MutableMapping: The rendered FHIR
+        """
+        pass
+
+
+class CcdaRenderer(BaseFhirRenderer):
+    """Consolidated CDA document renderer"""
+
+    __slots__ = ("env", "template_globals")
 
     def __init__(
         self,
         env: Optional[Environment] = None,
         template_globals: Optional[Mapping[str, Any]] = None,
     ) -> None:
-        if not env:
-            env = get_environment(loader=ccda_default_loader)
-        register_filters(env, all_filters)
-        register_tags(env, all_tags)
-
-        self.env = env
+        super().__init__(env)
         self.template_globals = self._make_globals(template_globals)
+
+    @staticmethod
+    def defaults() -> FhirRendererDefaults:
+        return {"loader": ccda_default_loader}
 
     def _make_globals(self, globals: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
         template_globals = dict(globals or {})
@@ -106,67 +236,36 @@ class CcdaRenderer:
             template_globals["code_mapping"] = frozendict(value_set.get("Mapping", {}))
         return frozendict(template_globals)
 
-    def render_fhir_string(
-        self, template_name: str, xml_in: DataInput, encoding: str = "utf-8"
-    ) -> str:
-        with StringIO() as buffer:
-            self.render_fhir(template_name, xml_in, buffer, encoding)
-            return buffer.getvalue()
-
-    def render_fhir(
-        self,
-        template_name: str,
-        xml_in: DataInput,
-        fhir_out: DataOutput,
-        encoding: str = "utf-8",
-    ) -> None:
-        """Renders the XML to FHIR writing the generated output to the supplied file
-        like object
-
-        Args:
-            template_name (str): The rendering template
-            xml_in (DataInput): The XML input. Either a string or file like object
-            fhir_out (DataOutput): The file like object to write the rendered output
-            encoding (str, optional): The encoding to use when parsing the XML input.
-                Defaults to "utf-8".
-
-        Raises:
-            RenderingError: when an error occurs while rendering the input
-        """
-        fhir = self.render_to_fhir(template_name, xml_in, encoding)
-        try:
-            encode_io(
-                fhir,
-                fp=fhir_out,  # type: ignore
-                supply_bytes=False,
-            )
-        except Exception as e:
-            raise RenderingError("Failed to serialize FHIR", e)
-
-    def render_to_fhir(
-        self, template_name: str, xml_input: DataInput, encoding: str = "utf-8"
+    def _render_to_fhir_internal(
+        self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
     ) -> MutableMapping:
-        """Renders the XML to FHIR
+        template = self.env.get_template(template_name, globals=self.template_globals)
+        return parse_fhir(
+            json_input=template.render({"msg": parse_xml(data_in, encoding)}),
+        )
 
-        Args:
-            template_name (str): The rendering template
-            xml_in (DataInput): The XML input. Either a string or file like object
-            encoding (str, optional): The encoding to use when parsing the XML input.
-                Defaults to "utf-8".
 
-        Returns:
-            dict: The rendered FHIR bundle
+class Stu3FhirRenderer(BaseFhirRenderer):
+    """Stu3 Fhir to Fhir renderer"""
 
-        Raises:
-            RenderingError: when an error occurs while rendering the input
-        """
-        try:
-            template = self.env.get_template(template_name, globals=self.template_globals)
-            return parse_fhir(
-                json_input=template.render({"msg": parse_xml(xml_input, encoding)}),
-            )
-        except Exception as e:
-            raise RenderingError("Failed to render FHIR", e)
+    __slots__ = "env"
+
+    def __init__(self, env: Optional[Environment] = None) -> None:
+        super().__init__(env)
+
+    @staticmethod
+    def defaults() -> FhirRendererDefaults:
+        return {"loader": stu3_default_loader}
+
+    def _render_to_fhir_internal(
+        self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
+    ) -> MutableMapping:
+        template = self.env.get_template(template_name)
+        return parse_fhir(
+            json_input=template.render(
+                {"msg": parse_json(data_in, encoding, ignore_empty_fields=False)}
+            ),
+        )
 
 
 def get_environment(
@@ -177,7 +276,8 @@ def get_environment(
     **kwargs,
 ) -> Environment:
     """Factory for creating rendering environments with builtin configurations.
-    Keyword arguments will be forwarded to the rendering environment
+    Keyword arguments will be forwarded to the rendering environment. Filters provided
+    by liquid are overridden by builtin filters as necessary
 
     Args:
         loader (BaseLoader): The loader to use when loading the rendering temples
@@ -190,12 +290,12 @@ def get_environment(
             loaders to use when a template is not found by the loader. Defaults to None
 
     Returns:
-        Environment: the rendering environment
+        Environment: The rendering environment
     """
     loaders = [loader]
     if additional_loaders:
         loaders += additional_loaders
-    return Environment(
+    env = Environment(
         loader=TemplateSystemLoader(
             loaders,
             auto_reload=auto_reload,
@@ -203,6 +303,9 @@ def get_environment(
         ),
         **kwargs,
     )
+    register_filters(env, all_filters, replace=True)
+    register_tags(env, all_tags)
+    return env
 
 
 def fail(e: Exception) -> NoReturn:
@@ -212,7 +315,7 @@ def fail(e: Exception) -> NoReturn:
         e (Exception): the exception / failure reason
 
     Raises:
-        Exception: the provided exception
+        Exception: The provided exception
     """
     raise e
 
@@ -241,6 +344,10 @@ def render_files_to_dir(
         onerror (RenderErrorHandler, optional): the error handler. Defaults to fail.
         path_filter (Optional[Callable[[Path], bool]], optional): the filter to use when scaning the
             source directory. Defaults to None.
+
+    Raises:
+        RenderingError: When the error handler determines an exception should be raised. By default
+        all errors are raised. See fail
     """
     try:
         for dir, _, filenames in walk_path(from_dir):
@@ -281,8 +388,8 @@ def render_to_dir(
         onerror (RenderErrorHandler, optional): the error handler. Defaults to fail.
 
     Raises:
-        Exception: when the error handler determines an exception should be raised. By default
-        all exceptions are raised. See fail
+        RenderingError: When the error handler determines an exception should be raised. By default
+        all errors are raised. See fail
     """
     try:
         with from_file.open(encoding=encoding) as data_in:

@@ -2,27 +2,47 @@ import argparse
 import os
 import sys
 from datetime import datetime
+from enum import StrEnum
 from functools import partial
 from pathlib import Path
 from shutil import get_terminal_size
 from textwrap import dedent, indent
 from time import time
 from traceback import print_exception
-from typing import List, Optional
+from typing import Any, Final, List, Mapping, Optional, Type
 
+from frozendict import frozendict
 from liquid import Environment, FileExtensionLoader
 from psutil import Process
 
 from fhir_converter.renderers import (
+    BaseFhirRenderer,
     CcdaRenderer,
     DataRenderer,
     RenderErrorHandler,
+    Stu3FhirRenderer,
     fail,
     get_environment,
     render_files_to_dir,
     render_to_dir,
 )
 from fhir_converter.utils import del_path_quietly, mkdir
+
+
+class RenderSourceFormat(StrEnum):
+    """RenderSourceFormat The source format to render"""
+
+    STU3 = "STU3"
+    CCDA = "CCDA"
+
+
+render_map: Final[Mapping[RenderSourceFormat, Type[BaseFhirRenderer]]] = frozendict(
+    {
+        RenderSourceFormat.STU3: Stu3FhirRenderer,
+        RenderSourceFormat.CCDA: CcdaRenderer,
+    }
+)
+"""Mapping[RenderSourceFormat, Type[BaseFhirRenderer]]: Source format to render mappings"""
 
 
 def main(argv: List[str], prog: Optional[str] = None) -> None:
@@ -56,20 +76,26 @@ def print_summary(success: bool) -> None:
 
 
 def get_renderer(args: argparse.Namespace) -> DataRenderer:
+    renderer = render_map[args.source_format]
     return partial(
-        CcdaRenderer(get_user_defined_environment(args)).render_fhir,
+        renderer(get_user_defined_environment(args, renderer.defaults())).render_fhir,
         args.template_name,
     )
 
 
-def get_user_defined_environment(args: argparse.Namespace) -> Optional[Environment]:
+def get_user_defined_environment(
+    args: argparse.Namespace, defaults: Mapping[str, Any]
+) -> Optional[Environment]:
     if args.template_dir:
-        return get_environment(loader=FileExtensionLoader(search_path=args.template_dir))
+        return get_environment(
+            loader=FileExtensionLoader(search_path=args.template_dir),
+            additional_loaders=[defaults["loader"]],
+        )
     return None
 
 
 def render(render: DataRenderer, args: argparse.Namespace) -> None:
-    to_dir_created = mkdir(args.to_dir)
+    dir_created = mkdir(args.to_dir)
     try:
         if args.from_dir:
             render_files_to_dir(
@@ -88,8 +114,7 @@ def render(render: DataRenderer, args: argparse.Namespace) -> None:
                 onerror=get_onerror(args),
             )
     finally:
-        # clean up the to_dir if its empty
-        if to_dir_created:
+        if dir_created:
             del_path_quietly(args.to_dir)
 
 
@@ -109,11 +134,12 @@ def get_argparser(prog: Optional[str] = None) -> argparse.ArgumentParser:
         description=indent(
             dedent(
                 """
-            Render legacy data formats to FHIR v4
+            Render data formats to FHIR v4
 
-            Legacy formats include:
+            Formats include:
 
                Consolidated CDA (.xml|.ccda) documents
+               STU3 FHIR (.json) resources or bundles
             """
             ).strip(),
             "    ",
@@ -150,6 +176,13 @@ def get_argparser(prog: Optional[str] = None) -> argparse.ArgumentParser:
         "--template-name",
         metavar="<str>",
         help="The liquid template to use when rendering the file",
+        required=True,
+    )
+    parser.add_argument(
+        "--source-format",
+        metavar="<RenderSourceFormat>",
+        type=RenderSourceFormat,
+        help="The source format to render. aka STU3 or CCDA",
         required=True,
     )
     parser.add_argument(
