@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import Optional
+from typing import Callable, List, Optional
 
 from importlib_resources import Package, files
 from liquid import BoundTemplate, Context, Environment
@@ -27,7 +26,7 @@ class CachedChoiceLoader(ChoiceLoader):
 
     def __init__(
         self,
-        loaders: list[BaseLoader],
+        loaders: List[BaseLoader],
         auto_reload: bool = True,
         cache_size: int = 300,
     ) -> None:

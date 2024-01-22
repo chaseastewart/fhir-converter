@@ -118,16 +118,37 @@ Templates can be loaded from any python-liquid supported mechanism. To make pack
 
 ## Benchmark
 
-You can run the [benchmark](https://github.com/chaseastewart/fhir-converter/blob/main/scripts/benchmark.py) from the root of the source tree. Test rig is a 16-inch, 2023 Macbook Pro with the M3 Pro not in low power mode. Python version is 3.12.1.
-```text
-   Ordered by: cumulative time
+You can run the [benchmark](https://github.com/chaseastewart/fhir-converter/blob/main/scripts/benchmark.py) from the root of the source tree. Test rig is a 14-inch, 2021 Macbook Pro with the M1 Pro. The benchmark performs the conversion for each template showing the min, max and mean times for the sample data used.
 
-   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
-        3    0.000    0.000   11.164    3.721 ./scripts/benchmark.py:75(render_samples)
-       22    0.003    0.000   11.164    0.507 ./fhir-converter/fhir_converter/renderers.py:187(render_files_to_dir)
-      484    0.002    0.000   11.154    0.023 ./fhir-converter/fhir_converter/renderers.py:220(render_to_dir)
-      484    0.010    0.000   11.017    0.023 ./fhir-converter/fhir_converter/renderers.py:93(render_fhir)
-      484    0.003    0.000   10.876    0.022 ./fhir-converter/fhir_converter/renderers.py:117(render_to_fhir)
+```text
+Python Version=3.12.1
+Iterations=20
+
+Sample=data/sample/ccda/Discharge_Summary.ccda
+CCD                     max=0.042       min=0.013       avg=0.015
+ConsultationNote        max=0.015       min=0.013       avg=0.014
+DischargeSummary        max=0.020       min=0.014       avg=0.014
+HistoryandPhysical      max=0.015       min=0.013       avg=0.014
+OperativeNote           max=0.014       min=0.010       avg=0.010
+ProcedureNote           max=0.013       min=0.011       avg=0.012
+ProgressNote            max=0.013       min=0.012       avg=0.012
+ReferralNote            max=0.015       min=0.014       avg=0.014
+TransferSummary         max=0.016       min=0.014       avg=0.014
+LabsandVitals           max=0.009       min=0.008       avg=0.008
+Pampi                   max=0.010       min=0.009       avg=0.009
+
+Sample=data/sample/ccda/History_and_Physical.ccda
+CCD                     max=0.053       min=0.018       avg=0.020
+ConsultationNote        max=0.021       min=0.018       avg=0.019
+DischargeSummary        max=0.018       min=0.016       avg=0.017
+HistoryandPhysical      max=0.020       min=0.018       avg=0.019
+OperativeNote           max=0.013       min=0.011       avg=0.012
+ProcedureNote           max=0.015       min=0.014       avg=0.014
+ProgressNote            max=0.017       min=0.015       avg=0.016
+ReferralNote            max=0.022       min=0.018       avg=0.019
+TransferSummary         max=0.021       min=0.019       avg=0.020
+LabsandVitals           max=0.012       min=0.010       avg=0.011
+Pampi                   max=0.013       min=0.012       avg=0.012
 ```
 
 

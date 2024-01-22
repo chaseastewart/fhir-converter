@@ -1,7 +1,6 @@
-from collections.abc import Iterable, Sequence
 from functools import partial
 from sys import intern
-from typing import Optional, TextIO
+from typing import Iterable, List, Mapping, Optional, Sequence, TextIO, Tuple, Type
 
 from liquid import Environment
 from liquid.ast import ChildNode, Node
@@ -66,7 +65,7 @@ class EvaluateNode(Node):
         tok: Token,
         name: str,
         template_name: Expression,
-        args: Optional[dict[str, Expression]] = None,
+        args: Optional[Mapping[str, Expression]] = None,
     ) -> None:
         self.tok = tok
         self.name = name
@@ -90,7 +89,7 @@ class EvaluateNode(Node):
         template_name = str(self.template_name.evaluate(context))
         template = context.get_template_with_context(template_name, tag=self.tag)
 
-        namespace: dict[str, object] = {}
+        namespace = {}
         for _key, _val in self.args.items():
             namespace[_key] = _val.evaluate(context)
 
@@ -101,8 +100,8 @@ class EvaluateNode(Node):
 
         return False
 
-    def children(self) -> list[ChildNode]:
-        block_scope: list[str] = list(self.args.keys())
+    def children(self) -> List[ChildNode]:
+        block_scope = list(self.args.keys())
         _children = [
             ChildNode(
                 linenum=self.tok.linenum,
@@ -145,7 +144,7 @@ class EvaluateTag(Tag):
         template_name = parse_string_or_identifier(expr_stream)
         next(expr_stream)
 
-        args: dict[str, Expression] = {}
+        args = {}
         if expr_stream.current[1] == TOKEN_IDENTIFIER:
             key, val = _parse_argument(expr_stream)
             args[key] = val
@@ -165,7 +164,7 @@ class EvaluateTag(Tag):
         return self.node_class(tok, name=name, template_name=template_name, args=args)
 
 
-def _parse_argument(stream: ExprTokenStream) -> tuple[str, Expression]:
+def _parse_argument(stream: ExprTokenStream) -> Tuple[str, Expression]:
     key = str(parse_unchained_identifier(stream))
     stream.next_token()
     stream.expect(TOKEN_COLON)
@@ -175,11 +174,11 @@ def _parse_argument(stream: ExprTokenStream) -> tuple[str, Expression]:
     return key, val
 
 
-all_tags: Sequence[type[Tag]] = [EvaluateTag]
+all_tags: Sequence[Type[Tag]] = [EvaluateTag]
 """Sequence[type[Tag]]: All of the tags provided by the module"""
 
 
-def register_tags(env: Environment, tags: Iterable[type[Tag]]) -> None:
+def register_tags(env: Environment, tags: Iterable[Type[Tag]]) -> None:
     """register_tags Adds the given tags to the Environment as long as a tag
     with the same name has not already been added
 

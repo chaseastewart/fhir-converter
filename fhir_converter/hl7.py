@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta, timezone
 from enum import IntEnum
 from math import copysign
 from re import compile as re_compile
 from re import sub as re_sub
-from typing import Any, NamedTuple, Optional
+from typing import Any, Dict, Mapping, NamedTuple, Optional, Sequence
 
 from fhir_converter.utils import merge_dict, parse_json, to_list_or_empty
 
@@ -238,7 +237,7 @@ def parse_fhir(json_input: str) -> Any:
     if isinstance(json_data, dict):
         entries = to_list_or_empty(json_data.get("entry", []))
         if len(entries) > 1:
-            unique_entrys: dict[str, dict] = {}
+            unique_entrys: Dict[str, Dict] = {}
             for entry in entries:
                 key = get_fhir_entry_key(entry)
                 if key in unique_entrys:
@@ -249,7 +248,7 @@ def parse_fhir(json_input: str) -> Any:
     return json_data
 
 
-def get_fhir_entry_key(entry: dict[str, dict]) -> str:
+def get_fhir_entry_key(entry: Mapping[str, dict]) -> str:
     """get_fhir_entry_key Gets the unique key for the given FHIR
     bundle entry
 
@@ -258,7 +257,7 @@ def get_fhir_entry_key(entry: dict[str, dict]) -> str:
     allowed to be missing or empty
 
     Args:
-        entry (dict): The FHIR bundle entry
+        entry (Mapping): The FHIR bundle entry
 
     Returns:
         The unique key for the entry, otherwise, empty string

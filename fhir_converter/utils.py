@@ -1,9 +1,8 @@
-from collections.abc import Generator
 from os import remove as os_remove
 from os import walk as os_walk
 from pathlib import Path
 from re import compile as re_compile
-from typing import IO, Any, Union
+from typing import IO, Any, Dict, Generator, List, Tuple, Union
 
 from pyjson5 import loads as json_loads
 from xmltodict import parse as xmltodict_parse
@@ -20,7 +19,7 @@ def is_none_or_empty(obj: Any) -> bool:
         - ' ' (blank string)
         - [] (empty list)
         - () (empty tuple)
-        - {} (empty dictionary)
+        - {} (empty dict)
 
     Args:
         obj (Any): the object to check
@@ -35,7 +34,7 @@ def is_none_or_empty(obj: Any) -> bool:
     return not obj
 
 
-def to_list_or_empty(obj: Any) -> list[Any]:
+def to_list_or_empty(obj: Any) -> List[Any]:
     """to_list_or_empty returns the object as a list if its a list or not empty
     or none, otherwise, []
 
@@ -65,18 +64,18 @@ def blank_str_to_empty(obj: str) -> str:
     return obj if obj and not obj.isspace() else ""
 
 
-def merge_dict(a: dict[Any, Any], b: dict[Any, Any]) -> dict[Any, Any]:
+def merge_dict(a: Dict[Any, Any], b: Dict[Any, Any]) -> Dict[Any, Any]:
     """merge_dict Merges the key/value pair mappings similarly to
     newtonsoft Merge.
 
     See https://www.newtonsoft.com/json/help/html/MergeJson.htm
 
     Args:
-        a (dict[Any, Any]): the mappings to merge into
-        b (dict[Any, Any]): the mappings to merge
+        a (Dict[Any, Any]): the mappings to merge into
+        b (Dict[Any, Any]): the mappings to merge
 
     Returns:
-        dict[Any, Any]: the merged mappings
+        Dict[Any, Any]: the merged mappings
     """
     for bk, bv in b.items():
         if bv is None:
@@ -99,16 +98,16 @@ def merge_dict(a: dict[Any, Any], b: dict[Any, Any]) -> dict[Any, Any]:
     return a
 
 
-def _remove_empty_json_list(obj: list[Any]) -> list[Any]:
+def _remove_empty_json_list(obj: List[Any]) -> List[Any]:
     """remove_empty_json_list Removes any empty values from the JSON list
 
     See is_none_or_empty and remove_empty_json for more info
 
     Args:
-        obj (list[Any]): the JSON list to check
+        obj (List[Any]): the JSON list to check
 
     Returns:
-        list[Any]: the JSON list with non empty values. May be empty if all values
+        List[Any]: the JSON list with non empty values. May be empty if all values
         were empty
     """
     new_list = []
@@ -119,17 +118,17 @@ def _remove_empty_json_list(obj: list[Any]) -> list[Any]:
     return new_list
 
 
-def _remove_empty_json_dict(obj: dict[Any, Any]) -> dict[Any, Any]:
+def _remove_empty_json_dict(obj: Dict[Any, Any]) -> Dict[Any, Any]:
     """remove_empty_json_dict Removes any empty JSON key/value mappings from
     the supplied key/value pairs
 
     See is_none_or_empty and remove_empty_json for more info
 
     Args:
-        obj (dict[Any, Any]): the JSON key/value pairs to check
+        obj (Dict[Any, Any]): the JSON key/value pairs to check
 
     Returns:
-        dict[Any, Any]: the non empty key/value pairs, May be empty if
+        Dict[Any, Any]: the non empty key/value pairs, May be empty if
         all key/value pairs were empty
     """
     for key in list(obj.keys()):
@@ -179,7 +178,7 @@ def parse_json(json_input: str) -> Any:
     return _remove_empty_json(json_loads(json_input))
 
 
-def parse_xml(xml_input: Union[str, IO], encoding: str = "utf-8") -> dict[str, Any]:
+def parse_xml(xml_input: Union[str, IO], encoding: str = "utf-8") -> Dict[str, Any]:
     """parse_xml Parses the xml imput string or text/binary IO
 
     Wraps xmltodict customizing the output as follows::
@@ -193,7 +192,7 @@ def parse_xml(xml_input: Union[str, IO], encoding: str = "utf-8") -> dict[str, A
         encoding (str, optional): The character encoding to use. Defaults to "utf-8"
 
     Returns:
-        dict[str, Any]: the parsed xml
+        Dict[str, Any]: the parsed xml
     """
     if isinstance(xml_input, str):
         xml = xml_input
@@ -293,7 +292,7 @@ def mkdir(path: Path, **kwargs) -> bool:
 
 def walk_path(
     path: Path,
-) -> Generator[tuple[Path, list[str], list[str]], Any, None]:
+) -> Generator[Tuple[Path, List[str], List[str]], Any, None]:
     """walk_path wrapper around os.walk to semi bridge the gap of path.walk
     added in 3.12.
 
@@ -301,7 +300,7 @@ def walk_path(
         path (Path): the path to walk
 
     Yields:
-        Generator[tuple[Path, list[str], list[str]], Any, None]: The directory
+        Generator[Tuple[Path, List[str], List[str]], Any, None]: The directory
         tree generator
     """
     for dir, dirs, filenames in os_walk(path):

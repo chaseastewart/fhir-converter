@@ -1,9 +1,20 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from io import StringIO
 from pathlib import Path
-from typing import IO, Any, NoReturn, Optional, TextIO, Union
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    NoReturn,
+    Optional,
+    Sequence,
+    TextIO,
+    Union,
+)
 
 from frozendict import frozendict
 from liquid import Environment

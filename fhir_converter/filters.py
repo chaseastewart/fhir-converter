@@ -1,10 +1,9 @@
 from base64 import b64encode
-from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from functools import wraps
 from hashlib import sha1, sha256
 from re import findall as re_findall
-from typing import Any, Optional
+from typing import Any, Callable, Iterable, List, Mapping, Optional, Sequence, Tuple
 from uuid import UUID
 from zlib import compress as z_compress
 
@@ -67,13 +66,13 @@ def to_json_string(obj: Any) -> str:
 
 
 @liquid_filter
-def to_array(obj: Any) -> list:
+def to_array(obj: Any) -> List[Any]:
     """Convert the given object to a list"""
     return to_list_or_empty(obj)
 
 
 @string_filter
-def match(data: str, regex: Any) -> list:
+def match(data: str, regex: Any) -> List[str]:
     """Find all / match the regex in data"""
     if is_none_or_empty(data):
         return []
@@ -237,7 +236,7 @@ def batch_render(
         return buffer.getvalue()
 
 
-all_filters: Sequence[tuple[str, FilterT]] = [
+all_filters: Sequence[Tuple[str, FilterT]] = [
     ("to_json_string", to_json_string),
     ("to_array", to_array),
     ("match", match),
@@ -255,7 +254,7 @@ all_filters: Sequence[tuple[str, FilterT]] = [
 """Sequence[tuple[str, FilterT]]: All of the filters provided by the module"""
 
 
-def register_filters(env: Environment, filters: Iterable[tuple[str, FilterT]]) -> None:
+def register_filters(env: Environment, filters: Iterable[Tuple[str, FilterT]]) -> None:
     """register_filters Registers the given filters with the supplied Environment. Will not
     replace a filter with the same name already registered with the environment.
 

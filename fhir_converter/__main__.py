@@ -8,7 +8,7 @@ from shutil import get_terminal_size
 from textwrap import dedent, indent
 from time import time
 from traceback import print_exception
-from typing import Optional
+from typing import List, Optional
 
 from liquid import Environment, FileExtensionLoader
 from psutil import Process
@@ -25,13 +25,13 @@ from fhir_converter.renderers import (
 from fhir_converter.utils import del_path_quietly, mkdir
 
 
-def main(argv: list[str], prog: Optional[str] = None) -> None:
+def main(argv: List[str], prog: Optional[str] = None) -> None:
     argparser = get_argparser(prog)
     try:
         args = parse_args(argparser, argv)
         render(get_renderer(args), args)
     except Exception as e:
-        print_exception(e)
+        print_exception(type(e), e, e.__traceback__)
         print_summary(success=False)
         sys.exit(1)
     else:
@@ -95,7 +95,7 @@ def render(render: DataRenderer, args: argparse.Namespace) -> None:
 
 def get_onerror(args: argparse.Namespace) -> RenderErrorHandler:
     if args.continue_on_error:
-        return print_exception
+        return lambda e: print_exception(type(e), e, e.__traceback__)
     return fail
 
 
@@ -169,7 +169,7 @@ def absolute_path(path: str) -> Path:
     return Path(path).absolute()
 
 
-def parse_args(argparser: argparse.ArgumentParser, argv: list[str]) -> argparse.Namespace:
+def parse_args(argparser: argparse.ArgumentParser, argv: List[str]) -> argparse.Namespace:
     args = argparser.parse_args(argv)
     if not args.from_dir and not args.from_file:
         argparser.error("Either --from-file or --from-dir must be specified.")
