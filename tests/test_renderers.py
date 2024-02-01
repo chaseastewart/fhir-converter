@@ -4,7 +4,7 @@ from json import loads
 from pathlib import Path
 from unittest import TestCase
 
-from liquid import Environment, FileExtensionLoader
+from liquid import FileExtensionLoader
 from liquid.utils import LRUCache
 from pyexpat import ExpatError
 from pyjson5 import Json5EOF
@@ -55,9 +55,8 @@ class GetEnvironmentTest(TestCase):
         env = get_environment(loader=ccda_default_loader, cache_size=0)
         self.assertFalse(env.auto_reload)
         self.assertIsNone(env.cache)
-
         self.assertFalse(env.loader.is_caching)  # type: ignore
-        self.assertIsInstance(env.loader.cache, dict)  # type: ignore
+        self.assertEqual(env.loader.cache.capacity, 0)  # type: ignore
 
     def test_additional_loaders(self) -> None:
         loader = FileExtensionLoader(search_path="data/templates/ccda")
@@ -88,7 +87,7 @@ class Stu3FhirRendererTest(TestCase):
     def test_render_fhir_string_text(self) -> None:
         self.validate_str(
             Stu3FhirRenderer().render_fhir_string(
-                "Immunization", self.stu3_file.read_text()
+                "Immunization", self.stu3_file.read_text(encoding="utf-8")
             )
         )
 
@@ -100,7 +99,7 @@ class Stu3FhirRendererTest(TestCase):
         )
 
     def test_render_fhir_string_text_io(self) -> None:
-        with self.stu3_file.open() as fhir_in:
+        with self.stu3_file.open(encoding="utf-8") as fhir_in:
             self.validate_str(
                 Stu3FhirRenderer().render_fhir_string("Immunization", fhir_in)
             )
@@ -118,7 +117,9 @@ class Stu3FhirRendererTest(TestCase):
 
     def test_render_to_fhir_text(self) -> None:
         self.validate(
-            Stu3FhirRenderer().render_to_fhir("Immunization", self.stu3_file.read_text())
+            Stu3FhirRenderer().render_to_fhir(
+                "Immunization", self.stu3_file.read_text(encoding="utf-8")
+            )
         )
 
     def test_render_to_fhir_bytes(self) -> None:
@@ -127,7 +128,7 @@ class Stu3FhirRendererTest(TestCase):
         )
 
     def test_render_to_fhir_text_io(self) -> None:
-        with self.stu3_file.open() as fhir_in:
+        with self.stu3_file.open(encoding="utf-8") as fhir_in:
             self.validate(Stu3FhirRenderer().render_to_fhir("Immunization", fhir_in))
 
     def test_render_to_fhir_binary_io(self) -> None:
@@ -139,14 +140,16 @@ class Stu3FhirRendererTest(TestCase):
         buffer.close()
 
         with raises(RenderingError, match="Failed to serialize FHIR") as exc_info:
-            with self.stu3_file.open() as fhir_in:
+            with self.stu3_file.open(encoding="utf-8") as fhir_in:
                 Stu3FhirRenderer().render_fhir("Immunization", fhir_in, buffer)
         self.assertIsInstance(exc_info.value.__cause__, ValueError)
         self.assertEqual(str(exc_info.value.__cause__), "I/O operation on closed file")
 
     def test_render_fhir_text(self) -> None:
         buffer = StringIO()
-        Stu3FhirRenderer().render_fhir("Immunization", self.stu3_file.read_text(), buffer)
+        Stu3FhirRenderer().render_fhir(
+            "Immunization", self.stu3_file.read_text(encoding="utf-8"), buffer
+        )
         self.validate_str(buffer.getvalue())
 
     def test_render_fhir_bytes(self) -> None:
@@ -157,10 +160,12 @@ class Stu3FhirRendererTest(TestCase):
         self.validate_str(buffer.getvalue())
 
     def test_render_env_provided(self) -> None:
-        renderer = Stu3FhirRenderer(
-            Environment(loader=TemplateSystemLoader(loaders=[stu3_default_loader]))
+        renderer = Stu3FhirRenderer(get_environment(loader=stu3_default_loader))
+        self.validate(
+            renderer.render_to_fhir(
+                "Immunization", self.stu3_file.read_text(encoding="utf-8")
+            )
         )
-        self.validate(renderer.render_to_fhir("Immunization", self.stu3_file.read_text()))
 
 
 class CcdaRendererTest(TestCase):
@@ -182,7 +187,9 @@ class CcdaRendererTest(TestCase):
 
     def test_render_fhir_string_text(self) -> None:
         self.validate_str(
-            CcdaRenderer().render_fhir_string("CCD", self.ccda_file.read_text())
+            CcdaRenderer().render_fhir_string(
+                "CCD", self.ccda_file.read_text(encoding="utf-8")
+            )
         )
 
     def test_render_fhir_string_bytes(self) -> None:
@@ -191,7 +198,7 @@ class CcdaRendererTest(TestCase):
         )
 
     def test_render_fhir_string_text_io(self) -> None:
-        with self.ccda_file.open() as xml_in:
+        with self.ccda_file.open(encoding="utf-8") as xml_in:
             self.validate_str(CcdaRenderer().render_fhir_string("CCD", xml_in))
 
     def test_render_fhir_string_binary_io(self) -> None:
@@ -207,13 +214,17 @@ class CcdaRendererTest(TestCase):
         )
 
     def test_render_to_fhir_text(self) -> None:
-        self.validate(CcdaRenderer().render_to_fhir("CCD", self.ccda_file.read_text()))
+        self.validate(
+            CcdaRenderer().render_to_fhir(
+                "CCD", self.ccda_file.read_text(encoding="utf-8")
+            )
+        )
 
     def test_render_to_fhir_bytes(self) -> None:
         self.validate(CcdaRenderer().render_to_fhir("CCD", self.ccda_file.read_bytes()))
 
     def test_render_to_fhir_text_io(self) -> None:
-        with self.ccda_file.open() as xml_in:
+        with self.ccda_file.open(encoding="utf-8") as xml_in:
             self.validate(CcdaRenderer().render_to_fhir("CCD", xml_in))
 
     def test_render_to_fhir_binary_io(self) -> None:
@@ -225,14 +236,16 @@ class CcdaRendererTest(TestCase):
         buffer.close()
 
         with raises(RenderingError, match="Failed to serialize FHIR") as exc_info:
-            with self.ccda_file.open() as xml_in:
+            with self.ccda_file.open(encoding="utf-8") as xml_in:
                 CcdaRenderer().render_fhir("CCD", xml_in, buffer)
         self.assertIsInstance(exc_info.value.__cause__, ValueError)
         self.assertEqual(str(exc_info.value.__cause__), "I/O operation on closed file")
 
     def test_render_fhir_text(self) -> None:
         buffer = StringIO()
-        CcdaRenderer().render_fhir("CCD", self.ccda_file.read_text(), buffer)
+        CcdaRenderer().render_fhir(
+            "CCD", self.ccda_file.read_text(encoding="utf-8"), buffer
+        )
         self.validate_str(buffer.getvalue())
 
     def test_render_fhir_bytes(self) -> None:
@@ -241,7 +254,7 @@ class CcdaRendererTest(TestCase):
         self.validate_str(buffer.getvalue())
 
     def test_render_env_provided(self) -> None:
-        renderer = CcdaRenderer(
-            Environment(loader=TemplateSystemLoader(loaders=[ccda_default_loader]))
+        renderer = CcdaRenderer(get_environment(loader=ccda_default_loader))
+        self.validate(
+            renderer.render_to_fhir("CCD", self.ccda_file.read_text(encoding="utf-8"))
         )
-        self.validate(renderer.render_to_fhir("CCD", self.ccda_file.read_text()))

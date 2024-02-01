@@ -325,13 +325,13 @@ class ParseXmlTest(TestCase):
                 parse_xml(xml_in)
 
     def test_text(self) -> None:
-        self.validate_ccda(parse_xml(self.ccda_file.read_text()))
+        self.validate_ccda(parse_xml(self.ccda_file.read_text(encoding="utf-8")))
 
     def test_bytes(self) -> None:
         self.validate_ccda(parse_xml(self.ccda_file.read_bytes()))
 
     def test_text_io(self) -> None:
-        with self.ccda_file.open() as xml_in:
+        with self.ccda_file.open(encoding="utf-8") as xml_in:
             self.validate_ccda(parse_xml(xml_in))
 
     def test_binary_io(self) -> None:

@@ -27,6 +27,10 @@ class ResourceLoaderTest(TestCase):
         template = self.get_rendering_env().get_template(name="CCD.liquid")
         self.assertIsInstance(template, BoundTemplate)
 
+    def test_load_template_relative(self) -> None:
+        template = self.get_rendering_env().get_template(name="./CCD.liquid")
+        self.assertIsInstance(template, BoundTemplate)
+
     def test_load_template_without_suffix(self) -> None:
         template = self.get_rendering_env().get_template(name="CCD")
         self.assertIsInstance(template, BoundTemplate)
@@ -58,6 +62,14 @@ class ResourceLoaderTest(TestCase):
             self.get_rendering_env(search_package="nosuchthing").get_template(
                 name="nosuchthing.liquid"
             )
+
+    def test_escape_search_path(self) -> None:
+        with raises(TemplateNotFound):
+            self.get_rendering_env().get_template(name="../CCD.liquid")
+
+    def test_escape_search_path_nested(self) -> None:
+        with raises(TemplateNotFound):
+            self.get_rendering_env().get_template(name="./../CCD.liquid")
 
 
 class TemplateSystemLoaderTest(TestCase):

@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "python-fhir-converter"
-version = "0.0.21"
+version = "0.0.22"
 authors = ["Chase Stewart <chase.a.stewart@outlook.com>"]
 description = "Transformation utility to translate data formats into FHIR"
 readme = "README.md"
@@ -32,9 +32,13 @@ packages = [
     {include = "fhir_converter/py.typed"},
 ]
 
+[tool.poetry.urls]
+"Change Log" = "https://github.com/chaseastewart/fhir-converter/blob/main/CHANGES.md"
+"Issue Tracker" = "https://github.com/chaseastewart/fhir-converter/issues"
+
 [tool.poetry.dependencies]
 python = "^3.8.1"
-python-liquid = "1.10.2"
+python-liquid = "1.11.0"
 xmltodict = "0.13.0"
 pyjson5 = "1.6.5"
 frozendict = "2.3.10"
@@ -54,6 +58,7 @@ smokeshow = "0.4.0"
 lazydocs = "0.4.8"
 mkdocs-awesome-pages-plugin = "2.9.2"
 mkdocs-include-markdown-plugin = "6.0.4"
+watchdog = "3.0.0"
 
 [tool.poetry.scripts]
 fhir_converter_cli  = "fhir_converter.__main__:entrypoint"
