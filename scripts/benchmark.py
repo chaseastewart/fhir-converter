@@ -7,7 +7,7 @@ from liquid import FileExtensionLoader
 from fhir_converter.renderers import (
     CcdaRenderer,
     ccda_default_loader,
-    get_environment,
+    make_environment,
     render_files_to_dir,
 )
 from fhir_converter.utils import mkdir
@@ -69,7 +69,7 @@ def profile() -> None:
         render_samples(renderer, templates=builtin_templates, to_dir=data_builtin_dir)
 
         renderer = CcdaRenderer(
-            env=get_environment(
+            env=make_environment(
                 loader=FileExtensionLoader(search_path=templates_dir),
                 additional_loaders=[ccda_default_loader],
             )
@@ -115,7 +115,7 @@ def benchmark(iterations: int = 20) -> None:
 def benchmark_renderer(sample_ccda: Path, iterations: int) -> None:
     print(f"\nSample={sample_ccda}")
     renderer = CcdaRenderer(
-        env=get_environment(
+        env=make_environment(
             loader=FileExtensionLoader(search_path=templates_dir),
             additional_loaders=[ccda_default_loader],
         )

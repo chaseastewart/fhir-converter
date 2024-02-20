@@ -1,105 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable, List
+from typing import List, Optional, Sequence
 
-from importlib_resources import Package, files
-from liquid import BoundTemplate, ChoiceLoader, Context, Environment
+from liquid import ChoiceLoader, Context, Environment
 from liquid.builtin.loaders.mixins import CachingLoaderMixin
 from liquid.exceptions import TemplateNotFound
-from liquid.loaders import BaseLoader, TemplateNamespace, TemplateSource
-from typing_extensions import deprecated
+from liquid.loaders import BaseLoader, TemplateSource
 
 
-@deprecated(
-    "ResourceLoader is deprecated and scheduled for removal "
-    "in a future version. Use PackageLoader instead"
-)
-class ResourceLoader(BaseLoader):
-    """A template loader that will load templates from the package resources
-
-    Args:
-        search_package (Package): The package to load templates from
-        encoding (str, optional): The encoding to use loading the template source
-                Defaults to "utf-8".
-        ext (str, optional): The extension to use when one isn't provided
-                Defaults to ".liquid".
-    """
-
-    def __init__(
-        self,
-        search_package: Package,
-        encoding: str = "utf-8",
-        ext: str = ".liquid",
-    ) -> None:
-        super().__init__()
-        self.search_package = search_package
-        self.encoding = encoding
-        self.ext = ext
-
-    def get_source(self, _: Environment, template_name: str) -> TemplateSource:
-        template_path = Path(template_name)
-        if ".." in template_path.parts:
-            raise TemplateNotFound(template_name)
-
-        if not template_path.suffix:
-            template_path = template_path.with_suffix(self.ext)
-        try:
-            resource_path = files(self.search_package).joinpath(template_path)
-            return TemplateSource(
-                source=resource_path.read_text(self.encoding),
-                filename=str(resource_path),
-                uptodate=lambda: True,
-            )
-        except (ModuleNotFoundError, FileNotFoundError):
-            raise TemplateNotFound(template_name)
-
-
-@deprecated(
-    "CachedChoiceLoader is deprecated and scheduled for removal "
-    "in a future version. Use CachingChoiceLoader instead"
-)
-class CachedChoiceLoader(CachingLoaderMixin, ChoiceLoader):
-    """A choice loader that caches parsed templates in memory
-    Args:
-        loaders: A list of loaders implementing `liquid.loaders.BaseLoader`
-        auto_reload (bool, optional): If `True`, automatically reload a cached template
-            if it has been updated. Defaults to True
-        cache_size (int, optional): The maximum number of templates to hold in the cache
-            before removing the least recently used template. Defaults to 300
-        namespace_key (str, optional): The name of a global render context variable or
-            loader keyword argument that resolves to the current loader "namespace" or
-            "scope". Defaults to ""
-    """
-
-    def __init__(
-        self,
-        loaders: List[BaseLoader],
-        auto_reload: bool = True,
-        cache_size: int = 300,
-        namespace_key: str = "",
-    ) -> None:
-        super().__init__(
-            auto_reload=auto_reload,
-            namespace_key=namespace_key,
-            cache_size=cache_size,
-        )
-        ChoiceLoader.__init__(self, loaders)
-        self.is_caching = cache_size > 0
-
-    def _check_cache(
-        self,
-        env: Environment,  # noqa: ARG002
-        cache_key: str,
-        globals: TemplateNamespace,  # noqa: A002
-        load_func: Callable[[], BoundTemplate],
-    ) -> BoundTemplate:
-        if self.is_caching:
-            return super()._check_cache(env, cache_key, globals, load_func)
-        return load_func()
-
-
-class TemplateSystemLoader(CachedChoiceLoader):
+class TemplateSystemLoader(ChoiceLoader):
     """TemplateSystemLoader allows templates to be loaded from a primary and optionally secondary
     location(s). This allows templates to include / render templates from the other location(s)
 
@@ -107,7 +17,7 @@ class TemplateSystemLoader(CachedChoiceLoader):
     Any template (non json file) that is in a subdirectory will have _ prepended to the name
     Ex: Section/Immunization -> Section/_Immunization
 
-    See ``CachedChoiceLoader`` for more information
+    See `ChoiceLoader` for more information
     """
 
     def get_source(
@@ -168,6 +78,68 @@ class TemplateSystemLoader(CachedChoiceLoader):
             if not tail.endswith(".json") and not tail.startswith("_"):
                 template_path = template_path.with_name("_" + tail)
         return str(template_path)
+
+
+class CachingTemplateSystemLoader(CachingLoaderMixin, TemplateSystemLoader):
+    """TemplateSystemLoader that caches parsed templates in memory.
+
+    See `TemplateSystemLoader` for more information
+    """
+
+    def __init__(
+        self,
+        loaders: List[BaseLoader],
+        *,
+        auto_reload: bool = True,
+        namespace_key: str = "",
+        cache_size: int = 300,
+    ) -> None:
+        super().__init__(
+            auto_reload=auto_reload,
+            namespace_key=namespace_key,
+            cache_size=cache_size,
+        )
+
+        TemplateSystemLoader.__init__(self, loaders)
+
+
+def make_template_system_loader(
+    loader: BaseLoader,
+    *,
+    auto_reload: bool = True,
+    namespace_key: str = "",
+    cache_size: int = 300,
+    additional_loaders: Optional[Sequence[BaseLoader]] = None,
+) -> BaseLoader:
+    """make_template_system_loader A `TemplateSystemLoader` factory
+
+    Args:
+        loader (BaseLoader): The loader to use when loading the rendering temples
+        auto_reload (bool, optional): If `True`, loaders that have an `uptodate`
+            callable will reload template source data automatically. Defaults to False
+        namespace_key (str, optional): The name of a global render context variable or loader
+            keyword argument that resolves to the current loader "namespace" or
+            "scope". Defaults to ""
+        cache_size (int, optional): The capacity of the template cache in number of
+            templates. cache_size less than 1 disables caching. Defaults to 300
+        additional_loaders (Optional[Sequence[BaseLoader]], optional): The additional
+            loaders to use when a template is not found by the loader. Defaults to None
+
+    Returns:
+        BaseLoader: `CachingTemplateSystemLoader` if cache_size > 0 else `TemplateSystemLoader`
+    """
+    loaders = [loader]
+    if additional_loaders:
+        loaders += additional_loaders
+    if cache_size > 0:
+        return CachingTemplateSystemLoader(
+            loaders=loaders,
+            auto_reload=auto_reload,
+            namespace_key=namespace_key,
+            cache_size=cache_size,
+        )
+
+    return TemplateSystemLoader(loaders=loaders)
 
 
 def read_text(env: Environment, filename: str) -> str:

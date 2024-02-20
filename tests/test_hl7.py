@@ -157,11 +157,39 @@ class ParseHl7DtmTest(TestCase):
         self.assertEqual(result.precision, Hl7DtmPrecision.SEC)
         self.assertEqual("2024-02-10T06:35:57", result.dt.isoformat())
 
-    def test_millis(self) -> None:
-        result = parse_hl7_dtm("20240210063557.920")
+    def test_tenth_second(self) -> None:
+        result = parse_hl7_dtm("20240210063557.1")
         self.assertEqual(result.precision, Hl7DtmPrecision.MILLIS)
         self.assertEqual(
-            "2024-02-10T06:35:57.920", result.dt.isoformat(timespec="milliseconds")
+            "2024-02-10T06:35:57.100", result.dt.isoformat(timespec="milliseconds")
+        )
+
+    def test_hundredth_second(self) -> None:
+        result = parse_hl7_dtm("20240210063557.01")
+        self.assertEqual(result.precision, Hl7DtmPrecision.MILLIS)
+        self.assertEqual(
+            "2024-02-10T06:35:57.010", result.dt.isoformat(timespec="milliseconds")
+        )
+
+    def test_millisecond(self) -> None:
+        result = parse_hl7_dtm("20240210063557.001")
+        self.assertEqual(result.precision, Hl7DtmPrecision.MILLIS)
+        self.assertEqual(
+            "2024-02-10T06:35:57.001", result.dt.isoformat(timespec="milliseconds")
+        )
+
+    def test_tenth_millisecond(self) -> None:
+        result = parse_hl7_dtm("20240210063557.0001")
+        self.assertEqual(result.precision, Hl7DtmPrecision.MILLIS)
+        self.assertEqual(
+            "2024-02-10T06:35:57.000100", result.dt.isoformat(timespec="microseconds")
+        )
+
+    def test_microsecond(self) -> None:
+        result = parse_hl7_dtm("20240210063557.123456")
+        self.assertEqual(result.precision, Hl7DtmPrecision.MILLIS)
+        self.assertEqual(
+            "2024-02-10T06:35:57.123456", result.dt.isoformat(timespec="microseconds")
         )
 
     def test_tz_utc(self) -> None:
@@ -203,19 +231,32 @@ class Hl7ToFhirDtmTest(TestCase):
     def test_month(self) -> None:
         self.assertEqual("2024-02", hl7_to_fhir_dtm("202402"))
 
-    def test_month_day(self) -> None:
+    def test_day(self) -> None:
         self.assertEqual("2024-02-10", hl7_to_fhir_dtm("20240210"))
 
-    def test_month_hour(self) -> None:
-        self.assertEqual("2024-02-10T06:00:00", hl7_to_fhir_dtm("2024021006"))
+    def test_hour(self) -> None:
+        self.assertEqual("2024-02-10T06:00:00+04:00", hl7_to_fhir_dtm("2024021006+0400"))
 
-    def test_month_min(self) -> None:
-        self.assertEqual("2024-02-10T06:35:00", hl7_to_fhir_dtm("202402100635"))
+    def test_min(self) -> None:
+        self.assertEqual(
+            "2024-02-10T06:35:00+04:00", hl7_to_fhir_dtm("202402100635+0400")
+        )
 
-    def test_month_sec(self) -> None:
-        self.assertEqual("2024-02-10T06:35:57", hl7_to_fhir_dtm("20240210063557"))
+    def test_sec(self) -> None:
+        self.assertEqual(
+            "2024-02-10T06:35:57+04:00", hl7_to_fhir_dtm("20240210063557+0400")
+        )
 
-    def test_utc(self) -> None:
+    def test_local_hour(self) -> None:
+        self.assertEqual("2024-02-10", hl7_to_fhir_dtm("2024021006"))
+
+    def test_local_min(self) -> None:
+        self.assertEqual("2024-02-10", hl7_to_fhir_dtm("202402100635"))
+
+    def test_local_sec(self) -> None:
+        self.assertEqual("2024-02-10", hl7_to_fhir_dtm("20240210063557"))
+
+    def test_tz_utc(self) -> None:
         self.assertEqual(
             "2024-02-10T06:35:57.920Z", hl7_to_fhir_dtm("20240210063557.920+0000")
         )
@@ -223,12 +264,10 @@ class Hl7ToFhirDtmTest(TestCase):
             "2024-02-10T06:35:57.920Z", hl7_to_fhir_dtm("20240210063557.920-0000")
         )
 
-    def test_tz_plus(self) -> None:
+    def test_tz_offset(self) -> None:
         self.assertEqual(
             "2024-02-10T06:35:57.920+01:00", hl7_to_fhir_dtm("20240210063557.920+0100")
         )
-
-    def test_tz_minus(self) -> None:
         self.assertEqual(
             "2024-02-10T06:35:57.920-01:00", hl7_to_fhir_dtm("20240210063557.920-0100")
         )
@@ -241,7 +280,7 @@ class Hl7ToFhirDtmTest(TestCase):
         res = hl7_to_fhir_dtm("202402", precision=Hl7DtmPrecision.DAY)
         self.assertEqual("2024-02", res)
 
-    def test_precision(self) -> None:
+    def test_precision_equal(self) -> None:
         res = hl7_to_fhir_dtm("20240210", precision=Hl7DtmPrecision.DAY)
         self.assertEqual("2024-02-10", res)
 

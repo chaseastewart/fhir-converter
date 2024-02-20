@@ -208,13 +208,13 @@ def to_fhir_dtm(dt: datetime, precision: Optional[FhirDtmPrecision] = None) -> s
     """
     if precision is None:
         precision = FhirDtmPrecision.SEC
+    # TODO HOUR, MIN, SEC truncation
 
-    iso_dtm = dt.isoformat(timespec=precision.timespec)
-    if dt.utcoffset() == zero_time_delta:
+    iso_dtm, offset = dt.isoformat(timespec=precision.timespec), dt.utcoffset()
+    if offset == zero_time_delta:
         iso_dtm = iso_dtm[:-6] + "Z"
 
-    # TODO HOUR, MIN, SEC
-    if precision > FhirDtmPrecision.DAY:
+    if offset is not None and precision > FhirDtmPrecision.DAY:
         return iso_dtm
     elif precision > FhirDtmPrecision.MONTH:
         return iso_dtm[: FhirDtmPrecision.DAY]

@@ -9,7 +9,7 @@ from fhir_converter.renderers import (
     CcdaRenderer,
     Stu3FhirRenderer,
     ccda_default_loader,
-    get_environment,
+    make_environment,
     render_files_to_dir,
     render_to_dir,
 )
@@ -48,7 +48,7 @@ static_templates = {
 }"""
 }
 renderer = CcdaRenderer(
-    env=get_environment(
+    env=make_environment(
         loader=DictLoader(templates=static_templates),
         additional_loaders=[ccda_default_loader],
     )
@@ -61,7 +61,7 @@ with from_file.open() as xml_in:
 
 # Create a renderer that will load the user defined templates into the rendering env
 renderer = CcdaRenderer(
-    env=get_environment(
+    env=make_environment(
         loader=FileExtensionLoader(search_path=ccda_templates_dir),
         additional_loaders=[ccda_default_loader],
     )

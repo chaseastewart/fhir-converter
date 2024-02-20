@@ -15,14 +15,14 @@ from frozendict import frozendict
 from liquid import Environment, FileExtensionLoader
 from psutil import Process
 
+from fhir_converter.exceptions import fail
 from fhir_converter.renderers import (
     BaseFhirRenderer,
     CcdaRenderer,
     DataRenderer,
     RenderErrorHandler,
     Stu3FhirRenderer,
-    fail,
-    get_environment,
+    make_environment,
     render_files_to_dir,
     render_to_dir,
 )
@@ -87,7 +87,7 @@ def get_user_defined_environment(
     args: argparse.Namespace, defaults: Mapping[str, Any]
 ) -> Optional[Environment]:
     if args.template_dir:
-        return get_environment(
+        return make_environment(
             loader=FileExtensionLoader(search_path=args.template_dir),
             additional_loaders=[defaults["loader"]],
         )

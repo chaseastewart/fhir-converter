@@ -12,7 +12,6 @@ from typing import (
     Iterable,
     Mapping,
     MutableMapping,
-    NoReturn,
     Optional,
     Sequence,
     TextIO,
@@ -22,13 +21,14 @@ from typing import (
 
 from frozendict import frozendict
 from liquid import Environment
-from liquid.loaders import BaseLoader
+from liquid.loaders import BaseLoader, PackageLoader
 from pyjson5 import encode_io
 from pyjson5 import loads as json_loads
 
+from fhir_converter.exceptions import RenderingError, fail
 from fhir_converter.filters import all_filters, register_filters
 from fhir_converter.hl7 import parse_fhir
-from fhir_converter.loaders import ResourceLoader, TemplateSystemLoader, read_text
+from fhir_converter.loaders import make_template_system_loader, read_text
 from fhir_converter.tags import all_tags, register_tags
 from fhir_converter.utils import (
     del_empty_dirs_quietly,
@@ -52,24 +52,15 @@ DataRenderer = Callable[[DataInput, DataOutput, str], None]
 RenderErrorHandler = Callable[[Exception], None]
 """Callable[[Exception], None]: Rendering error handling function"""
 
-ccda_default_loader: Final[ResourceLoader] = ResourceLoader(
-    search_package="fhir_converter.templates.ccda"
+ccda_default_loader: Final[PackageLoader] = PackageLoader(
+    package="fhir_converter.templates", package_path="ccda"
 )
 """ResourceLoader: The default loader for the ccda templates"""
 
-stu3_default_loader: Final[ResourceLoader] = ResourceLoader(
-    search_package="fhir_converter.templates.stu3"
+stu3_default_loader: Final[PackageLoader] = PackageLoader(
+    package="fhir_converter.templates", package_path="stu3"
 )
 """ResourceLoader: The default loader for the stu3 templates"""
-
-
-class RenderingError(Exception):
-    """Raised when there is a rendering error"""
-
-    def __init__(self, msg: str, cause: Optional[Exception] = None) -> None:
-        super().__init__(msg)
-        if cause:
-            self.__cause__ = cause
 
 
 class FhirRendererDefaults(TypedDict):
@@ -108,16 +99,16 @@ class BaseFhirRenderer(ABC):
         env: Optional[Environment] = None,
     ) -> None:
         if not env:
-            env = get_environment(**self.defaults())
+            env = make_environment(**self.defaults())
         else:
-            register_filters(env, all_filters)  # register if missing
+            register_filters(env, all_filters)
             register_tags(env, all_tags)
         self.env = env
 
     @staticmethod
     @abstractmethod
     def defaults() -> FhirRendererDefaults:
-        """_defaults The defaults when a rendering environment is not provided
+        """defaults The rendering defaults for the renderer
 
         Returns:
             FhirRendererDefaults: The rendering defaults for the renderer
@@ -268,7 +259,7 @@ class Stu3FhirRenderer(BaseFhirRenderer):
         )
 
 
-def get_environment(
+def make_environment(
     loader: BaseLoader,
     auto_reload: bool = False,
     cache_size: int = 300,
@@ -292,32 +283,19 @@ def get_environment(
     Returns:
         Environment: The rendering environment
     """
-    loaders = [loader]
-    if additional_loaders:
-        loaders += additional_loaders
     env = Environment(
-        loader=TemplateSystemLoader(
-            loaders,
+        loader=make_template_system_loader(
+            loader,
             auto_reload=auto_reload,
             cache_size=cache_size,
+            additional_loaders=additional_loaders,
         ),
+        cache_size=cache_size,
         **kwargs,
     )
     register_filters(env, all_filters, replace=True)
     register_tags(env, all_tags)
     return env
-
-
-def fail(e: Exception) -> NoReturn:
-    """fail Raises the provided exception
-
-    Args:
-        e (Exception): the exception / failure reason
-
-    Raises:
-        Exception: The provided exception
-    """
-    raise e
 
 
 def render_files_to_dir(
