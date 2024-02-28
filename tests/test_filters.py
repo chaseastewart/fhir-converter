@@ -477,7 +477,9 @@ class GetPropertTest(TestCase, FilterTest):
         "code_mapping": {
             "RequestStatus": {
                 "fatal": {"code": "severe", "display": "very severe"},
-                "retry": {"other": "retrying"},
+                "retry": {"other": "retrying", "code": "", "display": ""},
+                "unknown": {"other": ""},
+                "timeout": {},
                 "__default__": {
                     "code": "bad",
                     "display": "very bad",
@@ -494,77 +496,101 @@ class GetPropertTest(TestCase, FilterTest):
         result = self.bound_template.render()
         self.assertEqual(result, "")
 
-    def test_undefined_property(self) -> None:
+    def test_undefined_valueset_code(self) -> None:
         result = self.bound_template.render(status="undefined", key="Undefined")
         self.assertEqual(result, "undefined")
 
-    def test_undefined_property_code(self) -> None:
-        result = self.bound_template.render(
-            status="undefined", key="Undefined", property="code"
-        )
-        self.assertEqual(result, "undefined")
-
-    def test_undefined_property_display(self) -> None:
+    def test_undefined_valueset_display(self) -> None:
         result = self.bound_template.render(
             status="undefined", key="Undefined", property="display"
         )
         self.assertEqual(result, "undefined")
 
-    def test_undefined_property_other(self) -> None:
+    def test_undefined_valueset_other(self) -> None:
         result = self.bound_template.render(
             status="undefined", key="Undefined", property="other"
         )
         self.assertEqual(result, "")
 
-    def test_default_property(self) -> None:
+    def test_valueset_default_code(self) -> None:
         result = self.bound_template.render(status="aborted", key="RequestStatus")
         self.assertEqual(result, "bad")
 
-    def test_default_property_code(self) -> None:
-        result = self.bound_template.render(
-            status="aborted", key="RequestStatus", property="code"
-        )
-        self.assertEqual(result, "bad")
-
-    def test_default_property_display(self) -> None:
+    def test_valueset_default_display(self) -> None:
         result = self.bound_template.render(
             status="aborted", key="RequestStatus", property="display"
         )
         self.assertEqual(result, "very bad")
 
-    def test_default_property_other(self) -> None:
+    def test_valueset_default_other(self) -> None:
         result = self.bound_template.render(
             status="aborted", key="RequestStatus", property="other"
         )
         self.assertEqual(result, "could be worse")
 
-    def test_default_property_undefined(self) -> None:
+    def test_valueset_undefined(self) -> None:
         result = self.bound_template.render(
             status="aborted", key="RequestStatus", property="undefined"
         )
         self.assertEqual(result, "")
 
-    def test_property(self) -> None:
+    def test_valueset_code(self) -> None:
         result = self.bound_template.render(status="fatal", key="RequestStatus")
         self.assertEqual(result, "severe")
 
-    def test_property_display(self) -> None:
+    def test_valueset_display(self) -> None:
         result = self.bound_template.render(
             status="fatal", key="RequestStatus", property="display"
         )
         self.assertEqual(result, "very severe")
 
-    def test_property_other(self) -> None:
+    def test_valueset_other(self) -> None:
         result = self.bound_template.render(
             status="retry", key="RequestStatus", property="other"
         )
         self.assertEqual(result, "retrying")
 
-    def test_property_undefined(self) -> None:
+    def test_valueset_code_blank(self) -> None:
         result = self.bound_template.render(
-            status="fatal", key="RequestStatus", property="other"
+            status="retry", key="RequestStatus", property="code"
         )
         self.assertEqual(result, "")
+
+    def test_valueset_display_blank(self) -> None:
+        result = self.bound_template.render(
+            status="retry", key="RequestStatus", property="display"
+        )
+        self.assertEqual(result, "")
+
+    def test_valueset_other_blank(self) -> None:
+        result = self.bound_template.render(
+            status="unknown", key="RequestStatus", property="other"
+        )
+        self.assertEqual(result, "")
+
+    def test_valueset_code_undefined_default(self) -> None:
+        result = self.bound_template.render(
+            status="unknown", key="RequestStatus", property="code"
+        )
+        self.assertEqual(result, "bad")
+
+    def test_valueset_display_undefined_default(self) -> None:
+        result = self.bound_template.render(
+            status="unknown", key="RequestStatus", property="display"
+        )
+        self.assertEqual(result, "very bad")
+
+    def test_valueset_empty_default_code(self) -> None:
+        result = self.bound_template.render(
+            status="timeout", key="RequestStatus", property="code"
+        )
+        self.assertEqual(result, "bad")
+
+    def test_valueset_empty_default_display(self) -> None:
+        result = self.bound_template.render(
+            status="timeout", key="RequestStatus", property="display"
+        )
+        self.assertEqual(result, "very bad")
 
 
 class GetFirstCcdaSectionsByTemplateIdTest(TestCase, FilterTest):

@@ -21,29 +21,23 @@
       }
     },
     "ValueSet/AllergyCategory": {
-      "416098002": {
-        "code": "medication"
+      "235719002": {
+        "code": "food"
       },
-      "59037007": {
+      "414285001": {
+        "code": "food"
+      },
+      "418471000": {
+        "code": "food"
+      },
+      "416098002": {
         "code": "medication"
       },
       "419511003": {
         "code": "medication"
       },
-      "414285001": {
-        "code": "food"
-      },
-      "232347008": {
-        "code": "environment"
-      },
-      "420134006": {
-        "code": "other"
-      },
-      "418038007": {
-        "code": "other"
-      },
-      "419199007": {
-        "code": "other"
+      "59037007": {
+        "code": "medication"
       },
       "__default__": {
         "code": ""

@@ -247,11 +247,11 @@ def get_property(
     mapping = context.resolve("code_mapping", default={}).get(str_arg(mapping_key), None)
     if mapping:
         code_mapping = mapping.get(code, None)
-        if not code_mapping:
+        if not code_mapping or property not in code_mapping:
             code_mapping = mapping.get("__default__", {})
 
         mapped_code = code_mapping.get(property, None)
-        if mapped_code:
+        if mapped_code is not None:
             return mapped_code
 
     return code if property in ("code", "display") else ""
