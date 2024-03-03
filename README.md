@@ -27,7 +27,7 @@
 </a>
 <br>
 <a href="https://pepy.tech/project/python-fhir-converter" target="_blank">
-  <img src="https://static.pepy.tech/badge/python-fhir-converter/month" />
+  <img src="https://static.pepy.tech/badge/python-fhir-converter" />
 </a>
 </p>
 
