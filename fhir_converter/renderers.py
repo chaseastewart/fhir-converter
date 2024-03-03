@@ -55,12 +55,12 @@ RenderErrorHandler = Callable[[Exception], None]
 ccda_default_loader: Final[PackageLoader] = PackageLoader(
     package="fhir_converter.templates", package_path="ccda"
 )
-"""ResourceLoader: The default loader for the ccda templates"""
+"""PackageLoader: The default loader for the ccda templates"""
 
 stu3_default_loader: Final[PackageLoader] = PackageLoader(
     package="fhir_converter.templates", package_path="stu3"
 )
-"""ResourceLoader: The default loader for the stu3 templates"""
+"""PackageLoader: The default loader for the stu3 templates"""
 
 
 class FhirRendererDefaults(TypedDict):
@@ -181,15 +181,15 @@ class BaseFhirRenderer(ABC):
             RenderingError: when an error occurs while rendering the input data
         """
         try:
-            return self._render_to_fhir_internal(template_name, data_in, encoding)
+            return self._render(template_name, data_in, encoding)
         except Exception as e:
             raise RenderingError("Failed to render FHIR", e)
 
     @abstractmethod
-    def _render_to_fhir_internal(
+    def _render(
         self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
     ) -> MutableMapping:
-        """render_to_fhir_internal Renders the given data to FHIR
+        """render Renders the given data to FHIR
 
         Args:
             template_name (str): The rendering template
@@ -227,7 +227,7 @@ class CcdaRenderer(BaseFhirRenderer):
             template_globals["code_mapping"] = frozendict(value_set.get("Mapping", {}))
         return frozendict(template_globals)
 
-    def _render_to_fhir_internal(
+    def _render(
         self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
     ) -> MutableMapping:
         template = self.env.get_template(template_name, globals=self.template_globals)
@@ -248,7 +248,7 @@ class Stu3FhirRenderer(BaseFhirRenderer):
     def defaults() -> FhirRendererDefaults:
         return {"loader": stu3_default_loader}
 
-    def _render_to_fhir_internal(
+    def _render(
         self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
     ) -> MutableMapping:
         template = self.env.get_template(template_name)

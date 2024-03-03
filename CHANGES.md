@@ -1,5 +1,9 @@
 # Python FHIR Converter Change Log
 
+## Version 0.2.0
+- Map C-CDA Allergy to FHIR Allergy Intolerance Category. See [#6](https://github.com/chaseastewart/fhir-converter/issues/6)
+- Renamed `render_to_fhir_internal` to `render` to simplify `BaseFhirRenderer` API.
+
 ## Version 0.1.0
 - Fixed missing required AllergyIntolerance.reaction.manifestation for CDA->FHIR conversion. [_AllergyIntolerance.liquid](https://github.com/chaseastewart/fhir-converter/blob/69ca8f81cade9a480e624e09bfa3c4aa1663a2bf/fhir_converter/templates/ccda/Resource/_AllergyIntolerance.liquid#L23) incorrectly created an additional reaction for the severity. See [#3](https://github.com/chaseastewart/fhir-converter/issues/3)
 - Remove time when timezone is not present in CDA datetime to conform with FHIR datetime.  See [#2](https://github.com/chaseastewart/fhir-converter/issues/2)
