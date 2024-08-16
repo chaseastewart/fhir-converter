@@ -38,4 +38,5 @@ htmlcov/
 
 #mkdocs
 site/
+_site/
 docs/docstrings/

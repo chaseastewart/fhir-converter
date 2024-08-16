@@ -22,6 +22,7 @@ from typing import (
 from frozendict import frozendict
 from liquid import Environment
 from liquid.loaders import BaseLoader, PackageLoader
+from lxml.etree import QName
 from pyjson5 import encode_io
 from pyjson5 import loads as json_loads
 
@@ -29,14 +30,17 @@ from fhir_converter.exceptions import RenderingError, fail
 from fhir_converter.filters import all_filters, register_filters
 from fhir_converter.hl7 import parse_fhir
 from fhir_converter.loaders import make_template_system_loader, read_text
+from fhir_converter.parsers import ParseXmlOpts, parse_json, parse_xml, parse_xml_filter
 from fhir_converter.tags import all_tags, register_tags
 from fhir_converter.utils import (
     del_empty_dirs_quietly,
     del_path_quietly,
+    etree_element_to_str,
+    etree_to_str,
     join_subpath,
+    load_xslt,
     mkdir,
-    parse_json,
-    parse_xml,
+    sanitize_str,
     walk_path,
 )
 
@@ -225,14 +229,59 @@ class CcdaRenderer(BaseFhirRenderer):
         if "code_mapping" not in template_globals:
             value_set = json_loads(read_text(self.env, filename="ValueSet/ValueSet.json"))
             template_globals["code_mapping"] = frozendict(value_set.get("Mapping", {}))
+
+        self.render_narrative = template_globals.get("render_narrative", False)
+        if bool(self.render_narrative):
+            template_globals["narrative_xslt"] = load_xslt(
+                read_text(
+                    self.env,
+                    filename="cda_narrative.xsl",
+                )
+            )
         return frozendict(template_globals)
+
+    def _parse_cda(self, data_in: DataInput, encoding: str = "utf-8"):
+        def parse_ccda_filter(element, parent, opts):
+            filtered_out = parse_xml_filter(element, parent, opts)
+            if self.render_narrative is False:
+                return filtered_out
+
+            if filtered_out is None and QName(element.tag).localname == "text":
+                if parent is not None and QName(parent.tag).localname == "section":
+                    return {
+                        "_originalData": sanitize_str(
+                            etree_element_to_str(
+                                parent,
+                                encoding=opts.encoding,
+                                standalone=True,
+                            )
+                        )
+                    }
+            return filtered_out
+
+        def after_parse_ccda(parsed_dict, tree, opts):
+            parsed_dict["_originalData"] = sanitize_str(
+                etree_to_str(
+                    tree,
+                    encoding=opts.encoding,
+                    standalone=True,
+                )
+            )
+            return parsed_dict
+
+        return parse_xml(
+            data_in,
+            parse_opts=ParseXmlOpts(encoding=encoding),
+            parse_filter=parse_ccda_filter,
+            after_parse_xml=after_parse_ccda,
+        )
 
     def _render(
         self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
     ) -> MutableMapping:
         template = self.env.get_template(template_name, globals=self.template_globals)
         return parse_fhir(
-            json_input=template.render({"msg": parse_xml(data_in, encoding)}),
+            json_input=template.render({"msg": self._parse_cda(data_in, encoding)}),
         )
 
 
@@ -248,14 +297,16 @@ class Stu3FhirRenderer(BaseFhirRenderer):
     def defaults() -> FhirRendererDefaults:
         return {"loader": stu3_default_loader}
 
+    @staticmethod
+    def _parse_stu3(data_in: DataInput, encoding: str = "utf-8"):
+        return parse_json(data_in, encoding, ignore_empty_fields=False)
+
     def _render(
         self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
     ) -> MutableMapping:
         template = self.env.get_template(template_name)
         return parse_fhir(
-            json_input=template.render(
-                {"msg": parse_json(data_in, encoding, ignore_empty_fields=False)}
-            ),
+            json_input=template.render({"msg": self._parse_stu3(data_in, encoding)}),
         )
 
 
@@ -275,8 +326,7 @@ def make_environment(
         auto_reload (bool, optional): If `True`, loaders that have an `uptodate`
             callable will reload template source data automatically. Defaults to False
         cache_size (int, optional): The capacity of the template cache in number of
-            templates. cache_size is None or less than 1 disables caching.
-            Defaults to 300
+            templates. cache_size less than 1 disables caching. Defaults to 300
         additional_loaders (Optional[Sequence[BaseLoader]], optional): The additional
             loaders to use when a template is not found by the loader. Defaults to None
 

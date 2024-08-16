@@ -34,13 +34,10 @@ jobs:
         virtualenvs-in-project: true
         installer-parallel: true
     - name: Install project
-      run: poetry install --no-interaction
+      run: make install
     - name: flake8
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        poetry run flake8 fhir_converter --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings
-        poetry run flake8 fhir_converter --count --ignore=E203,E721 --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+        make linting-check
 
   type-check:
     needs: linting-check
@@ -63,9 +60,9 @@ jobs:
         virtualenvs-in-project: true
         installer-parallel: true
     - name: Install project
-      run: poetry install --no-interaction
+      run: make install
     - name: mypy
-      run: poetry run mypy fhir_converter
+      run: make type-check
 
   test:
     needs: type-check
@@ -131,9 +128,9 @@ jobs:
         virtualenvs-in-project: true
         installer-parallel: true
     - name: Install project
-      run: poetry install --no-interaction
+      run: make install
     - name: Build Coverage Report
-      run: poetry run pytest --cov=fhir_converter --cov-report=html
+      run: make cov
     - run: poetry run smokeshow upload htmlcov
       env:
         SMOKESHOW_GITHUB_STATUS_DESCRIPTION: Coverage {coverage-percentage}

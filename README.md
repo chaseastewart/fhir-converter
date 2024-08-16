@@ -124,7 +124,7 @@ Final Memory: 32M
 
 ## Templates
 
-Templates can be loaded from any python-liquid supported mechanism. To make packaging easier a [ResourceLoader](https://chaseastewart.github.io/fhir-converter/docstrings/loaders/#class-resourceloader) is provided. When a rendering environment is not provided, templates will be loaded from the module [resources](https://github.com/chaseastewart/fhir-converter/tree/main/fhir_converter/templates/). To ease the creation / reuse of templates a [TemplateSystemLoader](https://chaseastewart.github.io/fhir-converter/docstrings/loaders/#class-templatesystemloader) is provided that handles the template name conventions establised by [FHIR-Converter](https://github.com/microsoft/FHIR-Converter). This allows user defined templates to reference existing templates without change. The example user defined [templates](https://github.com/chaseastewart/fhir-converter/tree/main/data/templates/ccda) reuse the default section / header templates.
+Templates can be loaded from any python-liquid supported mechanism. When a rendering environment is not provided, templates will be loaded from the module [templates](https://github.com/chaseastewart/fhir-converter/tree/main/fhir_converter/templates/). To ease the creation / reuse of templates a [TemplateSystemLoader](https://chaseastewart.github.io/fhir-converter/docstrings/loaders/#class-templatesystemloader) is provided that handles the template name conventions establised by [FHIR-Converter](https://github.com/microsoft/FHIR-Converter). This allows user defined templates to reference existing templates without change. The example user defined [templates](https://github.com/chaseastewart/fhir-converter/tree/main/data/templates/ccda) reuse the default section / header templates.
 
 
 ## Benchmark
@@ -169,4 +169,5 @@ Pampi                   max=0.013       min=0.012       avg=0.012
 - [python-liquid](https://github.com/jg-rp/liquid)
 - [pyjson5](https://github.com/Kijewski/pyjson5)
 - [xmltodict](https://github.com/martinblech/xmltodict)
+- [isodate](https://github.com/gweis/isodate)
 <!--body-end-->

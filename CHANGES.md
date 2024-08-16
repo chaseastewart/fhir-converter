@@ -1,5 +1,9 @@
 # Python FHIR Converter Change Log
 
+## Version 0.3.0
+- Render narrative text from the CDA to xhtml to include in the Composition resource. See [#11](https://github.com/chaseastewart/fhir-converter/issues/11)
+- Fix bug in CDA to R4 Immunization template to correctly map lotNumberText to lotNumber.
+
 ## Version 0.2.0
 - Map C-CDA Allergy to FHIR Allergy Intolerance Category. See [#6](https://github.com/chaseastewart/fhir-converter/issues/6)
 - Renamed `render_to_fhir_internal` to `render` to simplify `BaseFhirRenderer` API.

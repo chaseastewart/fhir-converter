@@ -1,29 +1,81 @@
 from io import BytesIO, StringIO
 from pathlib import Path
-from typing import Mapping
 from unittest import TestCase
 from unittest.mock import patch
 
 from liquid import Undefined
-from pyexpat import ExpatError
-from pyjson5 import Json5EOF
+from lxml import etree
 from pytest import raises
 
-from fhir_converter.hl7 import get_ccda_section
 from fhir_converter.utils import (
     blank_str_to_empty,
     del_empty_dirs_quietly,
     del_path_quietly,
+    etree_element_to_str,
+    etree_to_str,
     is_undefined_none_or_blank,
+    join_strs,
     join_subpath,
+    load_xslt,
     merge_dict,
     mkdir,
-    parse_json,
-    parse_xml,
+    parse_etree,
+    sanitize_str,
     tail,
     to_list_or_empty,
+    transform_xml_str,
     walk_path,
 )
+
+
+class SanitizeStrTest(TestCase):
+    def test_none(self) -> None:
+        self.assertEqual(sanitize_str(None), "")
+
+    def test_empty_str(self) -> None:
+        self.assertEqual(sanitize_str(""), "")
+
+    def test_leading_trailing(self) -> None:
+        self.assertEqual(sanitize_str("  test  "), "test")
+
+    def test_consecutive_spaces(self) -> None:
+        self.assertEqual(sanitize_str("test    test"), "test test")
+
+    def test_tabs(self) -> None:
+        self.assertEqual(sanitize_str("test\t\ttest"), "test test")
+
+    def test_line_endings(self) -> None:
+        self.assertEqual(sanitize_str("\ntest\r\ntest\n"), "test test")
+
+    def test_mixed(self) -> None:
+        self.assertEqual(sanitize_str(" \t\ntest\r\n\t         test\n\t "), "test test")
+
+
+class JoinStrsTest(TestCase):
+    def test_none(self) -> None:
+        self.assertEqual(join_strs(None, None), "")
+
+    def test_empty_strs(self) -> None:
+        self.assertEqual(join_strs("", ""), "")
+
+    def test_blank_strs(self) -> None:
+        self.assertEqual(join_strs("", " "), " ")
+        self.assertEqual(join_strs(" ", ""), " ")
+        self.assertEqual(join_strs(" ", " "), " _ ")
+
+    def test_a(self) -> None:
+        self.assertEqual(join_strs("a", None), "a")
+        self.assertEqual(join_strs("a", ""), "a")
+
+    def test_b(self) -> None:
+        self.assertEqual(join_strs(None, "b"), "b")
+        self.assertEqual(join_strs("", "b"), "b")
+
+    def test_a_b(self) -> None:
+        self.assertEqual(join_strs("a", "b"), "a_b")
+
+    def test_sep(self) -> None:
+        self.assertEqual(join_strs("a", "b", sep="|"), "a|b")
 
 
 class IsUndefinedNoneOrBlankTest(TestCase):
@@ -71,6 +123,12 @@ class IsUndefinedNoneOrBlankTest(TestCase):
 
     def test_dict(self) -> None:
         self.assertFalse(is_undefined_none_or_blank({"test": "ok"}))
+
+    def test_set_empty(self) -> None:
+        self.assertTrue(is_undefined_none_or_blank(set()))
+
+    def test_set(self) -> None:
+        self.assertFalse(is_undefined_none_or_blank(set("ok")))
 
 
 class ToListOrEmptyTest(TestCase):
@@ -191,152 +249,6 @@ class MergeDictTest(TestCase):
         b: dict = {"NickNames": []}
         expected = {"NickNames": ["Slick", "Johnny", "Jon"]}
         self.assertEqual(expected, merge_dict(a, b))
-
-
-class ParseJsonTest(TestCase):
-    stu3_file = Path("tests/data/stu3/Person.json")
-
-    def validate_fhir(self, fhir: Mapping) -> None:
-        self.assertIn("gender", fhir)
-        self.assertEqual("male", fhir["gender"])
-
-    def test_empty(self) -> None:
-        with raises(Json5EOF):
-            parse_json("")
-
-    def test_blank(self) -> None:
-        with raises(Json5EOF):
-            parse_json(" ")
-
-    def test_list_empty(self) -> None:
-        self.assertEqual([], parse_json("[]"))
-
-    def test_list_bool(self) -> None:
-        self.assertEqual([True, False], parse_json("[true, false]"))
-
-    def test_list_str(self) -> None:
-        self.assertEqual(["ok"], parse_json("['', ' ', 'ok']"))
-
-    def test_list_dict(self) -> None:
-        self.assertEqual([{"test": "ok"}], parse_json('[{}, {"test": "ok"}]'))
-
-    def test_list_nested_empty(self) -> None:
-        self.assertEqual([], parse_json("[[[],[]]]"))
-
-    def test_dict_empty(self) -> None:
-        self.assertEqual({}, parse_json("{}"))
-
-    def test_dict_bool(self) -> None:
-        self.assertEqual({"test": False}, parse_json('{"test": false}'))
-
-    def test_dict_str_empty(self) -> None:
-        self.assertEqual({}, parse_json('{"test": ""}'))
-
-    def test_dict_str(self) -> None:
-        self.assertEqual({"test": "ok"}, parse_json('{"test": "ok"}'))
-
-    def test_dict_list_empty(self) -> None:
-        self.assertEqual({}, parse_json('{"test": []}'))
-
-    def test_dict_list_bool(self) -> None:
-        self.assertEqual({"test": [True, False]}, parse_json('{"test": [true, false]}'))
-
-    def test_dict_list_str(self) -> None:
-        self.assertEqual({"test": ["ok"]}, parse_json('{"test": ["", " ", "ok"]}'))
-
-    def test_dict_list_dict(self) -> None:
-        self.assertEqual(
-            {"test": [{"test": "ok"}]}, parse_json('{"test": [{}, {"test": "ok"}]}')
-        )
-
-    def test_dict_nested_empty(self) -> None:
-        self.assertEqual({}, parse_json('{"test": {"test": {"test": {}}}}'))
-
-    def test_dict_nested_str_empty(self) -> None:
-        self.assertEqual({}, parse_json('{"name": [{"family": "","given": [""]}]}'))
-
-    def test_dict_ignore_trailing_comma(self) -> None:
-        expected = {"name": [{"family": "Relative", "given": ["Ralph"]}]}
-        self.assertEqual(
-            expected,
-            parse_json('{"name": [{"family": "Relative","given": ["Ralph"]}],}'),
-        )
-
-    def test_dict_ignore_lead_trail_spaces(self) -> None:
-        expected = {"name": [{"family": "Relative", "given": ["Ralph"]}]}
-        self.assertEqual(
-            expected,
-            parse_json('   {"name": [{"family": "Relative","given": ["Ralph"]}]}   '),
-        )
-
-    def test_include_empty_fields(self) -> None:
-        self.assertEqual(
-            {"name": [{"family": "", "given": [""]}]},
-            parse_json(
-                '{"name": [{"family": "","given": [""]}]}', ignore_empty_fields=False
-            ),
-        )
-
-    def test_text(self) -> None:
-        self.validate_fhir(parse_json(self.stu3_file.read_text()))
-
-    def test_bytes(self) -> None:
-        self.validate_fhir(parse_json(self.stu3_file.read_bytes()))
-
-    def test_text_io(self) -> None:
-        with self.stu3_file.open() as stu3_in:
-            self.validate_fhir(parse_json(stu3_in))
-
-    def test_binary_io(self) -> None:
-        with self.stu3_file.open("rb") as stu3_in:
-            self.validate_fhir(parse_json(stu3_in))
-
-
-class ParseXmlTest(TestCase):
-    ccda_file = Path("tests/data/ccda/CCD.ccda")
-    empty_file = Path("tests/data/bad_data/empty.ccda")
-
-    def validate_ccda(self, xml: Mapping) -> None:
-        self.assertIn("ClinicalDocument", xml)
-        self.assertIsNotNone(
-            get_ccda_section(xml, search_template_ids="2.16.840.1.113883.10.20.22.2.6.1")
-        )
-
-    def test_empty_text(self) -> None:
-        with raises(ExpatError):
-            parse_xml("")
-
-    def test_blank_text(self) -> None:
-        with raises(ExpatError):
-            parse_xml(" ")
-
-    def test_empty_bytes(self) -> None:
-        with raises(ExpatError):
-            parse_xml(bytes())
-
-    def test_empty_text_io(self) -> None:
-        with raises(ExpatError):
-            with self.empty_file.open() as xml_in:
-                parse_xml(xml_in)
-
-    def test_empty_binary_io(self) -> None:
-        with raises(ExpatError):
-            with self.empty_file.open("rb") as xml_in:
-                parse_xml(xml_in)
-
-    def test_text(self) -> None:
-        self.validate_ccda(parse_xml(self.ccda_file.read_text(encoding="utf-8")))
-
-    def test_bytes(self) -> None:
-        self.validate_ccda(parse_xml(self.ccda_file.read_bytes()))
-
-    def test_text_io(self) -> None:
-        with self.ccda_file.open(encoding="utf-8") as xml_in:
-            self.validate_ccda(parse_xml(xml_in))
-
-    def test_binary_io(self) -> None:
-        with self.ccda_file.open("rb") as xml_in:
-            self.validate_ccda(parse_xml(xml_in))
 
 
 class JoinSubpathTest(TestCase):
@@ -525,7 +437,9 @@ class WalkPathTest(TestCase):
         root, dirs, filenames = next(walk)
         self.assertEqual(Path("tests/data/ccda"), root)
         self.assertEqual([], dirs)
-        self.assertSequenceEqual(["CCD.ccda", "sample.ccda"], sorted(filenames))
+        self.assertSequenceEqual(
+            ["CCD.ccda", "History_and_Physical.ccda", "sample.ccda"], sorted(filenames)
+        )
 
         with raises(StopIteration):
             next(walk)
@@ -569,3 +483,129 @@ class TailTest(TestCase):
         buffer = BytesIO()
         buffer.write(b"This is a test.")
         self.assertEqual("st.", tail(buffer, last_n=3))
+
+
+class ParseEtreeTest(TestCase):
+    def _validate(self, tree) -> None:
+        self.assertIsNotNone(tree)
+        root = tree.getroot()
+        self.assertIsNotNone(root)
+        self.assertEqual("root", root.tag)
+        self.assertEqual("simple", root.text)
+
+    def test_empty_text(self) -> None:
+        with raises(etree.XMLSyntaxError):
+            parse_etree("")
+
+    def test_blank_text(self) -> None:
+        with raises(etree.XMLSyntaxError):
+            parse_etree(" ")
+
+    def test_empty_bytes(self) -> None:
+        with raises(etree.XMLSyntaxError):
+            parse_etree(bytes())
+
+    def test_empty_text_io(self) -> None:
+        with raises(etree.XMLSyntaxError):
+            parse_etree(StringIO())
+
+    def test_empty_binary_io(self) -> None:
+        with raises(etree.XMLSyntaxError):
+            parse_etree(BytesIO())
+
+    def test_str(self) -> None:
+        self._validate(parse_etree("<root>simple</root>"))
+
+    def test_bytes(self) -> None:
+        self._validate(parse_etree(b"<root>simple</root>"))
+
+    def test_text_io(self) -> None:
+        self._validate(parse_etree(StringIO("<root>simple</root>")))
+
+    def test_binary_io(self) -> None:
+        self._validate(parse_etree(BytesIO(b"<root>simple</root>")))
+
+
+class EtreeToStrTest(TestCase):
+    tree = parse_etree("<root>simple</root>")
+
+    def test_defaults(self) -> None:
+        self.assertEqual(etree_to_str(self.tree), "<root>simple</root>")
+
+    def test_encoding(self) -> None:
+        self.assertEqual(
+            sanitize_str(
+                etree_to_str(self.tree, encoding="UTF-16"),
+                repl="",
+            ),
+            "<?xml version='1.0' encoding='UTF-16'?><root>simple</root>",
+        )
+
+    def test_standalone(self) -> None:
+        self.assertEqual(
+            sanitize_str(
+                etree_to_str(self.tree, encoding="UTF-8", standalone=True),
+                repl="",
+            ),
+            "<?xml version='1.0' encoding='UTF-8' standalone='yes'?><root>simple</root>",
+        )
+
+
+class EtreeElementToStrTest(TestCase):
+    element = parse_etree("<root>simple</root>").getroot()
+
+    def test_defaults(self) -> None:
+        self.assertEqual(
+            etree_element_to_str(self.element),
+            "<root>simple</root>",
+        )
+
+    def test_encoding(self) -> None:
+        self.assertEqual(
+            sanitize_str(
+                etree_element_to_str(self.element, encoding="UTF-16"),
+                repl="",
+            ),
+            "<?xml version='1.0' encoding='UTF-16'?><root>simple</root>",
+        )
+
+    def test_standalone(self) -> None:
+        self.assertEqual(
+            sanitize_str(
+                etree_element_to_str(self.element, encoding="UTF-8", standalone=True),
+                repl="",
+            ),
+            "<?xml version='1.0' encoding='UTF-8' standalone='yes'?><root>simple</root>",
+        )
+
+
+class TransformXmlStrTest(TestCase):
+    def test_output_text(self) -> None:
+        stylesheet = """<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+                <xsl:output method="text" encoding="ascii"/>
+                <xsl:template match="/">
+                    <xsl:value-of select="/root"/>
+                </xsl:template>
+            </xsl:stylesheet>
+        """
+        self.assertEqual(
+            transform_xml_str(load_xslt(stylesheet), "<root>text</root>"),
+            "text",
+        )
+
+    def test_output_xml(self) -> None:
+        stylesheet = """<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+                <xsl:output method="xml" encoding="utf-8" omit-xml-declaration="yes" indent="no"/>
+                <xsl:template match="/">
+                    <out>
+                        <xsl:value-of select="/in"/>
+                    </out>
+                </xsl:template>
+            </xsl:stylesheet>
+        """
+        self.assertEqual(
+            transform_xml_str(load_xslt(stylesheet), "<in>text</in>"),
+            "<out>text</out>",
+        )

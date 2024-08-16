@@ -1,17 +1,64 @@
+from io import BytesIO
+from os import PathLike
 from os import remove as os_remove
 from os import walk as os_walk
 from pathlib import Path
 from re import Pattern
 from re import compile as re_compile
-from typing import IO, Any, AnyStr, Dict, Final, Generator, List, Tuple, Union
+from typing import IO, Any, Dict, Final, Generator, List, Optional, Tuple, Union
 
 from liquid import Undefined
-from pyjson5 import loads as json_loads
-from xmltodict import parse as xmltodict_parse
+from lxml import etree
+from typing_extensions import TypeAlias
 
-DataIn = Union[IO, AnyStr]
+DataIn: TypeAlias = Union[IO[str], IO[bytes], str, bytes]
+FileDataIn: TypeAlias = Union[DataIn, PathLike]
 
 line_endings_pattern: Final[Pattern] = re_compile(r"\r\n?|\n")
+sanitize_pattern: Final[Pattern] = re_compile(r"\s\s+|\r\n?|\n")
+
+
+def sanitize_str(text: Optional[str], repl: str = " ") -> str:
+    """sanitize_str trims leading / trailing spaces replacing line endings and
+        consecutive whitespace characters with the specified replacement value
+
+    Args:
+        text (Optional[str]): the string
+        repl (str): the replacement value. Defaults to " "
+
+    Returns:
+        str: the santized string or empty string
+    """
+    return sanitize_pattern.sub(repl, text.strip()) if text else ""
+
+
+def join_strs(a: Optional[str], b: Optional[str], sep: str = "_") -> str:
+    """join_strs conditionally joins two strings depending on if they are both
+        not empty or None
+
+    Args:
+        a (Optional[str]): the first string
+        b (Optional[str]): the second string
+
+    Returns:
+        str: either the joined strings, the first, second or empty string
+    """
+    if a and b:
+        return a + sep + b
+    return a if a else b if b else ""
+
+
+def is_undefined_or_none(obj: Any) -> bool:
+    """is_undefined_or_none returns whether the object is undefined or
+    none
+
+    Args:
+        obj (Any): the object to check
+
+    Returns:
+        bool: returns True if the object is undefined or empty, otherwise, False
+    """
+    return obj is None or isinstance(obj, Undefined)
 
 
 def is_undefined_none_or_blank(obj: Any) -> bool:
@@ -26,6 +73,7 @@ def is_undefined_none_or_blank(obj: Any) -> bool:
         - [] (empty list)
         - () (empty tuple)
         - {} (empty dict)
+        - set() (empty set)
 
     Args:
         obj (Any): the object to check
@@ -33,11 +81,12 @@ def is_undefined_none_or_blank(obj: Any) -> bool:
     Returns:
         bool: returns True if the object is undefined, none or empty, otherwise, False
     """
-    if isinstance(obj, Undefined):
+    if is_undefined_or_none(obj):
         return True
     elif type(obj) in (int, float, bool):
         return False
-    elif isinstance(obj, str):
+
+    if isinstance(obj, str):
         obj = blank_str_to_empty(obj)
     return not obj
 
@@ -106,79 +155,13 @@ def merge_dict(a: Dict[Any, Any], b: Dict[Any, Any]) -> Dict[Any, Any]:
     return a
 
 
-def _remove_empty_json_list(obj: List[Any]) -> List[Any]:
-    """remove_empty_json_list Removes any empty values from the JSON list
-
-    See is_none_or_empty and remove_empty_json for more info
-
-    Args:
-        obj (List[Any]): the JSON list to check
-
-    Returns:
-        List[Any]: the JSON list with non empty values. May be empty if all values
-        were empty
-    """
-    new_list = []
-    for val in obj:
-        val = _remove_empty_json(val)
-        if not is_undefined_none_or_blank(val):
-            new_list.append(val)
-    return new_list
-
-
-def _remove_empty_json_dict(obj: Dict[Any, Any]) -> Dict[Any, Any]:
-    """remove_empty_json_dict Removes any empty JSON key/value mappings from
-    the supplied key/value pairs
-
-    See is_none_or_empty and remove_empty_json for more info
-
-    Args:
-        obj (Dict[Any, Any]): the JSON key/value pairs to check
-
-    Returns:
-        Dict[Any, Any]: the non empty key/value pairs, May be empty if
-        all key/value pairs were empty
-    """
-    for key in list(obj.keys()):
-        val = _remove_empty_json(obj[key])
-        if not is_undefined_none_or_blank(val):
-            obj[key] = val
-        else:
-            del obj[key]
-    return obj
-
-
-def _remove_empty_json(obj: Any) -> Any:
-    """remove_empty_json Removes empty JSON
-
-    Removes from the JSON object as follows::
-
-        - '', ' ' strings will be converted to ''. See blank_str_to_empty
-        - Lists with empty elements will be removed. See remove_empty_json_list
-        - Dicts with empty key/value mappings will be removed. See remove_empty_json_dict
-
-    Args:
-        obj (Any): the JSON to check
-
-    Returns:
-        Any: the non empty JSON, or empty
-    """
-    if isinstance(obj, dict):
-        return _remove_empty_json_dict(obj)
-    elif isinstance(obj, list):
-        return _remove_empty_json_list(obj)
-    elif isinstance(obj, str):
-        return blank_str_to_empty(obj)
-    return obj
-
-
-def _read_text(data: DataIn, encoding: str = "utf-8") -> str:
+def read_text(data: DataIn, encoding: str = "utf-8") -> str:
     """read_text Reads the given data using the supplied encoding if the data
     is not already a string
 
     Args:
         data (DataIn): the data to read
-        encoding (str, optional): The character encoding to use. Defaults to "utf-8"
+        encoding (str, optional): the character encoding to use. Defaults to "utf-8"
 
     Returns:
         str: the text content
@@ -186,68 +169,17 @@ def _read_text(data: DataIn, encoding: str = "utf-8") -> str:
     if isinstance(data, str):
         return data
 
-    content = data
-    if not isinstance(content, bytes):
-        content = content.read()
+    if not isinstance(data, (bytes, memoryview, bytearray)):
+        content = data.read()
         if isinstance(content, str):
             return content
-    return str(content, encoding=encoding)
-
-
-def parse_json(
-    json_in: DataIn, encoding: str = "utf-8", ignore_empty_fields: bool = True
-) -> Any:
-    """parse_json Parses the JSON string using a JSON 5 compliant decoder
-
-    Any empty JSON will be removed from decoded output. See remove_empty_json
-
-    Args:
-        json_in (DataIn): the json to decode
-        encoding (str, optional): The character encoding to use. Defaults to "utf-8"
-        ignore_empty_fields (bool): Whether to ignore empty fields. Defaults to True
-
-    Returns:
-        Any: the decoded output
-    """
-
-    json = json_loads(_read_text(json_in, encoding))
-    return _remove_empty_json(json) if ignore_empty_fields else json
-
-
-def parse_xml(xml_in: DataIn, encoding: str = "utf-8") -> Dict[str, Any]:
-    """parse_xml Parses the xml imput string or text/binary IO
-
-    Wraps xmltodict customizing the output as follows::
-        - Sets _originalData key with the original xml string with line endings removed
-        - Forces cdata along with settng the key to _
-        - Disables the prepanding of @ to attribute keys
-        - Replaces any : characters in keys with _
-
-    Args:
-        xml_in (DataIn): the xml input
-        encoding (str, optional): The character encoding to use. Defaults to "utf-8"
-
-    Returns:
-        Dict[str, Any]: the parsed xml
-    """
-    xml = line_endings_pattern.sub("", _read_text(xml_in))
-    data = xmltodict_parse(
-        xml,
-        encoding=encoding,
-        force_cdata=True,
-        attr_prefix="",
-        cdata_key="_",
-        postprocessor=lambda _, key, value: (
-            (key.replace(":", "_") if ":" in key else key, value) if value else None
-        ),
-    )
-    data["_originalData"] = xml
-    return data
+        data = content
+    return str(data, encoding=encoding)
 
 
 def join_subpath(path: Path, parent: Path, child: Path) -> Path:
     """join_subpath Joins the parts from the child relative to the parent
-    path to the supplied path. The final file part from child will be
+    path to the supplied path. the final file part from child will be
     excluded if child is a file
 
     Args:
@@ -329,7 +261,7 @@ def walk_path(
         path (Path): the path to walk
 
     Yields:
-        Generator[Tuple[Path, List[str], List[str]], Any, None]: The directory
+        Generator[Tuple[Path, List[str], List[str]], Any, None]: the directory
         tree generator
     """
     for dir, dirs, filenames in os_walk(path):
@@ -341,8 +273,8 @@ def tail(buffer: IO, last_n: int = 25, encoding: str = "utf-8") -> str:
 
     Args:
         buffer (IO): the file like object to read from
-        last_n (int, optional): The last n to read up to. Defaults to 25.
-        encoding (str, optional): The character encoding to use. Defaults to "utf-8"
+        last_n (int, optional): the last n to read up to. Defaults to 25.
+        encoding (str, optional): the character encoding to use. Defaults to "utf-8"
 
     Returns:
         str: up to the last n from the file like object or empty string if
@@ -352,4 +284,111 @@ def tail(buffer: IO, last_n: int = 25, encoding: str = "utf-8") -> str:
     if pos <= 0:
         return ""
     buffer.seek(pos - min(pos, last_n))
-    return _read_text(buffer, encoding)
+    return read_text(buffer, encoding)
+
+
+def parse_etree(
+    xml_in: FileDataIn, encoding: str = "utf-8", resolve_entities: bool = False, **kwargs
+) -> etree._ElementTree:
+    """parse_etree Parses the provided xml into a document tree
+
+    Args:
+        xml_in (FileDataIn): the xml in
+        encoding (str, optional): the character encoding to use. Defaults to "utf-8"
+        resolve_entities (bool, optional): Whether to replace entities. Defaults to False
+    Returns:
+        etree._ElementTree: the document tree
+    """
+    if isinstance(xml_in, (str, bytes)):
+        if isinstance(xml_in, str):
+            xml_in = xml_in.encode(encoding)
+        xml_in = BytesIO(xml_in)
+    return etree.parse(
+        xml_in,
+        etree.XMLParser(
+            encoding=encoding,
+            resolve_entities=resolve_entities,
+            **kwargs,
+        ),
+    )
+
+
+def etree_to_str(tree: etree._ElementTree, encoding: str = "utf-8", **kwargs) -> str:
+    """etree_to_str Serializes the document tree to a string
+
+    Args:
+        tree ( etree._ElementTree): the document tree
+        encoding (str, optional): the character encoding to use. Defaults to "utf-8"
+    Returns:
+        str: the xml string
+    """
+    buffer = BytesIO()
+    if isinstance(tree, etree._XSLTResultTree):
+        tree.write_output(
+            buffer,
+            **kwargs,
+        )
+    else:
+        tree.write(
+            buffer,
+            encoding=encoding,
+            **kwargs,
+        )
+    return buffer.getvalue().decode(encoding)
+
+
+def etree_element_to_str(
+    element: etree._Element, encoding: str = "utf-8", **kwargs
+) -> str:
+    """etree_element_to_str Serializes the document node to a string
+
+    Args:
+        element (etree._Element): the document node
+        encoding (str, optional): the character encoding to use. Defaults to "utf-8"
+    Returns:
+        str: the xml string
+    """
+    return etree.tostring(
+        element,
+        encoding=encoding,
+        **kwargs,
+    ).decode(encoding)
+
+
+def load_xslt(stylesheet_in: DataIn, encoding: str = "utf-8") -> etree.XSLT:
+    """load_xslt Loads the provided xslt stylesheet
+
+    Args:
+        stylesheet_in (DataIn): the stylesheet to load
+        encoding (str, optional): the character encoding to use. Defaults to "utf-8"
+    Returns:
+        etree.XSLT: the xslt object
+    """
+    return etree.XSLT(
+        parse_etree(
+            read_text(stylesheet_in, encoding),
+            encoding,
+        ),
+    )
+
+
+def transform_xml_str(xslt: etree.XSLT, xml: str) -> str:
+    """transform_xml_str Transforms the provided xml string using the specified xslt object
+    parsing the provided xml using the specified parser options passing any additional arguments
+    to the xslt transformation
+
+    Args:
+        xslt (str): the xml to transform
+        encoding (str, optional): the character encoding to use. Defaults to "utf-8"
+    Returns:
+        str: the output of the transformation
+    """
+    return etree_to_str(
+        xslt(
+            parse_etree(
+                xml,
+                remove_blank_text=True,
+                remove_comments=True,
+            )
+        )
+    )

@@ -33,7 +33,13 @@ from fhir_converter.hl7 import (
     hl7_to_fhir_dtm,
     to_fhir_dtm,
 )
-from fhir_converter.utils import is_undefined_none_or_blank, tail, to_list_or_empty
+from fhir_converter.utils import (
+    is_undefined_none_or_blank,
+    is_undefined_or_none,
+    tail,
+    to_list_or_empty,
+    transform_xml_str,
+)
 
 FilterT = Callable[..., Any]
 """Callable[..., Any]: A liquid filter function"""
@@ -338,6 +344,35 @@ def batch_render(
         return buffer.getvalue()
 
 
+@with_context
+@string_filter
+def transform_narrative(text: str, *, context: Context) -> Mapping:
+    """transform_narrative transform the given narrative text
+
+    Args:
+        text (str): the text to transform
+        context (Context): the rendering context
+
+    Returns:
+        str: the transformed output or an empty dict
+    """
+    narrative_xslt = context.resolve("narrative_xslt")
+    if is_undefined_or_none(narrative_xslt) or is_undefined_none_or_blank(text):
+        return {}
+
+    return {
+        "div": transform_xml_str(narrative_xslt, text),
+        "_status": {
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason",
+                    "valueCode": "unknown",
+                }
+            ]
+        },
+    }
+
+
 all_filters: Sequence[Tuple[str, FilterT]] = [
     ("to_json_string", to_json_string),
     ("to_array", to_array),
@@ -353,6 +388,7 @@ all_filters: Sequence[Tuple[str, FilterT]] = [
     ("get_first_ccda_sections_by_template_id", get_first_ccda_sections_by_template_id),
     ("get_ccda_section_by_template_id", get_ccda_section_by_template_id),
     ("batch_render", batch_render),
+    ("transform_narrative", transform_narrative),
 ]
 """Sequence[tuple[str, FilterT]]: All of the filters provided by the module"""
 

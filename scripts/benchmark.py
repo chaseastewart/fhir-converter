@@ -1,9 +1,10 @@
 import sys
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 from liquid import FileExtensionLoader
 
+from fhir_converter.parsers import parse_xml
 from fhir_converter.renderers import (
     CcdaRenderer,
     ccda_default_loader,
@@ -32,6 +33,10 @@ templates_dir, sample_data_dir = (
     Path("data/sample/ccda"),
 )
 
+disch_sum_cda = sample_data_dir.joinpath("Discharge_Summary.ccda")
+hist_and_phys_cda = sample_data_dir.joinpath("History_and_Physical.ccda")
+render_media_cda = sample_data_dir.joinpath("cda-ch-emed-2-7-MedicationCard.ccda")
+
 
 def main(argv: List[str]) -> None:
     from platform import python_version
@@ -59,14 +64,14 @@ def profile() -> None:
     )
 
     mkdir(data_out_dir)
-    mkdirs(data_builtin_dir, builtin_templates)
-    mkdirs(data_user_defined_dir, user_defined_templates)
-    mkdirs(data_all_dir, all_templates)
+    _mkdirs(data_builtin_dir, builtin_templates)
+    _mkdirs(data_user_defined_dir, user_defined_templates)
+    _mkdirs(data_all_dir, all_templates)
 
     before = perf_counter_ns()
     with Profile() as pr:
         renderer = CcdaRenderer()
-        render_samples(renderer, templates=builtin_templates, to_dir=data_builtin_dir)
+        _render_samples(renderer, templates=builtin_templates, to_dir=data_builtin_dir)
 
         renderer = CcdaRenderer(
             env=make_environment(
@@ -74,25 +79,23 @@ def profile() -> None:
                 additional_loaders=[ccda_default_loader],
             )
         )
-        render_samples(
-            renderer,
-            templates=user_defined_templates,
-            to_dir=data_user_defined_dir,
+        _render_samples(
+            renderer, templates=user_defined_templates, to_dir=data_user_defined_dir
         )
-        render_samples(renderer, templates=all_templates, to_dir=data_all_dir)
+        _render_samples(renderer, templates=all_templates, to_dir=data_all_dir)
 
         with open(data_out_dir.joinpath("stats.log"), "w") as stats_log:
             Stats(pr, stream=stats_log).sort_stats(SortKey.CUMULATIVE).print_stats()
     print(f"Took {(perf_counter_ns() - before) / 1000000000:.3f} seconds")
 
 
-def mkdirs(path: Path, dirnames: List[str], **kwargs) -> None:
+def _mkdirs(path: Path, dirnames: List[str], **kwargs) -> None:
     mkdir(path, **kwargs)
     for dirname in dirnames:
         mkdir(path.joinpath(dirname), **kwargs)
 
 
-def render_samples(
+def _render_samples(
     renderer: CcdaRenderer, templates: List[str], to_dir: Path, **kwargs
 ) -> None:
     from functools import partial
@@ -108,47 +111,73 @@ def render_samples(
 
 def benchmark(iterations: int = 20) -> None:
     print(f"Iterations={iterations}")
-    benchmark_renderer(sample_data_dir.joinpath("Discharge_Summary.ccda"), iterations)
-    benchmark_renderer(sample_data_dir.joinpath("History_and_Physical.ccda"), iterations)
+    _benchmark_cda_renderer(iterations)
+    _benchmark_xml_parser(iterations)
 
 
-def benchmark_renderer(sample_ccda: Path, iterations: int) -> None:
-    print(f"\nSample={sample_ccda}")
+def _benchmark_cda_renderer(iterations: int):
+    _benchmark_render_cda(disch_sum_cda, iterations)
+    _benchmark_render_cda(disch_sum_cda, iterations, render_narrative=True)
+    _benchmark_render_cda(hist_and_phys_cda, iterations)
+    _benchmark_render_cda(hist_and_phys_cda, iterations, render_narrative=True)
+    _benchmark_render_cda(render_media_cda, iterations)
+    _benchmark_render_cda(render_media_cda, iterations, render_narrative=True)
+
+
+def _benchmark_render_cda(
+    sample_ccda: Path, iterations: int, render_narrative: bool = False
+) -> None:
+    print(f"\nSample={sample_ccda}, render_narrative={render_narrative}")
     renderer = CcdaRenderer(
         env=make_environment(
             loader=FileExtensionLoader(search_path=templates_dir),
             additional_loaders=[ccda_default_loader],
-        )
+        ),
+        template_globals={"render_narrative": render_narrative},
     )
     for template_name in all_templates:
-        benchmark_render_to_fhir(renderer, sample_ccda, template_name, iterations)
+        _benchmark_function(
+            template_name,
+            "renderer.render_to_fhir(template_name, xml_in)",
+            {
+                **globals(),
+                "renderer": renderer,
+                "template_name": template_name,
+                "xml_in": sample_ccda.read_bytes(),
+            },
+            iterations,
+        )
 
 
-def benchmark_render_to_fhir(
-    renderer: CcdaRenderer, sample_ccda: Path, template_name: str, iterations: int
+def _benchmark_xml_parser(iterations: int) -> None:
+    _benchmark_parse_xml(disch_sum_cda, iterations)
+    _benchmark_parse_xml(hist_and_phys_cda, iterations)
+    _benchmark_parse_xml(render_media_cda, iterations)
+
+
+def _benchmark_parse_xml(sample_ccda: Path, iterations: int) -> None:
+    print(f"\nSample={sample_ccda}")
+    _benchmark_function(
+        parse_xml.__name__,
+        "parse_xml(xml_in)",
+        {
+            **globals(),
+            "xml_in": sample_ccda.read_bytes(),
+        },
+        iterations,
+    )
+
+
+def _benchmark_function(
+    what: str, stmt: str, globals: Dict[str, Any], iterations: int
 ) -> None:
     from statistics import mean
     from timeit import repeat
 
-    times = repeat(
-        "render_to_fhir(renderer, sample_ccda, template_name)",
-        globals={
-            **globals(),
-            "renderer": renderer,
-            "sample_ccda": sample_ccda,
-            "template_name": template_name,
-        },
-        number=1,
-        repeat=iterations,
-    )
+    times = repeat(stmt, globals=globals, number=1, repeat=iterations)
     print(
-        f"{template_name: <18}\tmax={max(times):.3f}\tmin={min(times):.3f}\tavg={mean(times):.3f}"
+        f"{what: <18}\tmax={max(times):.3f}\tmin={min(times):.3f}\tavg={mean(times):.3f}"
     )
-
-
-def render_to_fhir(renderer: CcdaRenderer, sample_ccda: Path, template_name: str) -> None:
-    with sample_ccda.open() as xml_in:
-        renderer.render_to_fhir(template_name, xml_in)
 
 
 if __name__ == "__main__":

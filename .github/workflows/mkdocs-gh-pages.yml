@@ -32,14 +32,9 @@ jobs:
         virtualenvs-in-project: true
         installer-parallel: true
     - name: Install project
-      run: poetry install --no-interaction
-    - name: Build Docstrings
-      run: |
-        poetry run lazydocs --output-path="./docs/docstrings" --overview-file="README.md" \
-        --src-base-url="https://github.com/chaseastewart/fhir-converter/blob/master/" \
-        fhir_converter
-    - name: Build Mkdocs
-      run: poetry run mkdocs build --site-dir ./_site
+      run: make install
+    - name: Build Docs
+      run: make docs
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
 

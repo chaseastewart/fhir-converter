@@ -36,7 +36,7 @@
                     {% else -%}
                         "vaccineCode":{ {% include 'DataType/CodeableConcept' CodeableConcept: manufacturedProduct.manufacturedMaterial.code -%} },
                     {% endif -%}
-                    "lotNumber":"{{ manufacturedProduct.manufacturedMaterial.IotNumberText._ }}",
+                    "lotNumber":"{{ manufacturedProduct.manufacturedMaterial.lotNumberText._ }}",
                 {% endif -%}
             {% endfor -%}
         {% endfor -%}

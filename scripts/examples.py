@@ -27,6 +27,11 @@ ccda_sample_dir = sample_data_dir.joinpath("ccda")
 ccda_data_out_dir = data_out_dir.joinpath("ccda")
 mkdir(ccda_data_out_dir)
 
+pampi_ccda_data_out_dir = ccda_data_out_dir.joinpath("pampi")
+mkdir(pampi_ccda_data_out_dir)
+ccd_ccda_data_out_dir = ccda_data_out_dir.joinpath("ccd")
+mkdir(ccd_ccda_data_out_dir)
+
 stu3_sample_dir = sample_data_dir.joinpath("stu3")
 stu3_data_out_dir = data_out_dir.joinpath("stu3")
 mkdir(stu3_data_out_dir)
@@ -71,14 +76,14 @@ print("\nRender the ccda file to the output directory using the CCD template")
 render_to_dir(
     render=partial(renderer.render_fhir, "CCD"),
     from_file=from_file,
-    to_dir=ccda_data_out_dir,
+    to_dir=ccd_ccda_data_out_dir,
 )
 
 print("\nRender all sample ccda files to the output directory using the Pampi template")
 render_files_to_dir(
     render=partial(renderer.render_fhir, "Pampi"),
     from_dir=ccda_sample_dir,
-    to_dir=ccda_data_out_dir,
+    to_dir=pampi_ccda_data_out_dir,
     path_filter=lambda p: p.suffix in (".ccda", ".xml"),
 )
 

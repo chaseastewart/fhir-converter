@@ -8,7 +8,8 @@ from re import compile as re_compile
 from re import sub as re_sub
 from typing import Any, Dict, Final, Mapping, NamedTuple, Optional, Sequence
 
-from fhir_converter.utils import merge_dict, parse_json, to_list_or_empty
+from fhir_converter.parsers import parse_json
+from fhir_converter.utils import merge_dict, to_list_or_empty
 
 dtm_pattern: Final[Pattern] = re_compile(r"(\d+(?:\.\d*)?)(?:([+-]\d{2})(\d{2}))?")
 """Final[Pattern]: The HL7 DTM REGEX for parsing date / times """

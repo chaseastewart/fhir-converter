@@ -56,6 +56,10 @@
                     {% if component.section.title._ == null -%}
                     "title":"{{ component.section.code.displayName }}",
                     {% endif -%}
+                    {% assign narrative = component.section.text._originalData | transform_narrative -%}
+                    {% if narrative.div -%}
+                    "text": {{ narrative }},
+                    {% else -%}
                     "text":
                     {
                         "status":"generated",
@@ -65,11 +69,11 @@
                             "div":"<div xmlns=\"http://www.w3.org/1999/xhtml\">{{ component.section.code.displayName | escape }}</div>",
                         {% endif -%}
                     },
+                    {% endif -%}
                     "code":
                     {
                         {% include 'DataType/CodeableConcept' CodeableConcept: component.section.code -%}
                     },
-                    "mode":"snapshot",
                 {% endif -%}
             },
             {% endfor -%}
