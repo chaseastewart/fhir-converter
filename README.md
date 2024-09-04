@@ -69,6 +69,7 @@ Built on the back of:
 - [Templates](#templates)
 - [Benchmark](#benchmark)
 - [Related Projects](#related-projects)
+- [HL7v2-\>FHIR](#hl7v2-fhir)
 
 
 <!--body-start-->
@@ -171,3 +172,15 @@ Pampi                   max=0.013       min=0.012       avg=0.012
 - [xmltodict](https://github.com/martinblech/xmltodict)
 - [isodate](https://github.com/gweis/isodate)
 <!--body-end-->
+
+## HL7v2->FHIR
+
+Updated liquid.expressions.common:parse_identifier() to support integers as identifiers. This is needed for HL7v2->FHIR mappings where the identifier is an integer.
+
+Still need to solve the tokenization of variables in hl7v2 liquid templates. 
+
+Variables of this kind are not supported in python-liquid:
+
+```liquid
+"timestamp":"{{ firstSegments.MSH.7.4.Value }}"
+```
