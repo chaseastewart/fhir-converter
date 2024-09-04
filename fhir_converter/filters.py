@@ -41,6 +41,8 @@ from fhir_converter.utils import (
     transform_xml_str,
 )
 
+import hl7
+
 FilterT = Callable[..., Any]
 """Callable[..., Any]: A liquid filter function"""
 
@@ -227,6 +229,15 @@ def generate_uuid(data: str) -> str:
         return ""
     return str(UUID(bytes=sha256(data.encode()).digest()[:16]))
 
+@string_filter
+def generate_id_input(data: str, resource_name:str ,based_id_required:bool,base_id:str = None) -> str:
+    """Generates an input string for generate_uuid with 1) the resource type, 2) whether a base ID is required, 3) the base ID (optional)"""
+    if is_undefined_none_or_blank(data):
+        return ""
+    if based_id_required:
+        return data + resource_name + base_id
+    return data + resource_name
+
 
 @with_context
 @string_filter
@@ -372,6 +383,72 @@ def transform_narrative(text: str, *, context: Context) -> Mapping:
         },
     }
 
+@liquid_filter
+def get_first_segments(msg: 'hl7.Message', segment_names: str) -> Mapping[Any, Any]:
+    """get_first_segments Get the first segment that matches the given segment_name
+
+    Args:
+        msg (hl7.Message): the msg / hl7v2 message to search
+        segment_name (str): the list of segments to search the document with separated by |
+
+    Returns:
+        Mapping[Any, Any]: the list of segments, otherwise, empty
+    """
+    segments, search_segment_names = {}, str_arg(segment_names).split("|")
+    for segment_name in search_segment_names:
+        segment = None
+        try:
+            segment = msg.segment(segment_name)
+        except KeyError:
+            pass
+        if segment:
+            segments[segment_name] = _convert_hl7_segment(segment)
+    return segments
+
+def _convert_hl7_segment(segment: 'hl7.Segment') -> Mapping[Any, Any]:
+    """Convert the hl7 segment to a dictionary
+
+    Each key are casted to a string
+    The leaf values are casted to a string and puted in a 'Value' key
+    Here we can't use items() because the hl7.Segment object is not a dict
+    We use the __getitem__ method to get the values and len() to get the number of fields
+    We do it recursively to get the values of the subfields
+
+    Args:
+        segment (hl7.Segment): the hl7 segment
+
+    Returns:
+        Mapping[Any, Any]: the segment as a dictionary
+    """
+    segment_dict = {}
+    for i in range(len(segment)):
+        if len(segment[i]) > 1:
+            segment_dict[str(i)] = _convert_hl7_segment(segment[i])
+        else:
+            segment_dict[str(i)] = {"Value": str(segment[i])}
+    return segment_dict
+
+@liquid_filter
+def get_segment_lists(msg: 'hl7.Message', segment_names: str) -> List[Mapping[Any, Any]]:
+    """get_segments_list Get the segments that match the given segment_name
+
+    Args:
+        msg (hl7.Message): the msg / hl7v2 message to search
+        segment_name (str): the list of segments to search the document with separated by |
+
+    Returns:
+        List[Mapping[Any, Any]]: the list of segments, otherwise, empty
+    """
+    segments, search_segment_names = [], str_arg(segment_names).split("|")
+    for segment_name in search_segment_names:
+        segment = None
+        try:
+            segment = msg.segment(segment_name)
+        except KeyError:
+            pass
+        if segment:
+            segments.append(_convert_hl7_segment(segment))
+    return segments
 
 all_filters: Sequence[Tuple[str, FilterT]] = [
     ("to_json_string", to_json_string),
@@ -389,6 +466,9 @@ all_filters: Sequence[Tuple[str, FilterT]] = [
     ("get_ccda_section_by_template_id", get_ccda_section_by_template_id),
     ("batch_render", batch_render),
     ("transform_narrative", transform_narrative),
+    ("get_first_segments", get_first_segments),
+    ("get_segment_lists", get_segment_lists),
+    ("generate_id_input", generate_id_input)
 ]
 """Sequence[tuple[str, FilterT]]: All of the filters provided by the module"""
 

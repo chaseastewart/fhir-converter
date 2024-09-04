@@ -25,6 +25,7 @@ from liquid.loaders import BaseLoader, PackageLoader
 from lxml.etree import QName
 from pyjson5 import encode_io
 from pyjson5 import loads as json_loads
+import hl7
 
 from fhir_converter.exceptions import RenderingError, fail
 from fhir_converter.filters import all_filters, register_filters
@@ -65,6 +66,11 @@ stu3_default_loader: Final[PackageLoader] = PackageLoader(
     package="fhir_converter.templates", package_path="stu3"
 )
 """PackageLoader: The default loader for the stu3 templates"""
+
+hl7v2_default_loader: Final[PackageLoader] = PackageLoader(
+    package="fhir_converter.templates", package_path="hl7v2"
+)
+"""PackageLoader: The default loader for the hl7v2 templates"""
 
 
 class FhirRendererDefaults(TypedDict):
@@ -307,6 +313,36 @@ class Stu3FhirRenderer(BaseFhirRenderer):
         template = self.env.get_template(template_name)
         return parse_fhir(
             json_input=template.render({"msg": self._parse_stu3(data_in, encoding)}),
+        )
+    
+class Hl7v2Renderer(BaseFhirRenderer):
+    """HL7v2 to FHIR renderer"""
+
+    __slots__ = "env"
+
+    def __init__(self, env: Optional[Environment] = None) -> None:
+        super().__init__(env)
+
+    @staticmethod
+    def defaults() -> FhirRendererDefaults:
+        return {"loader": hl7v2_default_loader}
+
+    @staticmethod
+    def _parse_hl7v2(data_in: DataInput, encoding: str = "utf-8"):
+        # convert data_in to string knowing that it is a file like object
+        # or a string or an TextIOWrapper
+
+        data_in = data_in.read()
+        data_in = data_in.replace("\n", "\r")
+
+        return hl7.parse(data_in, encoding)
+
+    def _render(
+        self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
+    ) -> MutableMapping:
+        template = self.env.get_template(template_name)
+        return parse_fhir(
+            json_input=template.render({"hl7v2Data": self._parse_hl7v2(data_in, encoding)}),
         )
 
 
