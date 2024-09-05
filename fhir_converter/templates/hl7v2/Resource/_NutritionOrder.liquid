@@ -1,20 +1,20 @@
-{% evaluate Practitioner_ID_NTE_5 using 'ID/Practitioner' XCN: NTE.5 -%}
+{% evaluate Practitioner_ID_NTE_5 using 'ID/Practitioner' XCN: NTE."5" -%}
 {
     "fullUrl":"urn:uuid:{{ ID }}",
     "resource":{
         "resourceType": "NutritionOrder",
         "id":"{{ ID }}",
-        {% if ORC.5 -%}
-            "status":"{{ ORC.5.Value | get_property: 'CodeSystem/OrderStatus', 'code' }}",  
+        {% if ORC."5" -%}
+            "status":"{{ ORC."5".Value | get_property: 'CodeSystem/OrderStatus', 'code' }}",  
         {% else -%}
-            "status":"{{ ORC.1.Value | get_property: 'CodeSystem/OrderControlCode', 'code' }}",
+            "status":"{{ ORC."1".Value | get_property: 'CodeSystem/OrderControlCode', 'code' }}",
         {% endif %} 
         "intent":"order",
         "identifier":
         [   
             {
-                {% if ORC.2 -%}
-                    {% include 'DataType/EIIdentifier' EI: ORC.2 -%}
+                {% if ORC."2" -%}
+                    {% include 'DataType/EIIdentifier' EI: ORC."2" -%}
                     "type":
                     {
                         "coding":
@@ -28,8 +28,8 @@
                 {% endif %} 
             },
             {
-                {% if ORC.3 -%}
-                    {% include 'DataType/EIIdentifier' EI: ORC.3 -%}
+                {% if ORC."3" -%}
+                    {% include 'DataType/EIIdentifier' EI: ORC."3" -%}
                     "type":
                     {
                         "coding":
@@ -43,16 +43,16 @@
                 {% endif %} 
             },           
             {
-                {% include 'DataType/EIIdentifier' EI: ORC.4 -%}
+                {% include 'DataType/EIIdentifier' EI: ORC."4" -%}
                 "type":
                 {
                     "coding":
                     [
                         {
-                            {% if ORC.4 -%}
+                            {% if ORC."4" -%}
                                 "code":"PGN",
                             {% endif -%}
-                            {% if ORC.4 -%}
+                            {% if ORC."4" -%}
                                 "system":"http://terminology.hl7.org/CodeSystem/v2-0203",
                             {% endif -%}
                         },
@@ -60,28 +60,28 @@
                 },
             },
         ],
-        "dateTime": "{{ ORC.15.Value | format_as_date_time }}",
-        {% if ORC.15 == null or ORC.15 == '' -%}
-            "dateTime": "{{ ORC.9.Value | format_as_date_time }}",
+        "dateTime": "{{ ORC."15".Value | format_as_date_time }}",
+        {% if ORC."15" == null or ORC."15" == '' -%}
+            "dateTime": "{{ ORC."9".Value | format_as_date_time }}",
         {% endif -%}
-        {% if ORC.15 == null or ORC.15 == '' or ORC.9 == null or ORC.9 == '' -%}
-            "dateTime": "{{ MSH.7.Value | format_as_date_time }}",
+        {% if ORC."15" == null or ORC."15" == '' or ORC."9" == null or ORC."9" == '' -%}
+            "dateTime": "{{ MSH."7".Value | format_as_date_time }}",
         {% endif -%}
 
-        {% if ODS.1.Value == "D" -%}
+        {% if ODS."1".Value == "D" -%}
             "oralDiet" : { 
                 "type" : [
-                    {% for ods3 in ODS.3.Repeats -%}
+                    {% for ods3 in ODS."3".Repeats -%}
                         {
                             {% include 'DataType/CWECodeableConcept', CWE: ods3 -%}
                         },
                     {% endfor -%}
                 ], 
-                {% capture textstring %}{{ ODS.4.Value  | split: "~" | join: "+" }}{% endcapture -%}
+                {% capture textstring %}{{ ODS."4".Value  | split: "~" | join: "+" }}{% endcapture -%}
                 "instruction" : "{{textstring}}",
-                {% if ORC.7 -%}
+                {% if ORC."7" -%}
                 "schedule" : [
-                    {% for orc7 in ORC.7.Repeats -%}
+                    {% for orc7 in ORC."7".Repeats -%}
                         {
                             {% include 'DataType/TQ_NutritionOrder', TQ: orc7 -%}
                         },
@@ -90,17 +90,17 @@
                 {% endif -%}
             },
         {% endif -%}
-        {% if ODS.1.Value == "S" -%}
+        {% if ODS."1".Value == "S" -%}
             "supplement" : [
-                {% for ods3 in ODS.3.Repeats -%}
+                {% for ods3 in ODS."3".Repeats -%}
                     { 
                         "type" : { 
                             {% include 'DataType/CWECodeableConcept', CWE: ods3 -%}
                         }, 
-                        {% capture textstring %}{{ ODS.4.Value  | split: "~" | join: "+" }}{% endcapture -%}
+                        {% capture textstring %}{{ ODS."4".Value  | split: "~" | join: "+" }}{% endcapture -%}
                         "instruction" : "{{textstring}}",
                         "schedule" : [
-                            {% for orc7 in ORC.7.Repeats -%}
+                            {% for orc7 in ORC."7".Repeats -%}
                                 {
                                     {% include 'DataType/TQ_NutritionOrder', TQ: orc7 -%}
                                 },
@@ -110,27 +110,27 @@
                 {% endfor -%}
             ],
         {% endif -%}
-        {% if ODS.1.Value == "P" -%}
+        {% if ODS."1".Value == "P" -%}
             "foodPreferenceModifier" : [,
-                {% for ods3 in ODS.3.Repeats -%}
+                {% for ods3 in ODS."3".Repeats -%}
                     { 
                         {% include 'DataType/CWECodeableConcept', CWE: ods3 -%}
-                        {% capture textstring %}{{ ODS.4.Value  | split: "~" | join: "+" }}{% endcapture -%}
+                        {% capture textstring %}{{ ODS."4".Value  | split: "~" | join: "+" }}{% endcapture -%}
                         "text" : "{{textstring}}",
                     },
                 {% endfor -%}
             ],
         {% endif -%}
         "note": [
-            {% for orc7 in ORC.7.Repeats -%}
+            {% for orc7 in ORC."7".Repeats -%}
                 {
-                    "text" : "{{ orc7.8.Value }}"
+                    "text" : "{{ orc7."8".Value }}"
                 },
             {% endfor -%}
             {% if NTE %}
             {
-                "text": "{{NTE.3.Value}}",
-                "time": "{{ NTE.6.Value | format_as_date_time }}",
+                "text": "{{NTE."3".Value}}",
+                "time": "{{ NTE."6".Value | format_as_date_time }}",
                 {% if Practitioner_ID_NTE_5 %}
                     "authorReference":
                     {

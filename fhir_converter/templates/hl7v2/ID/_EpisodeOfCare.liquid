@@ -1,6 +1,6 @@
 {% capture identifiers -%}
-    {% if PV1.1 and PV1.4 -%}
-        {{PV1.1.Value}},{{PV1.4.Value}}
+    {% if PV1."1" and PV1."4" -%}
+        {{PV1."1".Value}},{{PV1."4".Value}}
     {% elsif PV1 -%}
         {{PV1.Value}}
     {% elsif DG1 -%}

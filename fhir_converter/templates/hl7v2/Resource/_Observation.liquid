@@ -1,22 +1,22 @@
 {% comment -%}
 The following reference IDs are accepted by this template.
 
-Practitioner_ID_NTE_5: A resource Id, used to fill "note.reference" property. The resource is of "Practitioner" type and generated based on "NTE.5" HL7 V2 identifier.
-Practitioner_ID_OBX_16: A resource Id, used to fill "performer.reference" property. The resource is of "Practitioner" type and generated based on "OBX.16" HL7 V2 identifier.
-Organization_ID_OBX_23: A resource Id, used to fill "performer.reference" property. The resource is of "Organization" type and generated based on "OBX.23" HL7 V2 identifier.
-PractitionerRole_ID_OBX_25: A resource Id, used to fill "performer.reference" property. The resource is of "PractitionerRole" type and generated based on "OBX.25" HL7 V2 identifier.
+Practitioner_ID_NTE_5: A resource Id, used to fill "note.reference" property. The resource is of "Practitioner" type and generated based on "NTE."5"" HL7 V2 identifier.
+Practitioner_ID_OBX_16: A resource Id, used to fill "performer.reference" property. The resource is of "Practitioner" type and generated based on "OBX."16"" HL7 V2 identifier.
+Organization_ID_OBX_23: A resource Id, used to fill "performer.reference" property. The resource is of "Organization" type and generated based on "OBX."23"" HL7 V2 identifier.
+PractitionerRole_ID_OBX_25: A resource Id, used to fill "performer.reference" property. The resource is of "PractitionerRole" type and generated based on "OBX."25"" HL7 V2 identifier.
 Observation_Subject_ID: A resource Id, used to fill "subject.reference" property.
 Observation_Encounter_ID: A resource Id, used to fill "encounter.reference" property.
 Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" property.
 {% endcomment -%}
 
-{% evaluate Practitioner_ID_NTE_5 using 'ID/Practitioner' XCN: NTE.5 -%}
-{% evaluate Device_ID_OBX_18 using 'ID/Device' EI: OBX.18.Repeats[0] -%}
-{% evaluate Organization_ID_OBX_23 using 'ID/Organization' XON: OBX.23 -%}
-{% evaluate PractitionerRole_ID_OBX_25 using 'ID/PractitionerRole' XCN: OBX.25 -%}
+{% evaluate Practitioner_ID_NTE_5 using 'ID/Practitioner' XCN: NTE."5" -%}
+{% evaluate Device_ID_OBX_18 using 'ID/Device' EI: OBX."18".Repeats[0] -%}
+{% evaluate Organization_ID_OBX_23 using 'ID/Organization' XON: OBX."23" -%}
+{% evaluate PractitionerRole_ID_OBX_25 using 'ID/PractitionerRole' XCN: OBX."25" -%}
 
-{% assign VALUE_STRING_SN = {{OBX.5.1.Value}} | append: " " | append: {{OBX.5.2.Value}} | append: " " | append: {{OBX.5.3.Value}} | append: " " | append: {{OBX.5.4.Value}} -%}
-{% assign VALUE_STRING_VR = {{OBX.5.1.Value}} | append: "-" | append: {{OBX.5.2.Value}} -%}
+{% assign VALUE_STRING_SN = OBX."5"."1".Value | append: " " | append: OBX."5"."2".Value | append: " " | append: OBX."5"."3".Value | append: " " | append: OBX."5"."4".Value -%}
+{% assign VALUE_STRING_VR = OBX."5"."1".Value | append: "-" | append: OBX."5"."2".Value -%}
 
 {
     "fullUrl":"urn:uuid:{{ ID }}",
@@ -26,7 +26,7 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
         "identifier":
         [
             {
-                {% include 'DataType/EIIdentifier' EI: OBX.21 -%}
+                {% include 'DataType/EIIdentifier' EI: OBX."21" -%}
             },
             {
                 "type":
@@ -34,28 +34,28 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
                     "coding":
                     [
                         {
-                            {% if OBX.21 -%}
+                            {% if OBX."21" -%}
                                 "code":"FILL",
                             {% endif -%}
                         },
                     ],
                 },
             },
-            {% for ACC_13 in ACC.13.Repeats %}
+            {% for ACC_13 in ACC."13".Repeats %}
             {
                 {% include 'DataType/EIIdentifier' EI: ACC_13 -%}
             },
             {% endfor %}
         ],
 
-        "status": "{{ OBX.11.1.Value | get_property: 'CodeSystem/ObservationStatus', 'code' }}",
+        "status": "{{ OBX."11"."1".Value | get_property: 'CodeSystem/ObservationStatus', 'code' }}",
         {% if PDA_3 or PDA_6 or PDA_9 or ACC %}
             "status": "final",
         {% endif %}
 
         "code":
         {
-            {% include 'DataType/CWECodeableConcept' CWE: OBX.3 -%}
+            {% include 'DataType/CWECodeableConcept' CWE: OBX."3" -%}
             {% if ACC %}
             "coding": [
                 {
@@ -98,7 +98,7 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
         },
 
         "component" : [
-            {% if ACC.5 %}
+            {% if ACC."5" %}
             {
                 "code" : { 
                     "coding": [
@@ -110,11 +110,11 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
                     ],
                 },
                 "valueCodeableConcept": {
-                    {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/YesNo-Indicator', CWE: ACC.5 -%}
+                    {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/YesNo-Indicator', CWE: ACC."5" -%}
                 },
             },
             {% endif %}
-            {% if ACC.6 %}
+            {% if ACC."6" %}
             {
                 "code" : { 
                     "coding": [
@@ -126,11 +126,11 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
                     ],
                 },
                 "valueCodeableConcept": {
-                    {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/YesNo-Indicator', CWE: ACC.6 -%}
+                    {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/YesNo-Indicator', CWE: ACC."6" -%}
                 },
             },
             {% endif %}
-            {% if ACC.10 %}
+            {% if ACC."10" %}
             {
                 "code" : { 
                     "coding": [
@@ -142,13 +142,13 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
                     ],
                 },
                 "valueCodeableConcept": {
-                    {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/YesNo-Indicator', CWE: ACC.10 -%}
+                    {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/YesNo-Indicator', CWE: ACC."10" -%}
                 },
             },
             {% endif %}
         ],
 
-        "valueString" : "{{ ACC.8.Value }}",
+        "valueString" : "{{ ACC."8".Value }}",
 
         "basedOn":
         [
@@ -187,16 +187,16 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
                 {% endif %}
             },
         {% endif %}
-        {% if OBX.11.1.Value == 'X' or OBX.11.1.Value == 'N' %}
+        {% if OBX."11"."1".Value == 'X' or OBX."11"."1".Value == 'N' %}
             "dataAbsentReason" : { 
                 "coding" : [
-                {% if OBX.11.1.Value == 'X' %}
+                {% if OBX."11"."1".Value == 'X' %}
                     { 
                         "code" : "not-performed",
                         "system": "http://terminology.hl7.org/CodeSystem/data-absent-reason",
                     },
                 {% endif %}
-                {% if OBX.11.1.Value == 'N' %}
+                {% if OBX."11"."1".Value == 'N' %}
                     { 
                         "code" : "not-asked",
                         "system": "http://terminology.hl7.org/CodeSystem/data-absent-reason",
@@ -205,116 +205,116 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
                 ], 
             },
         {% else -%}       
-            {% assign obx5_rep = OBX.5.Repeats | size %}
+            {% assign obx5_rep = OBX."5".Repeats | size %}
             {% if obx5_rep == 1 %}
             "valueQuantity":
             {
-                {% if OBX.2.Value == "NM" -%}
-                    "value":{{ OBX.5.Value }},
+                {% if OBX."2".Value == "NM" -%}
+                    "value":{{ OBX."5".Value }},
                 {% endif -%}
-                {% if OBX.2.Value == "SN" -%}
-                    {% if OBX.5.3.Value != ':' and OBX.5.3.Value != '/' and  OBX.5.3.Value != '+' and  OBX.5.3.Value != '-' -%}
-                        {% include 'DataType/SNQuantity' SN: OBX.5 -%}
-                        {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                {% if OBX."2".Value == "SN" -%}
+                    {% if OBX."5"."3".Value != ':' and OBX."5"."3".Value != '/' and  OBX."5"."3".Value != '+' and  OBX."5"."3".Value != '-' -%}
+                        {% include 'DataType/SNQuantity' SN: OBX."5" -%}
+                        {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                     {% endif -%} 
                 {% endif -%} 
-                {% if OBX.2.Value == "NA" or OBX.2.Value == "NM" -%}
-                    {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                {% if OBX."2".Value == "NA" or OBX."2".Value == "NM" -%}
+                    {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                 {% endif -%}
             },
-            {% if OBX.2.Value == "ED" and OBX.5.2.Value == "text" and OBX.5.4.Value == "A" -%}
-                "valueString": "{{ OBX.5.1.Value}} {{ OBX.5.2.Value}} {{ OBX.5.3.Value}} {{ OBX.5.4.Value}}",
+            {% if OBX."2".Value == "ED" and OBX."5"."2".Value == "text" and OBX."5"."4".Value == "A" -%}
+                "valueString": "{{ OBX."5"."1".Value}} {{ OBX."5"."2".Value}} {{ OBX."5"."3".Value}} {{ OBX."5"."4".Value}}",
             {% endif %}
-            {% if OBX.2.Value == "ST" or OBX.2.Value == "FT" or OBX.2.Value == "TX" -%}
-                "valueString":"{{ OBX.5.Value }}",
+            {% if OBX."2".Value == "ST" or OBX."2".Value == "FT" or OBX."2".Value == "TX" -%}
+                "valueString":"{{ OBX."5".Value }}",
             {% endif -%}
-            {% if OBX.2.Value == "VR" -%}
+            {% if OBX."2".Value == "VR" -%}
                 "valueString": "{{VALUE_STRING_VR}}",
             {% endif -%}
-            {% if OBX.2.Value == "SN" and OBX.5.3.Value == "+" -%}
+            {% if OBX."2".Value == "SN" and OBX."5"."3".Value == "+" -%}
                 "valueString":"{{VALUE_STRING_SN}}",
             {% endif -%}
             "valueCodeableConcept":
             {
-                {% if OBX.2.Value == "CWE" -%}
-                    {% include 'DataType/CWECodeableConcept' CWE: OBX.5 -%}
+                {% if OBX."2".Value == "CWE" -%}
+                    {% include 'DataType/CWECodeableConcept' CWE: OBX."5" -%}
                 {% endif -%}  
-                {% if OBX.2.Value == "IS" -%}
-                    {% include 'DataType/ISCodeableConcept' IS: OBX.5 -%}
+                {% if OBX."2".Value == "IS" -%}
+                    {% include 'DataType/ISCodeableConcept' IS: OBX."5" -%}
                 {% endif -%}
-                {% if OBX.2.Value == "CE" -%}
-                    {% include 'DataType/CECodeableConcept' CE: OBX.5 -%}
+                {% if OBX."2".Value == "CE" -%}
+                    {% include 'DataType/CECodeableConcept' CE: OBX."5" -%}
                 {% endif -%}
-                {% if OBX.2.Value == "CNE" -%}
-                    {% include 'DataType/CNECodeableConcept' CNE: OBX.5 -%}
+                {% if OBX."2".Value == "CNE" -%}
+                    {% include 'DataType/CNECodeableConcept' CNE: OBX."5" -%}
                 {% endif -%}
-                {% if OBX.2.Value == "CF" -%}
-                    {% include 'DataType/CFCodeableConcept' CF: OBX.5 -%}
+                {% if OBX."2".Value == "CF" -%}
+                    {% include 'DataType/CFCodeableConcept' CF: OBX."5" -%}
                 {% endif -%}
-                {% if PID.10 -%}
-                    {% include 'DataType/CWECodeableConcept' CWE: PID.10 -%}
+                {% if PID."10" -%}
+                    {% include 'DataType/CWECodeableConcept' CWE: PID."10" -%}
                 {% endif -%}
-                {% if PID.22 -%}
-                    {% include 'DataType/CWECodeableConcept' CWE: PID.22 -%}
+                {% if PID."22" -%}
+                    {% include 'DataType/CWECodeableConcept' CWE: PID."22" -%}
                 {% endif -%}
             },
             "valueRange":
             {
-                {% if OBX.2.Value == "NR" -%}
-                    {% include 'DataType/NRRange' NR: OBX.5 -%}
+                {% if OBX."2".Value == "NR" -%}
+                    {% include 'DataType/NRRange' NR: OBX."5" -%}
                 {% endif -%}
-                {% if OBX.2.Value == "SN" and OBX.5.3.Value == "-" -%}
+                {% if OBX."2".Value == "SN" and OBX."5"."3".Value == "-" -%}
                     "low":
                     {
-                        {% if OBX.5.2 -%}      
-                            "value": {{ OBX.5.2.Value }},
+                        {% if OBX."5"."2" -%}      
+                            "value": {{ OBX."5"."2".Value }},
                         {% endif -%}
-                        {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}          
+                        {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}          
                     },
                     "high":
                     {
-                        {% if OBX.5.4 -%}      
-                            "value": {{ OBX.5.4.Value }},
+                        {% if OBX."5"."4" -%}      
+                            "value": {{ OBX."5"."4".Value }},
                         {% endif -%}
-                        {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                        {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                     },
                 {% endif -%}
             },
-            {% if OBX.2.Value == "DTM" or OBX.2.Value == "DT" -%}
-                "valueDateTime":"{{ OBX.5.Value | format_as_date_time }}",
+            {% if OBX."2".Value == "DTM" or OBX."2".Value == "DT" -%}
+                "valueDateTime":"{{ OBX."5".Value | format_as_date_time }}",
             {% endif -%}
-            {% if OBX.2.Value == "TM" -%}
-                "valueTime":"{{ OBX.5.Value }}",
+            {% if OBX."2".Value == "TM" -%}
+                "valueTime":"{{ OBX."5".Value }}",
             {% endif -%}
             "valuePeriod":
             {
-                {% if OBX.2.Value == "DR" -%}
-                    {% include 'DataType/DRPeriod' DR: OBX.5 -%}
+                {% if OBX."2".Value == "DR" -%}
+                    {% include 'DataType/DRPeriod' DR: OBX."5" -%}
                 {% endif -%}
             },
             "valueRatio":
             {
-                {% if OBX.2.Value == "SN" and OBX.5.3.Value == ":" or OBX.5.3.Value == "/" -%}
+                {% if OBX."2".Value == "SN" and OBX."5"."3".Value == ":" or OBX."5"."3".Value == "/" -%}
                     "numerator":
                     {
-                        {% if OBX.5.2 -%}      
-                            "value": {{ OBX.5.2.Value }},
+                        {% if OBX."5"."2" -%}      
+                            "value": {{ OBX."5"."2".Value }},
                         {% endif -%}
-                        {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                        {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                     },
                     "denominator":
                     {
-                        {% if OBX.5.4 -%}      
-                            "value": {{  OBX.5.4.Value }},
+                        {% if OBX."5"."4" -%}      
+                            "value": {{  OBX."5"."4".Value }},
                         {% endif -%}
-                        {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                        {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                     },
                 {% endif -%}
             }, 
             "referenceRange":
             [
                 {
-                    "text":"{{ OBX.7.Value }}",
+                    "text":"{{ OBX."7".Value }}",
                 },
             ],   
     
@@ -322,123 +322,123 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
           
                 "component":
                 [
-                    {% for obx5Segment in OBX.5.Repeats -%}
+                    {% for obx5Segment in OBX."5".Repeats -%}
                     {
                         "code":
                         {
-                            {% include 'DataType/CWECodeableConcept' CWE: OBX.3 -%}
+                            {% include 'DataType/CWECodeableConcept' CWE: OBX."3" -%}
                         },
                         "valueQuantity":
                         {
-                            {% if OBX.2.Value == "NM" -%}
+                            {% if OBX."2".Value == "NM" -%}
                                 "value": {{ obx5Segment.Value }},
                             {% endif -%}
-                            {% if OBX.2.Value == "SN" -%}
-                                {% if obx5Segment.3.Value != ':' and obx5Segment.3.Value != '/' and  obx5Segment.3.Value != '+' and  obx5Segment.3.Value != '-' -%}
+                            {% if OBX."2".Value == "SN" -%}
+                                {% if obx5Segment."3".Value != ':' and obx5Segment."3".Value != '/' and  obx5Segment."3".Value != '+' and  obx5Segment."3".Value != '-' -%}
                                     {% include 'DataType/SNQuantity' SN: obx5Segment -%}
-                                    {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                                    {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                                 {% endif -%} 
                             {% endif -%} 
-                            {% if OBX.2.Value == "NA" or OBX.2.Value == "NM" -%}
-                                {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                            {% if OBX."2".Value == "NA" or OBX."2".Value == "NM" -%}
+                                {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                             {% endif -%}
                         },
-                        {% if OBX.2.Value == "ED" and obx5Segment.2.Value == "text" and obx5Segment.4.Value == "A" -%}
-                            "valueString": "{{obx5Segment.1.Value}} {{obx5Segment.2.Value}} {{obx5Segment.3.Value}} {{obx5Segment.4.Value}}",
+                        {% if OBX."2".Value == "ED" and obx5Segment."2".Value == "text" and obx5Segment."4".Value == "A" -%}
+                            "valueString": "{{obx5Segment."1".Value}} {{obx5Segment."2".Value}} {{obx5Segment."3".Value}} {{obx5Segment."4".Value}}",
                         {% endif %}
-                        {% if OBX.2.Value == "ST" or OBX.2.Value == "FT" or OBX.2.Value == "TX" -%}
+                        {% if OBX."2".Value == "ST" or OBX."2".Value == "FT" or OBX."2".Value == "TX" -%}
                             "valueString":"{{obx5Segment.Value }}",
                         {% endif -%}
-                        {% if OBX.2.Value == "VR" -%}
-                            "valueString": "{{obx5Segment.1.Value}}-{{obx5Segment.2.Value}}",
+                        {% if OBX."2".Value == "VR" -%}
+                            "valueString": "{{obx5Segment."1".Value}}-{{obx5Segment."2".Value}}",
                         {% endif -%}
-                        {% if OBX.2.Value == "SN" and obx5Segment.3.Value == "+" -%}
-                            "valueString": "{{obx5Segment.1.Value}} {{obx5Segment.2.Value}} {{obx5Segment.3.Value}} {{obx5Segment.4.Value}}",
+                        {% if OBX."2".Value == "SN" and obx5Segment."3".Value == "+" -%}
+                            "valueString": "{{obx5Segment."1".Value}} {{obx5Segment."2".Value}} {{obx5Segment."3".Value}} {{obx5Segment."4".Value}}",
                         {% endif -%}
                         "valueCodeableConcept":
                         {
-                            {% if OBX.2.Value == "CWE" -%}
+                            {% if OBX."2".Value == "CWE" -%}
                                 {% include 'DataType/CWECodeableConcept' CWE: obx5Segment -%}
                             {% endif -%}  
-                            {% if OBX.2.Value == "IS" -%}
+                            {% if OBX."2".Value == "IS" -%}
                                 {% include 'DataType/ISCodeableConcept' IS: obx5Segment -%}
                             {% endif -%}
-                            {% if OBX.2.Value == "CE" -%}
+                            {% if OBX."2".Value == "CE" -%}
                                 {% include 'DataType/CECodeableConcept' CE: obx5Segment -%}
                             {% endif -%}
-                            {% if OBX.2.Value == "CNE" -%}
+                            {% if OBX."2".Value == "CNE" -%}
                                 {% include 'DataType/CNECodeableConcept' CNE: obx5Segment -%}
                             {% endif -%}
-                            {% if OBX.2.Value == "CF" -%}
+                            {% if OBX."2".Value == "CF" -%}
                                 {% include 'DataType/CFCodeableConcept' CF: obx5Segment -%}
                             {% endif -%}
-                            {% if PID.10 -%}
-                                {% include 'DataType/CWECodeableConcept' CWE: PID.10 -%}
+                            {% if PID."10" -%}
+                                {% include 'DataType/CWECodeableConcept' CWE: PID."10" -%}
                             {% endif -%}
-                            {% if PID.22 -%}
-                                {% include 'DataType/CWECodeableConcept' CWE: PID.22 -%}
+                            {% if PID."22" -%}
+                                {% include 'DataType/CWECodeableConcept' CWE: PID."22" -%}
                             {% endif -%}
                         },
                         "valueRange":
                         {
-                            {% if OBX.2.Value == "NR" -%}
+                            {% if OBX."2".Value == "NR" -%}
                                 {% include 'DataType/NRRange' NR: obx5Segment -%}
                             {% endif -%}
-                            {% if OBX.2.Value == "SN" and obx5Segment.3.Value == "-" -%}
+                            {% if OBX."2".Value == "SN" and obx5Segment."3".Value == "-" -%}
                                 "low":
                                 {
-                                    {% if obx5Segment.2 -%}      
-                                        "value": {{ obx5Segment.2.Value }},
+                                    {% if obx5Segment."2" -%}      
+                                        "value": {{ obx5Segment."2".Value }},
                                     {% endif -%}
-                                    {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                                    {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                                 },
                                 "high":
                                 {
-                                    {% if obx5Segment.4 -%}      
-                                        "value": {{ obx5Segment.4.Value }},
+                                    {% if obx5Segment."4" -%}      
+                                        "value": {{ obx5Segment."4".Value }},
                                     {% endif -%}
-                                    {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                                    {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                                 },
                             {% endif -%}
                         },
-                        {% if OBX.2.Value == "DTM" or OBX.2.Value == "DT" -%}
+                        {% if OBX."2".Value == "DTM" or OBX."2".Value == "DT" -%}
                             "valueDateTime":"{{ obx5Segment.Value | format_as_date_time }}",
                         {% endif -%}
-                        {% if OBX.2.Value == "TM" -%}
+                        {% if OBX."2".Value == "TM" -%}
                             "valueTime":"{{ obx5Segment.Value }}",
                         {% endif -%}
                         "valuePeriod":
                         {
-                            {% if OBX.2.Value == "DR" -%}
+                            {% if OBX."2".Value == "DR" -%}
                                 {% include 'DataType/DRPeriod' DR: obx5Segment -%}
                             {% endif -%}
                         },
                         "valueRatio":
                         {
-                            {% if OBX.2.Value == "NR" -%}
+                            {% if OBX."2".Value == "NR" -%}
                                 {% include 'DataType/NRRange' NR: obx5Segment -%}
                             {% endif -%}
-                            {% if OBX.2.Value == "SN" and obx5Segment.3.Value == ":" or obx5Segment.3.Value == "/" -%}
+                            {% if OBX."2".Value == "SN" and obx5Segment."3".Value == ":" or obx5Segment."3".Value == "/" -%}
                                 "numerator":
                                 {
-                                    {% if obx5Segment.2 -%}      
-                                        "value": {{ obx5Segment.2.Value }},
+                                    {% if obx5Segment."2" -%}      
+                                        "value": {{ obx5Segment."2".Value }},
                                     {% endif -%}
-                                    {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                                    {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                                 },
                                 "denominator":
                                 {
-                                    {% if obx5Segment.4 -%}      
-                                        "value": {{ obx5Segment.4.Value }},
+                                    {% if obx5Segment."4" -%}      
+                                        "value": {{ obx5Segment."4".Value }},
                                     {% endif -%}
-                                    {% include 'DataType/CWEQuantity' CWE: OBX.6 -%}
+                                    {% include 'DataType/CWEQuantity' CWE: OBX."6" -%}
                                 },
                             {% endif -%}
                         }, 
                         "referenceRange":
                         [
                             {
-                                "text":"{{ OBX.7.Value }}",
+                                "text":"{{ OBX."7".Value }}",
                             },
                         ], 
                     },
@@ -447,25 +447,25 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
             {% endif %}
         {% endif %}
         
-        "effectiveDateTime":"{{ OBX.14.Value | format_as_date_time }}",
-        "effectiveDateTime":"{{ ACC.1.Value | format_as_date_time }}",
+        "effectiveDateTime":"{{ OBX."14".Value | format_as_date_time }}",
+        "effectiveDateTime":"{{ ACC."1".Value | format_as_date_time }}",
          "method":
         {
-            {% include 'DataType/CWECodeableConcept' CWE: OBX.17 -%}
+            {% include 'DataType/CWECodeableConcept' CWE: OBX."17" -%}
         },
         "device":
         {
-            {% if OBX.18 and Device_ID_OBX_18 -%}
+            {% if OBX."18" and Device_ID_OBX_18 -%}
                 "reference":"Device/{{ Device_ID_OBX_18 }}",
             {% endif -%}
         },
         "note": [
             {
-                "text": "{{NTE.3.Value}}",
-                "time": "{{ NTE.6.Value | format_as_date_time }}",
+                "text": "{{NTE."3".Value}}",
+                "time": "{{ NTE."6".Value | format_as_date_time }}",
                 "authorReference":
                 {
-                    {% if NTE.5 and Practitioner_ID_NTE_5 -%}
+                    {% if NTE."5" and Practitioner_ID_NTE_5 -%}
                         "reference":"Practitioner/{{ Practitioner_ID_NTE_5 }}",
                     {% endif -%}
                 }
@@ -473,12 +473,12 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
         ],
         "bodySite":
         {
-            {% include 'DataType/CWECodeableConcept' CWE: OBX.20 -%}
+            {% include 'DataType/CWECodeableConcept' CWE: OBX."20" -%}
         },
          
         "performer":
         [    
-        {% for obx_Segment_16 in OBX.16.Repeats %}
+        {% for obx_Segment_16 in OBX."16".Repeats %}
             {  
                 {% evaluate PractitionerRole_ID_OBX_16 using 'ID/PractitionerRole' XCN: obx_Segment_16 -%}
                 {% if obx_Segment_16 and PractitionerRole_ID_OBX_16 -%}
@@ -487,17 +487,17 @@ Observation_Specimen_ID: A resource Id, used to fill "specimen.reference" proper
             },
         {% endfor %}
             {
-                    {% if OBX.25 == null and OBX.23 and Organization_ID_OBX_23 -%}
+                    {% if OBX."25" == null and OBX."23" and Organization_ID_OBX_23 -%}
                         "reference":"Organization/{{ Organization_ID_OBX_23 }}",
                     {% endif -%}
-                    {% if OBX.23 and OBX.25 and PractitionerRole_ID_OBX_25 -%}
+                    {% if OBX."23" and OBX."25" and PractitionerRole_ID_OBX_25 -%}
                         "reference":"PractitionerRole/{{ PractitionerRole_ID_OBX_25 }}",
                     {% endif -%}           
             },
         ],
         "interpretation":
         [
-            {% for obx_8 in OBX.8.Repeats %}
+            {% for obx_8 in OBX."8".Repeats %}
                 {
                     {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/InterpretationCode', CWE: obx_8 -%}
                 },

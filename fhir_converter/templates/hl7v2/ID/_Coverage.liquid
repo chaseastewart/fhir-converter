@@ -1,6 +1,6 @@
 {% capture identifiers -%}
-    {% if CX.49.1 and CX.49.4 -%}
-        {{CX.49.1.Value}},{{CX.49.4.Value}}
+    {% if CX."49"."1" and CX."49"."4" -%}
+        {{CX."49"."1".Value}},{{CX."49"."4".Value}}
     {% elsif CX -%}
         {{CX.Value}}
     {% endif -%}

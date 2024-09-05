@@ -1,14 +1,14 @@
 {% if EIP -%}
-    {% if EIP.1 or EIP.1 and EIP.2 %}
-        {% include 'DataType/EIIdentifier_InternalValues' EI: EIP.1 %}
+    {% if EIP."1" or EIP."1" and EIP."2" %}
+        {% include 'DataType/EIIdentifier_InternalValues' EI: EIP."1" %}
         "type": {
             "coding": {
                 "code": "PGN",
                 "system": "http://terminology.hl7.org/CodeSystem/v2-0203"
             }
         },
-    {% elsif EIP.2 %}
-        {% include 'DataType/EIIdentifier_InternalValues' EI: EIP.2 %}
+    {% elsif EIP."2" %}
+        {% include 'DataType/EIIdentifier_InternalValues' EI: EIP."2" %}
         "type": {
             "coding": {
                 "code": "FGN",
@@ -18,7 +18,7 @@
     {% endif %}
 {% endif -%}
 {% if EIP_Specimen_child1 -%}
-    "value":"{{ EIP_Specimen_child1.1 }}",
+    "value":"{{ EIP_Specimen_child1."1" }}",
     "type":
     {
         "coding":
@@ -33,7 +33,7 @@
     },
 {% endif -%}
 {% if EIP_Specimen_child2 -%}
-    "value":"{{ EIP_Specimen_child2.1 }}",
+    "value":"{{ EIP_Specimen_child2."1" }}",
     "type":
     {
         "coding":
@@ -49,9 +49,9 @@
 {% endif -%}
 {% if EIP_Specimen_parent1 or EIP_Specimen_parent2 -%}
     {% if EIP_Specimen_parent1 -%}
-        "value":"{{ EIP_Specimen_parent1.1 }}",
+        "value":"{{ EIP_Specimen_parent1."1" }}",
     {% elsif EIP_Specimen_parent2 -%}
-        "value":"{{ EIP_Specimen_parent2.1 }}",
+        "value":"{{ EIP_Specimen_parent2."1" }}",
     {% endif -%}
     "type":
     {

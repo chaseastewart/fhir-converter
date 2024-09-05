@@ -4,7 +4,7 @@
         "resourceType": "Linkage",
         "id":"{{ ID }}",
         "item" : [
-            {% for p in PID.3.Repeats -%}
+            {% for p in PID."3".Repeats -%}
             {
                 "type" : "source",
                 "resource" : { 
@@ -15,7 +15,7 @@
                 }
             },
             {% endfor -%}
-            {% for mrg in MRG.1.Repeats -%}
+            {% for mrg in MRG."1".Repeats -%}
             {
                 "type" : "historical",
                 "resource" : { 
@@ -26,24 +26,24 @@
                 }
             },
             {% endfor -%}
-            {% if PID_A41.18 -%}
+            {% if PID_A41."18" -%}
             {
                 "type" : "source",
                 "resource" : { 
                     "type" : "Account",
                     "identifier" : { 
-                        {% include 'DataType/CX' CX: PID_A41.18 -%}
+                        {% include 'DataType/CX' CX: PID_A41."18" -%}
                      },
                 }
             },
             {% endif -%}
-            {% if MRG_A41.3 -%}
+            {% if MRG_A41."3" -%}
             {
                 "type" : "historical",
                 "resource" : { 
                     "type" : "Account",
                     "identifier" : { 
-                        {% include 'DataType/CX' CX: MRG_A41.3 -%}
+                        {% include 'DataType/CX' CX: MRG_A41."3" -%}
                      },
                 }
             },

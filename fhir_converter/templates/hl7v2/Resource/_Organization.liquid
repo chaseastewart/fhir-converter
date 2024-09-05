@@ -1,6 +1,6 @@
 {% assign namestring = "" -%}
-{% evaluate organization_ID_MSH_22 using 'ID/Organization' XON: MSH.22 -%}
-{% evaluate organization_ID_MSH_23 using 'ID/Organization' XON: MSH.23 -%}
+{% evaluate organization_ID_MSH_22 using 'ID/Organization' XON: MSH."22" -%}
+{% evaluate organization_ID_MSH_23 using 'ID/Organization' XON: MSH."23" -%}
 {
     "fullUrl":"urn:uuid:{{ ID }}",
     "resource":{
@@ -11,8 +11,8 @@
             {% include 'DataType/HDOrganization' HD: MSHHD1 -%}
         {% endif -%}
 
-        {% if PRD.10 %}
-            {% include 'DataType/XONOrganization'  XON: PRD.10 -%}
+        {% if PRD."10" %}
+            {% include 'DataType/XONOrganization'  XON: PRD."10" -%}
         {% endif %}
 
         {% if RQD -%}
@@ -59,8 +59,8 @@
             {% include 'DataType/HDOrganization_InternalValue' HD: OBR_SEG_35 -%}
         {% endif %}
 
-        {% if ORC_SEG.21 %}
-            {% include 'DataType/XONOrganization' XON: ORC_SEG.21 -%}
+        {% if ORC_SEG."21" %}
+            {% include 'DataType/XONOrganization' XON: ORC_SEG."21" -%}
         {% endif %}
 
         {% if SPM -%}  
@@ -68,31 +68,31 @@
         {% endif -%}
 
         {% if PID -%}  
-            {% include 'DataType/HDOrganization_InternalValue' HD: PID.4 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: PID."4" -%}
         {% endif -%}
 
         {% if MRG -%}  
-            {% include 'DataType/HDOrganization_InternalValue' HD: MRG.4 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: MRG."4" -%}
         {% endif -%}
 
         {% if IN1_49 -%}  
-            {% include 'DataType/HDOrganization_InternalValue' HD: IN1_49.4 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: IN1_49."4" -%}
         {% endif -%}
 
         {% if IN1_3 -%}  
-            {% include 'DataType/HDOrganization_InternalValue' HD: IN1_3.4 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: IN1_3."4" -%}
         {% endif -%}
 
         {% if IN1_10 -%}  
-            {% include 'DataType/HDOrganization_InternalValue' HD: IN1_10.4 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: IN1_10."4" -%}
         {% endif -%}
 
         {% if IN2_1 -%}  
-            {% include 'DataType/HDOrganization_InternalValue' HD: IN2_1.4 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: IN2_1."4" -%}
         {% endif -%}
 
         {% if IN2_61 -%}  
-            {% include 'DataType/HDOrganization_InternalValue' HD: IN2_61.4 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: IN2_61."4" -%}
         {% endif -%}
 
         {% if TXA -%}  
@@ -136,31 +136,31 @@
         {% endif -%}
 
          {% if NK1_12 -%}  
-            {% include 'DataType/HDOrganization_InternalValue' HD: NK1_12.4 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: NK1_12."4" -%}
         {% endif -%}
 
          {% if NK1_33 -%}  
-            {% include 'DataType/HDOrganization_InternalValue' HD: NK1_33.4 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: NK1_33."4" -%}
         {% endif -%}
 
-        {% if ROL.14 %}
-            {% include 'DataType/XONOrganization' XON: ROL.14 -%}
+        {% if ROL."14" %}
+            {% include 'DataType/XONOrganization' XON: ROL."14" -%}
         {% endif %}
         
-        {% if PD1.3 -%}
-            {% include 'DataType/XONOrganization' XON: PD1.3.Repeats[0] -%}
+        {% if PD1."3" -%}
+            {% include 'DataType/XONOrganization' XON: PD1."3".Repeats[0] -%}
         {% endif -%}
 
-        {% if FT1_32.32 -%}
-            {% include 'DataType/XONOrganization' XON: FT1_32.32.Repeats[0] -%}
+        {% if FT1_32."32" -%}
+            {% include 'DataType/XONOrganization' XON: FT1_32."32".Repeats[0] -%}
         {% endif -%}
 
-        {% if FT1_33.33 -%}
-            {% include 'DataType/XONOrganization' XON: FT1_33.33 -%}
+        {% if FT1_33."33" -%}
+            {% include 'DataType/XONOrganization' XON: FT1_33."33" -%}
         {% endif -%}
 
-        {% if NK1.13 -%}
-            {% include 'DataType/XONOrganization' XON: NK1.13.Repeats[0] -%}
+        {% if NK1."13" -%}
+            {% include 'DataType/XONOrganization' XON: NK1."13".Repeats[0] -%}
         {% endif -%}
 
         {% if PRT %}
@@ -179,8 +179,8 @@
             {% include 'DataType/HDOrganization_InternalValue' HD: DB1 -%}
         {% endif -%}
 
-        {% if GT1.21 -%}
-            {% include 'DataType/XONOrganization' XON: GT1.21.Repeats[0] -%}
+        {% if GT1."21" -%}
+            {% include 'DataType/XONOrganization' XON: GT1."21".Repeats[0] -%}
         {% endif -%}
 
         {% if PR1 -%}  
@@ -204,39 +204,39 @@
         {% elsif ORC_19 %}
             {% include 'DataType/HDOrganization_InternalValue' HD: ORC_19 -%}
         {% endif %}
-        {% if ORC.21 %}
-            {% include 'DataType/XONOrganization' XON: ORC.21.Repeats[0] -%}
+        {% if ORC."21" %}
+            {% include 'DataType/XONOrganization' XON: ORC."21".Repeats[0] -%}
         {% endif %}
-        {% include 'DataType/CWEOrganization' CWE: RXA.17.Repeats[0] -%}
+        {% include 'DataType/CWEOrganization' CWE: RXA."17".Repeats[0] -%}
 
-        {% include 'DataType/CWEOrganization' CWE: RXO.32 -%}
-        {% include 'DataType/CWEOrganization' CWE: RXE.40 -%}
+        {% include 'DataType/CWEOrganization' CWE: RXO."32" -%}
+        {% include 'DataType/CWEOrganization' CWE: RXE."40" -%}
 
-        {% include 'DataType/CWEOrganization' CWE: FT1.13 -%}
+        {% include 'DataType/CWEOrganization' CWE: FT1."13" -%}
 
-        {% include 'DataType/CWEOrganization' CWE: RQ1_2.2 -%}
+        {% include 'DataType/CWEOrganization' CWE: RQ1_2."2" -%}
 
-        {% include 'DataType/CWEOrganization' CWE: RQ1_4.4 -%}
+        {% include 'DataType/CWEOrganization' CWE: RQ1_4."4" -%}
 
          {% if IN2_3 -%}  
             {% include 'DataType/HDOrganization_InternalValue' HD: IN2_3 -%}
         {% endif -%}
 
-        {% if IN2_70.70 -%}
-            {% include 'DataType/XONOrganization' XON: IN2_70.70.Repeats[0] -%}
+        {% if IN2_70."70" -%}
+            {% include 'DataType/XONOrganization' XON: IN2_70."70".Repeats[0] -%}
         {% endif -%}
 
         {% include 'DataType/HDOrganization_InternalValue' HD: AIP -%}
 
         {% if PDA_5 -%}
-            {% include 'DataType/HDOrganization_InternalValue' HD: PDA_5.9 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: PDA_5."9" -%}
         {% endif -%}
         {% if PDA_8 -%}
-            {% include 'DataType/HDOrganization_InternalValue' HD: PDA_8.9 -%}
+            {% include 'DataType/HDOrganization_InternalValue' HD: PDA_8."9" -%}
         {% endif -%}
 
         {% if MSHHD1 %}
-            {% if MSH.22 and organization_ID_MSH_22 -%}
+            {% if MSH."22" and organization_ID_MSH_22 -%}
                 "partOf": 
                 {
                     "reference":"Organization/{{ organization_ID_MSH_22 }}",
@@ -244,7 +244,7 @@
             {% endif -%}
         {% endif %}
         {% if MSHHD2 %}
-            {% if MSH.23 and organization_ID_MSH_23 -%}
+            {% if MSH."23" and organization_ID_MSH_23 -%}
                 "partOf": 
                 {
                     "reference":"Organization/{{ organization_ID_MSH_23 }}",
@@ -254,7 +254,7 @@
         "address":
         [
             {
-                "country":"{{ MSH.17.Value | get_property: 'CodeSystem/Countries', 'code' }}",
+                "country":"{{ MSH."17".Value | get_property: 'CodeSystem/Countries', 'code' }}",
             }, 
             {% if ORC_SEG_22 %}
                 {% for orc22 in ORC_SEG_22.Repeats %}
@@ -263,31 +263,31 @@
                 },
                 {% endfor -%}    
             {% endif %}
-            {% if PRD.11 %}
-                {% for PRD_11 in PRD.11.Repeats %}
+            {% if PRD."11" %}
+                {% for PRD_11 in PRD."11".Repeats %}
                 {
                     {% include 'DataType/XADAddress' XAD: PRD_11 -%}
                 },
                 {% endfor %}     
             {% endif %}
-            {% if ORC.21 %}
-                {% for orc22 in ORC.22.Repeats %}
+            {% if ORC."21" %}
+                {% for orc22 in ORC."22".Repeats %}
                     {
                         {% include 'DataType/XAD' XAD: orc22 -%}
                     },
                 {% endfor -%}    
             {% endif %}     
             {
-                {% include 'DataType/XAD' XAD: OBX_ORU.24 -%}
+                {% include 'DataType/XAD' XAD: OBX_ORU."24" -%}
             },
-            {% if RXO.33 %}
+            {% if RXO."33" %}
             {
-                {% include 'DataType/XAD' XAD: RXO.33 -%}
+                {% include 'DataType/XAD' XAD: RXO."33" -%}
             },
             {% endif %}
-            {% if RXE.40 %}
+            {% if RXE."40" %}
             {
-                {% include 'DataType/XAD' XAD: RXE.41 -%}
+                {% include 'DataType/XAD' XAD: RXE."41" -%}
             },
             {% endif %}
             {
@@ -295,18 +295,18 @@
                     {% include 'DataType/XADAddress' XAD: OBX_24 -%}
                 {% endif -%}
             },
-            {% if OBX_ORU.25 -%}
+            {% if OBX_ORU."25" -%}
                 {
-                    {% include 'DataType/XAD' XAD: OBX_ORU.24 -%}
+                    {% include 'DataType/XAD' XAD: OBX_ORU."24" -%}
                 },
             {% endif -%}
             
-            {% for in1_5 in IN1.5.Repeats -%}
+            {% for in1_5 in IN1."5".Repeats -%}
             {
                 {% include 'DataType/XAD' XAD: in1_5 -%}
             },
             {% endfor -%}
-            {% for in1_44 in IN1_11.44.Repeats -%}
+            {% for in1_44 in IN1_11."44".Repeats -%}
             {
                 {% include 'DataType/XAD' XAD: in1_44 -%}
             },
@@ -317,16 +317,16 @@
             {
                 "name":
                 {
-                    {% include 'DataType/XPN' XPN: NK1.30 -%}
+                    {% include 'DataType/XPN' XPN: NK1."30" -%}
                 },
                 "telecom":
                 [
-                    {% for nk131 in NK1.31.Repeats -%}
+                    {% for nk131 in NK1."31".Repeats -%}
                         {
                             {% include 'DataType/XTN' XTN: nk131 -%}
                         },
                     {% endfor -%}
-                    {% for gt1_46 in GT1.46.Repeats -%}
+                    {% for gt1_46 in GT1."46".Repeats -%}
                         {
                             {% include 'DataType/XTN' XTN: gt1_46 -%}
                         },
@@ -339,20 +339,20 @@
                 ],
                 "address":
                 {
-                    {% include 'DataType/XAD' XAD: NK1.32 -%}
+                    {% include 'DataType/XAD' XAD: NK1."32" -%}
                 },
                 "purpose":
                 {
-                    {% include 'DataType/CWECodeableConcept' CWE: GT1.47 -%}
+                    {% include 'DataType/CWECodeableConcept' CWE: GT1."47" -%}
                 },
             },
             {
                 "name":
                 {
-                    {% include 'DataType/XPN' XPN: IN1.6 -%}
+                    {% include 'DataType/XPN' XPN: IN1."6" -%}
                 },
             },
-            {% for gt1_45 in GT1.45.Repeats -%}
+            {% for gt1_45 in GT1."45".Repeats -%}
             { 
                 "name":
                 {
@@ -363,11 +363,11 @@
             { 
                 "name":
                 {
-                    {% include 'DataType/XPN' XPN: IN2_49.49.Repeats[0] -%}
+                    {% include 'DataType/XPN' XPN: IN2_49."49".Repeats[0] -%}
                 },
                 "telecom":
                 [
-                    {% for in2_49 in IN2_49.50.Repeats -%}
+                    {% for in2_49 in IN2_49."50".Repeats -%}
                         {
                             {% include 'DataType/XTN' XTN: in2_49 -%}
                         },
@@ -379,43 +379,43 @@
         "type":
         [
             {
-                {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/OrganizationUnitType', CWE: PRT.7 -%}
+                {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/OrganizationUnitType', CWE: PRT."7" -%}
             },
         ],
         {%- endcomment -%}
         "telecom":
         [
             
-            {% if PRD.13 %}
-                {% for PRD_13 in PRD.13.Repeats %}
+            {% if PRD."13" %}
+                {% for PRD_13 in PRD."13".Repeats %}
                     {
                         {% include 'DataType/XTN' XTN: PRD_13 -%}
                     },
                 {% endfor %}
             {% endif %}
             
-            {% for in1_7 in IN1.7.Repeats -%}
+            {% for in1_7 in IN1."7".Repeats -%}
                 {
                     {% include 'DataType/XTN' XTN: in1_7 -%}
                 },
             {% endfor -%}       
-            {% for in2_64 in IN2_49.64.Repeats -%}
+            {% for in2_64 in IN2_49."64".Repeats -%}
                 {
                     {% include 'DataType/XTN' XTN: in2_64 -%}
                 },
             {% endfor -%}
-            {% for rxo_36 in RXO.36.Repeats -%}
+            {% for rxo_36 in RXO."36".Repeats -%}
                 {
                     {% include 'DataType/XTN' XTN: rxo_36 -%}
                 },
             {% endfor -%}
-            {% for rxe_45 in RXE.45.Repeats -%}
+            {% for rxe_45 in RXE."45".Repeats -%}
                 {
                     {% include 'DataType/XTN' XTN: rxe_45 -%}
                 },
             {% endfor -%}
-            {% if ORC.21 %}
-                {% for orc23 in ORC.23.Repeats %}
+            {% if ORC."21" %}
+                {% for orc23 in ORC."23".Repeats %}
                     {
                         {% include 'DataType/XTN' XTN: orc23 -%}
                     },
@@ -425,12 +425,12 @@
         "identifier":
         [
             
-            {% for in1_3 in IN1.3.Repeats -%}
+            {% for in1_3 in IN1."3".Repeats -%}
                 {
                     {% include 'DataType/CX' CX: in1_3 -%}
                 },
             {% endfor -%}
-            {% for in1_10 in IN1_11.10.Repeats -%}
+            {% for in1_10 in IN1_11."10".Repeats -%}
                 {
                     {% include 'DataType/CX' CX: in1_10 -%}
                 },
@@ -442,28 +442,28 @@
         {% if aut_org_name %}
             "name": "{{aut_org_name}}",
         {% endif %}
-        {% if IN1.4 -%}
-            "name": {% include 'DataType/XONString' XON: IN1.4 -%}
+        {% if IN1."4" -%}
+            "name": {% include 'DataType/XONString' XON: IN1."4" -%}
         {% endif -%}
 
-        {% if IN1_11.11 -%}
-            {% for in1_11 in IN1_11.11.Repeats -%}
+        {% if IN1_11."11" -%}
+            {% for in1_11 in IN1_11."11".Repeats -%}
                     {% if in1_11 -%}
-                        {% assign namevalue = in1_11.1.Value -%}
-                    {% unless in1_11.1 -%}
-                         {% assign namevalue =  in1_11.10.Value -%}
+                        {% assign namevalue = in1_11."1".Value -%}
+                    {% unless in1_11."1" -%}
+                         {% assign namevalue =  in1_11."10".Value -%}
                     {% endunless -%}
                     {% endif -%}
                 {% capture namestring %}{{ namestring | append: namevalue | append: ":" }}{% endcapture -%}
                 {% endfor %}
             "name" : "{{ namestring | split: ":" | join: "+"}}",
         {% endif -%}
-        {% if GT1_51.51 -%}
-            {% for gt1_51 in GT1_51.51.Repeats -%}
+        {% if GT1_51."51" -%}
+            {% for gt1_51 in GT1_51."51".Repeats -%}
                     {% if gt1_51 -%}
-                        {% assign namevalue = gt1_51.1.Value -%}
-                    {% unless gt1_51.1 -%}
-                         {% assign namevalue =  gt1_51.10.Value -%}
+                        {% assign namevalue = gt1_51."1".Value -%}
+                    {% unless gt1_51."1" -%}
+                         {% assign namevalue =  gt1_51."10".Value -%}
                     {% endunless -%}
                     {% endif -%}
                 {% capture namestring %}{{ namestring | append: namevalue | append: ":" }}{% endcapture -%}

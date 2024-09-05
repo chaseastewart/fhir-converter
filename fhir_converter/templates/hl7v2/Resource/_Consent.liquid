@@ -5,7 +5,7 @@
         "id":"{{ ID }}",
         
         "scope" : {
-            {% unless CON.2 %}
+            {% unless CON."2" %}
             "coding": [
             {
                 "code": "treatment",
@@ -14,11 +14,11 @@
             },
             ],
             {% endunless %}
-            {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/ConsentScope', CWE: CON.2 -%}
+            {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/ConsentScope', CWE: CON."2" -%}
         },
         "category" : [
             { 
-                {% unless CON.2 %}
+                {% unless CON."2" %}
                 "coding": [
                     {
                         "code": "59284-0",
@@ -27,32 +27,32 @@
                     },
                 ],
                 {% endunless %}
-                {% include 'DataType/CWECodeableConcept' CWE: CON.2 -%}
+                {% include 'DataType/CWECodeableConcept' CWE: CON."2" -%}
             },
         ],
         "identifier" : [
             { 
-                {% include 'DataType/EIIdentifier' EI: CON.4 -%} 
+                {% include 'DataType/EIIdentifier' EI: CON."4" -%} 
             },
         ],
         
-        {% assign textValue = CON.5.Repeats[0].Value | append: " + " | append: CON.6.Repeats[0].Value %}
+        {% assign textValue = CON."5".Repeats[0].Value | append: " + " | append: CON."6".Repeats[0].Value %}
 
         "policyRule" : {
-            "text": "{{CON.5.Repeats[0].Value}}",
-            "text": "{{CON.6.Repeats[0].Value}}",
-            {% if CON.5.Repeats[0] and CON.6.Repeats[0] %}
+            "text": "{{CON."5".Repeats[0].Value}}",
+            "text": "{{CON."6".Repeats[0].Value}}",
+            {% if CON."5".Repeats[0] and CON."6".Repeats[0] %}
                 "text": "{{ textValue }}",
             {% endif %}
         },
 
-        {% if CON.11.1 %}
-            "status" : "{{ CON.11.1.Value | get_property: 'CodeSystem/ConsentStatusCode', 'code' }}",
+        {% if CON."11"."1" %}
+            "status" : "{{ CON."11"."1".Value | get_property: 'CodeSystem/ConsentStatusCode', 'code' }}",
         {% else %}
             "status": "active",
         {% endif %}
 
-        "dateTime" : "{{ CON.13.Value | format_as_date_time }}",
+        "dateTime" : "{{ CON."13".Value | format_as_date_time }}",
         
 
     },

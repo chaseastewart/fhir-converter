@@ -1,7 +1,7 @@
 {% comment -%}
 The following reference IDs are accepted by this template.
 
-Practitioner_ID_ORC_12: A resource Id, used to fill "requester.reference" property. The resource is of "Practitioner" type and generated based on "ORC.12" HL7 V2 identifier.
+Practitioner_ID_ORC_12: A resource Id, used to fill "requester.reference" property. The resource is of "Practitioner" type and generated based on "ORC."12"" HL7 V2 identifier.
 Task_Focus_ID: A resource Id, used to fill "focus.reference" property.
 Task_For_ID: A resource Id, used to fill "for.reference" property.
 Task_Encounter_ID: A resource Id, used to fill "encounter.reference" property.
@@ -19,8 +19,8 @@ Task_ReasonReference_ID: A resource Id, used to fill "reasonReference.reference"
         "identifier":
             [   
                 {
-                    {% if ORC.2 %}
-                        {% include 'DataType/EIIdentifier' EI: ORC.2 -%}
+                    {% if ORC."2" %}
+                        {% include 'DataType/EIIdentifier' EI: ORC."2" -%}
                         "type":
                         {
                             "coding":
@@ -34,8 +34,8 @@ Task_ReasonReference_ID: A resource Id, used to fill "reasonReference.reference"
                     {% endif %} 
                 },
                 {
-                    {% if ORC.3 %}
-                        {% include 'DataType/EIIdentifier' EI: ORC.3 -%}
+                    {% if ORC."3" %}
+                        {% include 'DataType/EIIdentifier' EI: ORC."3" -%}
                         "type":
                         {
                             "coding":
@@ -49,8 +49,8 @@ Task_ReasonReference_ID: A resource Id, used to fill "reasonReference.reference"
                     {% endif %} 
                 },
                 {
-                    {% if ORC.4 %}
-                        {% include 'DataType/EIIdentifier' EI: ORC.4 -%}
+                    {% if ORC."4" %}
+                        {% include 'DataType/EIIdentifier' EI: ORC."4" -%}
                         "type":
                         {
                             "coding":
@@ -65,59 +65,59 @@ Task_ReasonReference_ID: A resource Id, used to fill "reasonReference.reference"
                 },
             ],
 
-            {% if ORC.5 %}
-                "status":"{{ ORC.5.Value | get_property: 'CodeSystem/SupplyRequestStatus', 'code' }}",
+            {% if ORC."5" %}
+                "status":"{{ ORC."5".Value | get_property: 'CodeSystem/SupplyRequestStatus', 'code' }}",
             {% endif %} 
 
             
             "occurrenceTiming":
             {    
-                {% if ORC.7 %}
-                    {% include 'DataType/TQ_SupplyRequest' TQ: ORC.7.Repeats[0] -%}
+                {% if ORC."7" %}
+                    {% include 'DataType/TQ_SupplyRequest' TQ: ORC."7".Repeats[0] -%}
                 {% endif %} 
             },
             
-            {% if ORC.1.Value == 'NW' %}
-                "authoredOn" : "{{ ORC.9.Value | format_as_date_time }}",
+            {% if ORC."1".Value == 'NW' %}
+                "authoredOn" : "{{ ORC."9".Value | format_as_date_time }}",
             {% endif %} 
 
             "requester": {
-                {% if ORC.12.Repeats[0] -%}
-                    {% evaluate practitionerRole_ID_ORC_12 using 'ID/PractitionerRole' XCN: ORC.12.Repeats[0] -%}
+                {% if ORC."12".Repeats[0] -%}
+                    {% evaluate practitionerRole_ID_ORC_12 using 'ID/PractitionerRole' XCN: ORC."12".Repeats[0] -%}
                     "reference":"PractitionerRole/{{ practitionerRole_ID_ORC_12 }}",
-                {% elsif ORC.21.Repeats[0] %}
-                    {% evaluate practitionerRoleId_ORC_21 using 'ID/PractitionerRole' XCN: ORC.21.Repeats[0] -%}
+                {% elsif ORC."21".Repeats[0] %}
+                    {% evaluate practitionerRoleId_ORC_21 using 'ID/PractitionerRole' XCN: ORC."21".Repeats[0] -%}
                     "reference":"PractitionerRole/{{ practitionerRoleId_ORC_21 }}",    
                 {% endif -%}
             },
 
-            {% unless ORC.7 -%}
-                "occurrenceDateTime" : "{{ RQD.10.Value | format_as_date_time }}",
-                {% unless RQD.10 -%}
-                    "occurrenceDateTime" : "{{ ORC.15.Value | format_as_date_time }}",
+            {% unless ORC."7" -%}
+                "occurrenceDateTime" : "{{ RQD."10".Value | format_as_date_time }}",
+                {% unless RQD."10" -%}
+                    "occurrenceDateTime" : "{{ ORC."15".Value | format_as_date_time }}",
                 {% endunless -%}
             {% endunless -%}
 
             "itemCodeableConcept" : { 
-                {% if RQD.4 -%}
-                    {% include 'DataType/CWECodeableConcept' CWE: RQD.4 -%}
-                {% elsif RQD.2 %}
-                    {% include 'DataType/CWECodeableConcept' CWE: RQD.2 -%}
-                {% elsif RQD.3 %}
-                    {% include 'DataType/CWECodeableConcept' CWE: RQD.3 -%}
+                {% if RQD."4" -%}
+                    {% include 'DataType/CWECodeableConcept' CWE: RQD."4" -%}
+                {% elsif RQD."2" %}
+                    {% include 'DataType/CWECodeableConcept' CWE: RQD."2" -%}
+                {% elsif RQD."3" %}
+                    {% include 'DataType/CWECodeableConcept' CWE: RQD."3" -%}
                 {% endif %}
             },
 
             "quantity" : { 
                 {% if RQD %}
-                    {% if RQD.5 -%}
-                        "value" : {{RQD.5.Value}},
+                    {% if RQD."5" -%}
+                        "value" : {{RQD."5".Value}},
                     {% else %}
                         "value" : 1,
                     {% endif %}  
                 {% endif %}
                
-                {% include 'DataType/CWEQuantity' CWE: RQD.6 -%}
+                {% include 'DataType/CWEQuantity' CWE: RQD."6" -%}
             },
 
             "supplier" : [
@@ -135,8 +135,8 @@ Task_ReasonReference_ID: A resource Id, used to fill "reasonReference.reference"
             },
 
             "deliverTo" :{
-                {% if RQD.9 -%}
-                    {% evaluate organizationID_RQD_9 using 'ID/Organization' CWE: RQD.9 -%}
+                {% if RQD."9" -%}
+                    {% evaluate organizationID_RQD_9 using 'ID/Organization' CWE: RQD."9" -%}
                     "reference":"Organization/{{ organizationID_RQD_9 }}",
                 {% endif %}
             },

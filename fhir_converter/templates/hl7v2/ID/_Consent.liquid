@@ -1,6 +1,6 @@
 {% capture identifiers -%}
-    {% if CON.4 and CON.24 -%}
-        {{CON.4.Value}},{{CON.24.Value}}
+    {% if CON."4" and CON."24" -%}
+        {{CON."4".Value}},{{CON."24".Value}}
     {% elsif CON -%}
         {{CON.Value}}
     {% endif -%}

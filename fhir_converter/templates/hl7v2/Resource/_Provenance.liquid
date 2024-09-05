@@ -1,23 +1,23 @@
 {% comment -%}
 The following reference IDs are accepted by this template.
 
-Organization_ID_MSH_4: A resource Id, used to fill "agent.who.reference" property. The resource is of "Organization" type and generated based on "MSH.4" HL7 V2 identifier.
-Organization_ID_MSH_22: A resource Id, used to fill "agent.who.reference" property. The resource is of "Organization" type and generated based on "MSH.22" HL7 V2 identifier.
-Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. The resource is of "Device" type and generated based on "MSH.3" HL7 V2 identifier.
+Organization_ID_MSH_4: A resource Id, used to fill "agent.who.reference" property. The resource is of "Organization" type and generated based on "MSH."4"" HL7 V2 identifier.
+Organization_ID_MSH_22: A resource Id, used to fill "agent.who.reference" property. The resource is of "Organization" type and generated based on "MSH."22"" HL7 V2 identifier.
+Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. The resource is of "Device" type and generated based on "MSH."3"" HL7 V2 identifier.
 
 {% endcomment -%}
-{% evaluate Practitioner_ID_ORC_10 using 'ID/Practitioner' XCN: ORC.10 -%}
-{% evaluate Practitioner_ID_ORC_11 using 'ID/Practitioner' XCN: ORC.11 -%}
-{% evaluate Practitioner_ID_ORC_12 using 'ID/Practitioner' XCN: ORC.12 -%}
-{% evaluate Organization_ID_ORC_17 using 'ID/Organization' CWE: ORC.17 -%}
-{% evaluate Practitioner_ID_ORC_19 using 'ID/Practitioner' XCN: ORC.19 -%}
-{% evaluate Location_ID_ORC_21 using 'ID/Location' XON: ORC.21 -%}
+{% evaluate Practitioner_ID_ORC_10 using 'ID/Practitioner' XCN: ORC."10" -%}
+{% evaluate Practitioner_ID_ORC_11 using 'ID/Practitioner' XCN: ORC."11" -%}
+{% evaluate Practitioner_ID_ORC_12 using 'ID/Practitioner' XCN: ORC."12" -%}
+{% evaluate Organization_ID_ORC_17 using 'ID/Organization' CWE: ORC."17" -%}
+{% evaluate Practitioner_ID_ORC_19 using 'ID/Practitioner' XCN: ORC."19" -%}
+{% evaluate Location_ID_ORC_21 using 'ID/Location' XON: ORC."21" -%}
 
-{% evaluate Practitioner_ID_EVN_5 using 'ID/Practitioner' XCN: EVN.5 -%}
-{% evaluate Location_ID_EVN_7 using 'ID/Location' HD: EVN.7 -%}
-{% evaluate Organization_ID_MSH_4 using 'ID/Organization' HD: MSH.4 -%}
-{% evaluate Organization_ID_MSH_22 using 'ID/Organization' XON: MSH.22 -%}
-{% evaluate Device_ID_MSH_3 using 'ID/Device' HD: MSH.3 -%}
+{% evaluate Practitioner_ID_EVN_5 using 'ID/Practitioner' XCN: EVN."5" -%}
+{% evaluate Location_ID_EVN_7 using 'ID/Location' HD: EVN."7" -%}
+{% evaluate Organization_ID_MSH_4 using 'ID/Organization' HD: MSH."4" -%}
+{% evaluate Organization_ID_MSH_22 using 'ID/Organization' XON: MSH."22" -%}
+{% evaluate Device_ID_MSH_3 using 'ID/Device' HD: MSH."3" -%}
 
 {
     "fullUrl":"urn:uuid:{{ ID }}",
@@ -26,40 +26,39 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
         "id":"{{ ID }}",
         
         {% if Root_Template -%}
-        {% assign generationInstant = "{{ "" | now }}" -%}
         {% assign templateVersion = "TEMPLATE_VERSION_PLACEHOLDER" -%}
         "text": {
             "status": "generated",
-            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p><span>Resource bundle generated on {{ generationInstant }} using Microsoft FHIR Converter.</span><span>Template Version: {{ templateVersion }}.</span><span>Template URL: https://github.com/microsoft/FHIR-Converter/releases/download/v{{ templateVersion }}/Hl7v2DefaultTemplates.tar.gz.</span><span>Root template: {{ Root_Template }}.</span></p></div>"
+            "div": "<div xmlns="http://www.w3.org/1999/xhtml"><p><span>Resource bundle generated using Microsoft FHIR Converter.</span><span>Template Version: {{ templateVersion }}.</span><span>Template URL: https://github.com/microsoft/FHIR-Converter/releases/download/v{{ templateVersion }}/Hl7v2DefaultTemplates.tar.gz.</span><span>Root template: {{ Root_Template }}.</span></p></div>"
         },
         {% endif -%}
 
         {% if MSH %}
-            "occurredDateTime" : "{{ MSH.7.Value | format_as_date_time }}",
-            "recorded":"{{ MSH.7.Value | format_as_date_time }}",
+            "occurredDateTime" : "{{ MSH."7".Value | format_as_date_time }}",
+            "recorded":"{{ MSH."7".Value | format_as_date_time }}",
          {% elsif EVN %}
-            "occurredDateTime" : "{{ EVN.6.Value | format_as_date_time }}",
-            "recorded": "{{ EVN.2.Value | format_as_date_time }}",
+            "occurredDateTime" : "{{ EVN."6".Value | format_as_date_time }}",
+            "recorded": "{{ EVN."2".Value | format_as_date_time }}",
             "reason":
             [
             {
-                {% if EVN.4 -%}
-                    {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/EventReason', CWE: EVN.4 -%}
+                {% if EVN."4" -%}
+                    {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/EventReason', CWE: EVN."4" -%}
                 {% endif %}
             },            
         ],
         {% elsif ORC -%}
-            "recorded": "{{ ORC.9.Value | format_as_date_time }}",
-            "occurredDateTime" : "{{ ORC.9.Value | format_as_date_time }}",
+            "recorded": "{{ ORC."9".Value | format_as_date_time }}",
+            "occurredDateTime" : "{{ ORC."9".Value | format_as_date_time }}",
         {% endif %}
  
-        {% if EVN.5 %}
+        {% if EVN."5" %}
         "agent":
         [
             {
                 "who":
                 {
-                    {% if EVN.5 and Practitioner_ID_EVN_5 -%}
+                    {% if EVN."5" and Practitioner_ID_EVN_5 -%}
                         "reference":"Practitioner/{{ Practitioner_ID_EVN_5 }}",
                     {% endif -%}
                 },
@@ -68,7 +67,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
         {% elsif MSH -%} 
         "agent":
         [
-            {% unless MSH.22 -%}
+            {% unless MSH."22" -%}
             {
                 "type":
                 {
@@ -82,7 +81,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 },
                 "who":
                 {
-                        {% if MSH.4 and Organization_ID_MSH_4 -%}
+                        {% if MSH."4" and Organization_ID_MSH_4 -%}
                             "reference":"Organization/{{ Organization_ID_MSH_4 }}",
                         {% endif -%}   
                 },
@@ -94,7 +93,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                     "coding":
                     [
                         {
-                            {% if MSH.22 %}
+                            {% if MSH."22" %}
                                 "code":"author",
                                 "system":"http://terminology.hl7.org/CodeSystem/provenance-participant-type",
                             {% endif %} 
@@ -103,7 +102,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 },
                 "who":
                 {
-                    {% if MSH.22 and Organization_ID_MSH_22 -%}
+                    {% if MSH."22" and Organization_ID_MSH_22 -%}
                         "reference":"Organization/{{ Organization_ID_MSH_22 }}",
                     {% endif -%}                     
                 },
@@ -118,7 +117,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 {
                     "coding":
                     [
-                        {% if ORC.10 -%}
+                        {% if ORC."10" -%}
                         {
                             "code":"enterer",
                             "system":"http://terminology.hl7.org/CodeSystem/provenance-participant-type",
@@ -128,13 +127,13 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 },
                 "who":
                 {
-                        {% if ORC.10 and Practitioner_ID_ORC_11 -%}
+                        {% if ORC."10" and Practitioner_ID_ORC_11 -%}
                             "reference":"Practitioner/{{ Practitioner_ID_ORC_11 }}",
                         {% endif -%}   
                 },
                 "onBehalfOf":
                 {
-                    {% if ORC.17 and Organization_ID_ORC_17 -%}
+                    {% if ORC."17" and Organization_ID_ORC_17 -%}
                         "reference":"Organization/{{ Organization_ID_ORC_17 }}",
                     {% endif -%}
                 },
@@ -144,7 +143,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 {
                     "coding":
                     [
-                    {% if ORC.11 -%}
+                    {% if ORC."11" -%}
                     {
                         "code":"verifier",
                         "system":"http://terminology.hl7.org/CodeSystem/provenance-participant-type",
@@ -154,7 +153,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 },
                 "who":
                 {
-                        {% if ORC.11 and Practitioner_ID_ORC_11 -%}
+                        {% if ORC."11" and Practitioner_ID_ORC_11 -%}
                             "reference":"Practitioner/{{ Practitioner_ID_ORC_11 }}",
                         {% endif -%}   
                 },
@@ -164,7 +163,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 {
                     "coding":
                     [
-                    {% if ORC.12 -%}
+                    {% if ORC."12" -%}
                     {
                         "code":"author",
                         "system":"http://terminology.hl7.org/CodeSystem/provenance-participant-type",
@@ -174,7 +173,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 },
                 "who":
                 {
-                        {% if ORC.12 and Practitioner_ID_ORC_12 -%}
+                        {% if ORC."12" and Practitioner_ID_ORC_12 -%}
                             "reference":"Practitioner/{{ Practitioner_ID_ORC_12 }}",
                         {% endif -%}   
                 },
@@ -184,7 +183,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 {
                     "coding":
                     [
-                    {% if ORC.19 -%}
+                    {% if ORC."19" -%}
                     {
                         "code":"performer",
                         "system":"http://terminology.hl7.org/CodeSystem/provenance-participant-type",
@@ -194,7 +193,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 },
                 "who":
                 {
-                        {% if ORC.19 and Practitioner_ID_ORC_19 -%}
+                        {% if ORC."19" and Practitioner_ID_ORC_19 -%}
                             "reference":"Practitioner/{{ Practitioner_ID_ORC_19 }}",
                         {% endif -%}   
                 },
@@ -208,8 +207,8 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
             "coding":
             [
                 {    
-                    {% if MSH.9 -%}
-                        "display": "{{ MSH.9.1.Value }}^{{ MSH.9.2.Value }}^{{ MSH.9.3.Value }}",
+                    {% if MSH."9" -%}
+                        "display": "{{ MSH."9"."1".Value }}^{{ MSH."9"."2".Value }}^{{ MSH."9"."3".Value }}",
                     {% endif -%}
                 },
             ],
@@ -218,13 +217,13 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
                 "coding":
                 [
                     {    
-                        {% if ORC.1 == 'NW' -%}
+                        {% if ORC."1" == 'NW' -%}
                             "code": "CREATE",
                             "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
-                        {% elsif ORC.1 == 'SC' -%}
+                        {% elsif ORC."1" == 'SC' -%}
                             "code": "UPDATE",
                             "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
-                        {% elsif ORC.1 == 'OC' or ORC.1 == 'CA' -%}
+                        {% elsif ORC."1" == 'OC' or ORC."1" == 'CA' -%}
                             "code": "CANCEL",
                             "system": "http://terminology.hl7.org/CodeSystem/v3-DataOperation",
                         {% endif -%}
@@ -239,7 +238,7 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
         "entity" :
         [
         { 
-            {% if MSH.3 and MSH.24 -%}
+            {% if MSH."3" and MSH."24" -%}
                 "role" : "source",
                 "what":
                 { 
@@ -253,11 +252,11 @@ Device_ID_MSH_3: A resource Id, used to fill "entity.what.reference" property. T
         {% endif %}
         "location":
         {
-            {% if EVN.7 and Location_ID_EVN_7 -%}
+            {% if EVN."7" and Location_ID_EVN_7 -%}
                 "reference":"Location/{{ Location_ID_EVN_7 }}",
             {% endif -%}
             {% if ORC %}
-                {% if ORC.21 and Location_ID_ORC_21 -%}
+                {% if ORC."21" and Location_ID_ORC_21 -%}
                     "reference":"Location/{{ Location_ID_ORC_21 }}",
                 {% endif -%}
             {% endif %}

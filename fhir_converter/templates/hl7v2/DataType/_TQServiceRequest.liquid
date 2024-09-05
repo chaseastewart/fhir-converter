@@ -1,7 +1,7 @@
 {% if TQ -%}
     "quantityQuantity":
     {
-        "value":"{{ TQ.1.1 }}",
+        "value":"{{ TQ."1"."1" }}",
     },
     "occurrenceTiming":
     {
@@ -13,14 +13,14 @@
         {
             "timeOfDay":
             [
-                "{{ TQ.2.2 }}",
+                "{{ TQ."2"."2" }}",
             ],
             "boundsPeriod":
             {
-                "start":"{{ TQ.4.Value | format_as_date_time }}",
-                "end":"{{ TQ.5.Value | format_as_date_time }}",
+                "start":"{{ TQ."4".Value | format_as_date_time }}",
+                "end":"{{ TQ."5".Value | format_as_date_time }}",
             },
-            "count":"{{ TQ.12.Value }}",
+            "count":"{{ TQ."12".Value }}",
         },
     },
 {% endif -%}

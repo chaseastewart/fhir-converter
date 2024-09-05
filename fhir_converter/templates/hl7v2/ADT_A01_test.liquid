@@ -16,17 +16,17 @@
 {% assign rf1SegmentLists = hl7v2Data | get_segment_lists: 'RF1' -%}
 {% assign ub1SegmentLists = hl7v2Data | get_segment_lists: 'UB1' -%}
 {% assign ub2SegmentLists = hl7v2Data | get_segment_lists: 'UB2' -%}
-{% evaluate bundleID using 'ID/Bundle' Data: firstSegments.MSH.10 -%}
+{% evaluate bundleID using 'ID/Bundle' Data: firstSegments.MSH."10" -%}
         
 {
     "resourceType": "Bundle",
     "type": "batch",
-    {% if firstSegments.MSH.7 -%}
-        "timestamp":"{{ firstSegments.MSH.7.Value | format_as_date_time }}",
+    {% if firstSegments.MSH."7" -%}
+        "timestamp":"{{ firstSegments.MSH."7".Value | format_as_date_time }}",
     {% endif -%}
     "identifier":
     {
-        "value":"{{ firstSegments.MSH.10.Value }}",
+        "value":"{{ firstSegments.MSH."10".Value }}",
     },
     "id":"{{ bundleID }}"
 }

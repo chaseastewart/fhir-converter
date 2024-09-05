@@ -1,49 +1,49 @@
-{% if PL.5 or PL.9 -%}
-    {% if PL.5 and PL.9 -%}
-        {% assign PL_Value_Except_PL5_PL9 = PL.Value | remove: PL.5.Value | remove: PL.9.Value %}
+{% if PL."5" or PL."9" -%}
+    {% if PL."5" and PL."9" -%}
+        {% assign PL_Value_Except_PL5_PL9 = PL.Value | remove: PL."5".Value | remove: PL."9".Value %}
     {% endif -%}
-    {% if PL.5 and PL.9 == null or PL.9 == "" -%}
-        {% assign PL_Value_Except_PL5_PL9= PL.Value | remove: PL.5.Value %}
+    {% if PL."5" and PL."9" == null or PL."9" == "" -%}
+        {% assign PL_Value_Except_PL5_PL9= PL.Value | remove: PL."5".Value %}
     {% endif -%}
-    {% if PL.9 and PL.5 == null or PL.5 == "" -%}
-        {% assign PL_Value_Except_PL5_PL9= PL.Value | remove: PL.9.Value %}
+    {% if PL."9" and PL."5" == null or PL."5" == "" -%}
+        {% assign PL_Value_Except_PL5_PL9= PL.Value | remove: PL."9".Value %}
     {% endif -%}
 {% else -%}
     {% assign PL_Value_Except_PL5_PL9 = PL.Value %}
 {% endif -%}
 
-{% if PL.1 -%}
-    {% evaluate locationId_PL_1 using 'ID/Location' PL_Field_Value: PL.1, PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
+{% if PL."1" -%}
+    {% evaluate locationId_PL_1 using 'ID/Location' PL_Field_Value: PL."1", PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
 {% else -%}
     {% assign locationId_PL_1= null -%}
 {% endif -%}
-{% if PL.2 -%}
-    {% evaluate locationId_PL_2 using 'ID/Location' PL_Field_Value: PL.2, PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
+{% if PL."2" -%}
+    {% evaluate locationId_PL_2 using 'ID/Location' PL_Field_Value: PL."2", PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
 {% else -%}
     {% assign locationId_PL_2 = null -%}
 {% endif -%}
-{% if PL.3 -%}
-    {% evaluate locationId_PL_3 using 'ID/Location' PL_Field_Value: PL.3, PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
+{% if PL."3" -%}
+    {% evaluate locationId_PL_3 using 'ID/Location' PL_Field_Value: PL."3", PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
 {% else -%}
     {% assign locationId_PL_3 = null -%}
 {% endif -%}
-{% if PL.4 -%}
-    {% evaluate locationId_PL_4 using 'ID/Location' PL_Field_Value: PL.4, PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
+{% if PL."4" -%}
+    {% evaluate locationId_PL_4 using 'ID/Location' PL_Field_Value: PL."4", PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
 {% else -%}
     {% assign locationId_PL_4 = null -%}
 {% endif -%}
-{% if PL.7 -%}
-    {% evaluate locationId_PL_7 using 'ID/Location' PL_Field_Value: PL.7, PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
+{% if PL."7" -%}
+    {% evaluate locationId_PL_7 using 'ID/Location' PL_Field_Value: PL."7", PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
 {% else -%}
     {% assign locationId_PL_7 = null -%}
 {% endif -%}
-{% if PL.8 -%}
-    {% evaluate locationId_PL_8 using 'ID/Location' PL_Field_Value: PL.8, PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
+{% if PL."8" -%}
+    {% evaluate locationId_PL_8 using 'ID/Location' PL_Field_Value: PL."8", PL: PL, PL_Value_Except_PL5_PL9: PL_Value_Except_PL5_PL9 -%}
 {% else -%}
     {% assign locationId_PL_8 = null -%}
 {% endif -%}
 
-{% if PL.1 -%}
+{% if PL."1" -%}
 {
     "fullUrl":"urn:uuid:{{ locationId_PL_1 }}",
     "resource":{
@@ -54,7 +54,7 @@
             "reference":"Location/{{locationId_PL_8}}"
         },
         {% endif %}
-        {% include 'DataType/PL_HDLocation' HD: PL.1 -%},
+        {% include 'DataType/PL_HDLocation' HD: PL."1" -%},
         "mode":"instance",
         {% assign PLValue= PL.Value%}
         {% capture textstring %}{{ PLValue  | split: "^" | join: "--" }}{% endcapture -%}
@@ -62,7 +62,7 @@
         {% capture description %}{{ specomp  | split: "&" | join: "--" }}{% endcapture -%}
         "description" : "{{ description }}",
         "alias" : [
-            "{{NTE.3.Value}}",
+            "{{NTE."3".Value}}",
             ],
         "type" : [
             { 
@@ -79,7 +79,7 @@
          },
         "address":
         {
-            {% include 'DataType/XADAddress' XAD: RXA.28 -%}
+            {% include 'DataType/XADAddress' XAD: RXA."28" -%}
         },
     },
     "request":{
@@ -91,7 +91,7 @@
     },
 },
 {% endif -%}
-{% if PL.2 -%}
+{% if PL."2" -%}
 {
     "fullUrl":"urn:uuid:{{ locationId_PL_2 }}",
     "resource":{
@@ -102,7 +102,7 @@
             "reference":"Location/{{locationId_PL_1}}"
         },
         {% endif %}
-        {% include 'DataType/PL_HDLocation' HD: PL.2 -%},
+        {% include 'DataType/PL_HDLocation' HD: PL."2" -%},
         "mode":"instance",
         {% assign PLValue= PL.Value%}
         {% capture textstring %}{{ PLValue  | split: "^" | join: "--" }}{% endcapture -%}
@@ -110,7 +110,7 @@
         {% capture description %}{{ specomp  | split: "&" | join: "--" }}{% endcapture -%}
         "description" : "{{ description }}",
         "alias" : [
-            "{{NTE.3.Value}}",
+            "{{NTE."3".Value}}",
             ],
         "type" : [
             { 
@@ -127,7 +127,7 @@
          },
         "address":
         {
-            {% include 'DataType/XADAddress' XAD: RXA.28 -%}
+            {% include 'DataType/XADAddress' XAD: RXA."28" -%}
         },
     },
     "request":{
@@ -139,7 +139,7 @@
     },
 },
 {% endif -%}
-{% if PL.3 -%}
+{% if PL."3" -%}
 {
     "fullUrl":"urn:uuid:{{ locationId_PL_3 }}",
     "resource":{
@@ -150,7 +150,7 @@
             "reference":"Location/{{locationId_PL_2}}"
         },
         {% endif %}
-        {% include 'DataType/PL_HDLocation' HD: PL.3 -%},
+        {% include 'DataType/PL_HDLocation' HD: PL."3" -%},
         "mode":"instance",
         {% assign PLValue= PL.Value%}
         {% capture textstring %}{{ PLValue  | split: "^" | join: "--" }}{% endcapture -%}
@@ -158,7 +158,7 @@
         {% capture description %}{{ specomp  | split: "&" | join: "--" }}{% endcapture -%}
         "description" : "{{ description }}",
         "alias" : [
-            "{{NTE.3.Value}}",
+            "{{NTE."3".Value}}",
             ],
         "type" : [
             { 
@@ -175,7 +175,7 @@
          },
         "address":
         {
-            {% include 'DataType/XADAddress' XAD: RXA.28 -%}
+            {% include 'DataType/XADAddress' XAD: RXA."28" -%}
         },
     },
     "request":{
@@ -187,13 +187,13 @@
     },
 },
 {% endif -%}
-{% if PL.4 -%}
+{% if PL."4" -%}
 {
     "fullUrl":"urn:uuid:{{ locationId_PL_4 }}",
     "resource":{
         "resourceType": "Location",
         "id":"{{ locationId_PL_4 }}",
-        {% include 'DataType/PL_HDLocation' HD: PL.4 -%},
+        {% include 'DataType/PL_HDLocation' HD: PL."4" -%},
         "mode":"instance",
         {% assign PLValue= PL.Value%}
         {% capture textstring %}{{ PLValue  | split: "^" | join: "--" }}{% endcapture -%}
@@ -201,7 +201,7 @@
         {% capture description %}{{ specomp  | split: "&" | join: "--" }}{% endcapture -%}
         "description" : "{{ description }}",
         "alias" : [
-            "{{NTE.3.Value}}",
+            "{{NTE."3".Value}}",
             ],
         "type" : [
             { 
@@ -218,7 +218,7 @@
          },
         "address":
         {
-            {% include 'DataType/XADAddress' XAD: RXA.28 -%}
+            {% include 'DataType/XADAddress' XAD: RXA."28" -%}
         },
     },
     "request":{
@@ -230,7 +230,7 @@
     },
 },
 {% endif -%}
-{% if PL.7 -%}
+{% if PL."7" -%}
 {
     "fullUrl":"urn:uuid:{{ locationId_PL_7 }}",
     "resource":{
@@ -241,7 +241,7 @@
             "reference":"Location/{{locationId_PL_4}}"
         },
         {% endif %}
-        {% include 'DataType/PL_HDLocation' HD: PL.7 -%},
+        {% include 'DataType/PL_HDLocation' HD: PL."7" -%},
         "mode":"instance",
         {% assign PLValue= PL.Value%}
         {% capture textstring %}{{ PLValue  | split: "^" | join: "--" }}{% endcapture -%}
@@ -249,7 +249,7 @@
         {% capture description %}{{ specomp  | split: "&" | join: "--" }}{% endcapture -%}
         "description" : "{{ description }}",
         "alias" : [
-            "{{NTE.3.Value}}",
+            "{{NTE."3".Value}}",
             ],
         "type" : [
             { 
@@ -266,7 +266,7 @@
          },
         "address":
         {
-            {% include 'DataType/XADAddress' XAD: RXA.28 -%}
+            {% include 'DataType/XADAddress' XAD: RXA."28" -%}
         },
     },
     "request":{
@@ -278,7 +278,7 @@
     },
 },
 {% endif -%}
-{% if PL.8 -%}
+{% if PL."8" -%}
 {
     "fullUrl":"urn:uuid:{{ locationId_PL_8 }}",
     "resource":{
@@ -289,7 +289,7 @@
             "reference":"Location/{{locationId_PL_7}}"
         },
         {% endif %}
-        {% include 'DataType/PL_HDLocation' HD: PL.8 -%},
+        {% include 'DataType/PL_HDLocation' HD: PL."8" -%},
         "mode":"instance",
         {% assign PLValue= PL.Value%}
         {% capture textstring %}{{ PLValue  | split: "^" | join: "--" }}{% endcapture -%}
@@ -297,7 +297,7 @@
         {% capture description %}{{ specomp  | split: "&" | join: "--" }}{% endcapture -%}
         "description" : "{{ description }}",
         "alias" : [
-            "{{NTE.3.Value}}",
+            "{{NTE."3".Value}}",
             ],
         "type" : [
             { 
@@ -314,7 +314,7 @@
          },
         "address":
         {
-            {% include 'DataType/XADAddress' XAD: RXA.28 -%}
+            {% include 'DataType/XADAddress' XAD: RXA."28" -%}
         },
     },
     "request":{

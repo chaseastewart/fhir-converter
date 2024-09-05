@@ -1,6 +1,6 @@
 {% capture identifiers -%}
-    {% if RXD.7 -%}
-        {{RXD.7.Value}},{{RXD.2.Value}},{{RXD.3.Value}}
+    {% if RXD."7" -%}
+        {{RXD."7".Value}},{{RXD."2".Value}},{{RXD."3".Value}}
     {% elsif RXD -%}
         {{RXD.Value}}
     {% elsif FT1 and ORC_FT1 -%}

@@ -4,21 +4,21 @@
 {% endcomment -%}
 {% if CWE -%}
     {% if mapping -%}
-        {% if CWE.1.Value -%}
-            "{{ CWE.1.Value | get_property: mapping, 'code' }}"
+        {% if CWE."1".Value -%}
+            "{{ CWE."1".Value | get_property: mapping, 'code' }}"
         {% endif -%}
-        {% unless CWE.1.Value -%}
-            "{{ CWE.4.Value | get_property: mapping, 'code' }}"
+        {% unless CWE."1".Value -%}
+            "{{ CWE."4".Value | get_property: mapping, 'code' }}"
         {% endunless %}
     {% endif -%}  
 {% endif -%}
 {% if CWE_internal -%}
     {% if mapping -%}
-        {% if CWE_internal.1 -%}
-            "{{ CWE_internal.1 | get_property: mapping, 'code' }}"
+        {% if CWE_internal."1" -%}
+            "{{ CWE_internal."1" | get_property: mapping, 'code' }}"
         {% endif -%}
-        {% unless CWE_internal.1 -%}
-            "{{ CWE_internal.4 | get_property: mapping, 'code' }}"
+        {% unless CWE_internal."1" -%}
+            "{{ CWE_internal."4" | get_property: mapping, 'code' }}"
         {% endunless %}
     {% endif -%}  
 {% endif -%}

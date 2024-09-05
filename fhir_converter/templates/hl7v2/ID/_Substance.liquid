@@ -1,6 +1,6 @@
 {% capture identifiers -%}
-    {% if INV.1 -%}
-        {{INV.1.Value}}
+    {% if INV."1" -%}
+        {{INV."1".Value}}
     {% elsif INV -%}
         {{INV.Value}}
     {% endif -%}

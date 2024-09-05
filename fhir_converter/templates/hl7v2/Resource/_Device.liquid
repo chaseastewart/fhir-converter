@@ -14,13 +14,13 @@ Device_Parent_ID: A resource Id used to fill "parent.reference" property.
         "resourceType": "Device",
         "id":"{{ ID }}",
 
-        {% if MSH.3 -%}  
-            {% include 'DataType/HDDevice' HD: MSH.3 -%}
+        {% if MSH."3" -%}  
+            {% include 'DataType/HDDevice' HD: MSH."3" -%}
         {% endif -%}
 
         "identifier" : [
-            {% include 'DataType/CWEIdentifier' CWE_InternalValue: AIG.3 -%}
-            {% include 'DataType/CWEIdentifier' CWE_InternalValue: FT1.34 -%}
+            {% include 'DataType/CWEIdentifier' CWE_InternalValue: AIG."3" -%}
+            {% include 'DataType/CWEIdentifier' CWE_InternalValue: FT1."34" -%}
         ],
         "identifier":
         [
@@ -30,14 +30,14 @@ Device_Parent_ID: A resource Id used to fill "parent.reference" property.
                 },
             {% endfor -%}
 
-            {% for prt_10 in PRT.10.Repeats -%}
+            {% for prt_10 in PRT."10".Repeats -%}
                 {
                     {% include 'DataType/EIIdentifier' EI: prt_10 -%}
                 },
             {% endfor -%}
-            {% if PRT.16 %}
+            {% if PRT."16" %}
             {
-                {% include 'DataType/EIIdentifier' EI: PRT.16 -%}
+                {% include 'DataType/EIIdentifier' EI: PRT."16" -%}
             },
             {% endif %}
            
@@ -52,56 +52,56 @@ Device_Parent_ID: A resource Id used to fill "parent.reference" property.
             },
         ],
         
-            {% unless SFT.1.10 -%}
-            {% if SFT.1.1 -%}
-            "manufacturer": "{{SFT.1.1.Value}}",
+            {% unless SFT."1"."10" -%}
+            {% if SFT."1"."1" -%}
+            "manufacturer": "{{SFT."1"."1".Value}}",
             {% endif -%}
             {% endunless -%}
         "deviceName":
         [
             {% if SFT -%}
             {
-                "name":"{{SFT.3.Value}}",
+                "name":"{{SFT."3".Value}}",
                 "type": "manufacturer-name",
             }
             {% endif -%} 
-            {% if AIG.3.2 -%}
+            {% if AIG."3"."2" -%}
             {
-                "name":"{{AIG.3.2.Value}}",
+                "name":"{{AIG."3"."2".Value}}",
                 "type": "model-name",
             }
             {% endif -%} 
         ],
-        {% if AIG.2.Value == "D" -%}
+        {% if AIG."2".Value == "D" -%}
             "status": "entered-in error",
-        {% elsif AIG.2.Value == "A" or AIG.2.Value == "U" or AIG.2.Value == "X"%}
+        {% elsif AIG."2".Value == "A" or AIG."2".Value == "U" or AIG."2".Value == "X"%}
             "status": "active",
         {% endif -%}
         "version":
             [
                 {
-                "value":"{{SFT.2.Value}}",
+                "value":"{{SFT."2".Value}}",
                 }
             ],
-        "modelNumber": "{{SFT.4.Value}}",
-        "modelNumber": "{{FT1.35.Value}}",
+        "modelNumber": "{{SFT."4".Value}}",
+        "modelNumber": "{{FT1."35".Value}}",
         "note": [
             {
-                "text": "{{SFT.5.Value}}",
-                "text": "{{NTE.3.Value}}",
-                "time": "{{NTE.6.Value | format_as_date_time}}",
+                "text": "{{SFT."5".Value}}",
+                "text": "{{NTE."3".Value}}",
+                "time": "{{NTE."6".Value | format_as_date_time}}",
             },
         ],
-        "manufactureDate":"{{ PRT.17.Value | format_as_date_time }}",
-        "expirationDate":"{{ PRT.18.Value | format_as_date_time }}",
-        "lotNumber":"{{ PRT.19.Value }}",
-        "serialNumber":"{{ PRT.20.Value }}",
+        "manufactureDate":"{{ PRT."17".Value | format_as_date_time }}",
+        "expirationDate":"{{ PRT."18".Value | format_as_date_time }}",
+        "lotNumber":"{{ PRT."19".Value }}",
+        "serialNumber":"{{ PRT."20".Value }}",
         
          {% comment -%} Placeholder provided for customization by users. If left empty, it will be removed in post-processing. {% endcomment -%}
         "type":
         {
-            {% if PRT.22 %}
-                {% include 'DataType/CNECodeableConcept' CNE: PRT.22 -%}
+            {% if PRT."22" %}
+                {% include 'DataType/CNECodeableConcept' CNE: PRT."22" -%}
             {% endif %}
         },
         

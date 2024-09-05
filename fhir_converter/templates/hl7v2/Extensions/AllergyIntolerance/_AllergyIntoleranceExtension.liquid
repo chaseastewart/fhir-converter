@@ -5,13 +5,13 @@
         {% comment -%}
         "modifierExtension":
         [
-            {% if IAM.6 -%}
+            {% if IAM."6" -%}
                 {% include 'Extensions/AllergyIntoleranceActionCode' IAM: IAM -%},
             {% endif -%}
         ],
         {% endcomment -%}
-        {% if IAM.9 -%}
-            {% if IAM.9.1 and IAM.9.1.Value != "AL" and IAM.9.1.Value != "IN" -%}
+        {% if IAM."9" -%}
+            {% if IAM."9"."1" and IAM."9"."1".Value != "AL" and IAM."9"."1".Value != "IN" -%}
             "type": "allergy",
             "_type": {
                 "extension": 

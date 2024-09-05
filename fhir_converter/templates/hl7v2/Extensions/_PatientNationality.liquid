@@ -9,11 +9,11 @@
             {
                 "coding":
                     [   
-                        {% assign CWE_2 = NATIONALITY.2.Value %}
-                        {% assign CWE_5 = NATIONALITY.5.Value %}
-                        {% assign CWE_11 = NATIONALITY.11.Value %}
-                        {% assign CWE_2_doubleDash = NATIONALITY.2.Value |append: '--' %} 
-                        {% assign CWE_5_doubleDash = NATIONALITY.5.Value |append: '--' %} 
+                        {% assign CWE_2 = NATIONALITY."2".Value %}
+                        {% assign CWE_5 = NATIONALITY."5".Value %}
+                        {% assign CWE_11 = NATIONALITY."11".Value %}
+                        {% assign CWE_2_doubleDash = NATIONALITY."2".Value |append: '--' %} 
+                        {% assign CWE_5_doubleDash = NATIONALITY."5".Value |append: '--' %} 
                         {% include 'DataType/CWECodeableConceptRepeatable' CWE:NATIONALITY %}    
                     ],
                     {% if CWE_2_doubleDash and CWE_5_doubleDash == null and CWE_11 == null %}
