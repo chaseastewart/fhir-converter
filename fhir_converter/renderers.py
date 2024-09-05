@@ -45,6 +45,10 @@ from fhir_converter.utils import (
     walk_path,
 )
 
+from fhir_converter.expressions import parse_loop_expression
+
+from liquid.mode import Mode
+
 DataInput = Union[IO, AnyStr]
 """ Union[str, IO]: The rendering data input types"""
 
@@ -322,6 +326,9 @@ class Hl7v2Renderer(BaseFhirRenderer):
 
     def __init__(self, env: Optional[Environment] = None) -> None:
         super().__init__(env)
+        self.env.parse_loop_expression_value = parse_loop_expression
+        # set the env parser to LAX
+        self.env.mode = Mode.STRICT
 
     @staticmethod
     def defaults() -> FhirRendererDefaults:
