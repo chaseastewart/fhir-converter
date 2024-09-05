@@ -238,7 +238,6 @@ def generate_id_input(data: str, resource_name:str ,based_id_required:bool,base_
         return data + resource_name + base_id
     return data + resource_name
 
-
 @with_context
 @string_filter
 def get_property(
@@ -450,6 +449,43 @@ def get_segment_lists(msg: 'hl7.Message', segment_names: str) -> List[Mapping[An
             segments.append(_convert_hl7_segment(segment))
     return segments
 
+def has_segments(msg: 'hl7.Message', segment_names: str) -> bool:
+    """has_segments Check if the message has the given segment_name
+
+    Args:
+        msg (hl7.Message): the msg / hl7v2 message to search
+        segment_name (str): the segment to search the document with
+
+    Returns:
+        bool: True if the segment is found, otherwise, False
+    """
+    result = False
+    try:
+        result = msg.segment(segment_names) is not None
+    except KeyError:
+        pass
+    return result
+
+def get_related_segment_list(msg: 'hl7.Message', segment_name: str, related_segment_name: str) -> List[Mapping[Any, Any]]:
+    """get_related_segment_list Get the related segments that match the given segment_name
+
+    Args:
+        msg (hl7.Message): the msg / hl7v2 message to search
+        segment_name (str): the segment to search the document with
+        related_segment_name (str): the related segment to search the document with
+
+    Returns:
+        List[Mapping[Any, Any]]: the list of related segments, otherwise, empty
+    """
+    segment = None
+    try:
+        segment = msg.segment(segment_name)
+    except KeyError:
+        pass
+    if segment:
+        return get_segment_lists(segment, related_segment_name)
+    return []
+
 all_filters: Sequence[Tuple[str, FilterT]] = [
     ("to_json_string", to_json_string),
     ("to_array", to_array),
@@ -468,7 +504,9 @@ all_filters: Sequence[Tuple[str, FilterT]] = [
     ("transform_narrative", transform_narrative),
     ("get_first_segments", get_first_segments),
     ("get_segment_lists", get_segment_lists),
-    ("generate_id_input", generate_id_input)
+    ("generate_id_input", generate_id_input),
+    ("has_segments", has_segments),
+    ("get_related_segment_list", get_related_segment_list),
 ]
 """Sequence[tuple[str, FilterT]]: All of the filters provided by the module"""
 
