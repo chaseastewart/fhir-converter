@@ -401,31 +401,24 @@ def get_first_segments(msg: 'hl7.Message', segment_names: str) -> Mapping[Any, A
         except KeyError:
             pass
         if segment:
-            segments[segment_name] = _convert_hl7_segment(segment)
+            segments[segment_name] = _convert_hl7_container(segment)
     return segments
 
-def _convert_hl7_segment(segment: 'hl7.Segment') -> Mapping[Any, Any]:
-    """Convert the hl7 segment to a dictionary
-
-    Each key are casted to a string
-    The leaf values are casted to a string and puted in a 'Value' key
-    Here we can't use items() because the hl7.Segment object is not a dict
-    We use the __getitem__ method to get the values and len() to get the number of fields
-    We do it recursively to get the values of the subfields
-
-    Args:
-        segment (hl7.Segment): the hl7 segment
-
-    Returns:
-        Mapping[Any, Any]: the segment as a dictionary
+def _convert_hl7_container(container: 'hl7.Container') -> dict:
+    """Convert the hl7 container to a dictionary
     """
-    segment_dict = {}
-    for i in range(len(segment)):
-        if len(segment[i]) > 1:
-            segment_dict[str(i)] = _convert_hl7_segment(segment[i])
+    container_dict = {}
+    for i in range(len(container)):
+        name = str(i)
+        if not isinstance(container, hl7.Segment):
+            name = str(i+1)
+        if len(container[i]) > 1:
+            # Repeats is a list of dictionaries converted from the container
+            container_dict[name] = {"Repeats": [_convert_hl7_container(repeat) for repeat in container[i]]
+                                ,"Value": str(container[i])}
         else:
-            segment_dict[str(i)] = {"Value": str(segment[i])}
-    return segment_dict
+            container_dict[name] = {"Value": str(container[i])}
+    return container_dict
 
 @liquid_filter
 def get_segment_lists(msg: 'hl7.Message', segment_names: str) -> List[Mapping[Any, Any]]:
@@ -446,7 +439,7 @@ def get_segment_lists(msg: 'hl7.Message', segment_names: str) -> List[Mapping[An
         except KeyError:
             pass
         if segment:
-            segments.append(_convert_hl7_segment(segment))
+            segments.append(_convert_hl7_container(segment))
     return segments
 
 def has_segments(msg: 'hl7.Message', segment_names: str) -> bool:
