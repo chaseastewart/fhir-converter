@@ -418,6 +418,10 @@ def _convert_hl7_container(container: 'hl7.Container') -> dict:
                                 ,"Value": str(container[i])}
         else:
             container_dict[name] = {"Value": str(container[i])}
+            if len(container[i][0]) > 1 and isinstance(container[i][0], list):
+                for j in range(len(container[i][0])):
+                    name_sub = str(j+1)
+                    container_dict[name][name_sub] = {"Value": str(container[i][0][j])}
     return container_dict
 
 @liquid_filter
