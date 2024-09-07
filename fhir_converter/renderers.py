@@ -322,17 +322,28 @@ class Stu3FhirRenderer(BaseFhirRenderer):
 class Hl7v2Renderer(BaseFhirRenderer):
     """HL7v2 to FHIR renderer"""
 
-    __slots__ = "env"
+    __slots__ = ("env", "template_globals")
 
-    def __init__(self, env: Optional[Environment] = None) -> None:
+    def __init__(
+            self, env: Optional[Environment] = None,
+            template_globals: Optional[Mapping[str, Any]] = None,
+    ) -> None:
         super().__init__(env)
         self.env.parse_loop_expression_value = parse_loop_expression
-        # set the env parser to LAX
-        self.env.mode = Mode.STRICT
+        self.template_globals = self._make_globals(template_globals)
+
 
     @staticmethod
     def defaults() -> FhirRendererDefaults:
         return {"loader": hl7v2_default_loader}
+
+    def _make_globals(self, globals: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
+        template_globals = dict(globals or {})
+        if "code_mapping" not in template_globals:
+            value_set = json_loads(read_text(self.env, filename="CodeSystem/CodeSystem.json"))
+            template_globals["code_mapping"] = frozendict(value_set.get("Mapping", {}))
+
+        return frozendict(template_globals)
 
     @staticmethod
     def _parse_hl7v2(data_in: DataInput, encoding: str = "utf-8"):
@@ -347,10 +358,11 @@ class Hl7v2Renderer(BaseFhirRenderer):
     def _render(
         self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
     ) -> MutableMapping:
-        template = self.env.get_template(template_name)
+        template = self.env.get_template(template_name, globals=self.template_globals)
         return parse_fhir(
-            json_input=template.render({"hl7v2Data": self._parse_hl7v2(data_in, encoding)}),
+            template.render({"hl7v2Data": self._parse_hl7v2(data_in, encoding)})
         )
+        
 
 
 def make_environment(
