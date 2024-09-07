@@ -50,7 +50,7 @@
         "CodeSystem/UniversalIDType": {
             "x500": {
                 "code": "x500", 
-                "display": "An X."500" directory name", 
+                "display": "An X.500 directory name", 
                 "system": "http://terminology.hl7.org/CodeSystem/v2-0301"
             }, 
             "DNS": {
@@ -80,7 +80,7 @@
             }, 
             "x400": {
                 "code": "x400", 
-                "display": "An X."400" MHS identifier. Recommended format is in accordance with RFC 1649", 
+                "display": "An X.400 MHS identifier. Recommended format is in accordance with RFC 1649", 
                 "system": "http://terminology.hl7.org/CodeSystem/v2-0301"
             }, 
             "ISO": {
@@ -1398,22 +1398,22 @@
                 "system": "http://hl7.org/fhir/sid/icd-10"
             },
             "ALPHAID2006": {
-                "system": "urn:oid:1."2"."276"."0"."76"."5"."309""
+                "system": "urn:oid:1.2.276.0.76.5.309"
             }, 
             "ALPHAID2007": {
-                "system": "urn:oid:1."2"."276"."0"."76"."5"."316""
+                "system": "urn:oid:1.2.276.0.76.5.316"
             }, 
             "ALPHAID2008": {
-                "system": "urn:oid:1."2"."276"."0"."76"."5"."329""
+                "system": "urn:oid:1.2.276.0.76.5.329"
             }, 
             "ALPHAID2009": {
-                "system": "urn:oid:1."2"."276"."0"."76"."5"."355""
+                "system": "urn:oid:1.2.276.0.76.5.355"
             }, 
             "ALPHAID20010": {
-                "system": "urn:oid:1."2"."276"."0"."76"."5"."383""
+                "system": "urn:oid:1.2.276.0.76.5.383"
             }, 
             "ALPHAID20011": {
-                "system": "urn:oid:1."2"."276"."0"."76"."5"."387""
+                "system": "urn:oid:1.2.276.0.76.5.387"
             }, 
             "C4": {
                 "system": "http://www.ama-assn.org/go/cpt"
@@ -4251,32 +4251,32 @@
             "1002-5": {
                 "code": "1002-5", 
                 "display": "American Indian or Alaska Native", 
-                "system": "urn:oid:2."16"."840"."1"."113883"."6"."238""
+                "system": "urn:oid:2.16.840.1.113883.6.238"
             }, 
             "2028-9": {
                 "code": "2028-9", 
                 "display": "Asian", 
-                "system": "urn:oid:2."16"."840"."1"."113883"."6"."238""
+                "system": "urn:oid:2.16.840.1.113883.6.238"
             }, 
             "2054-5": {
                 "code": "2054-5", 
                 "display": "Black or African American", 
-                "system": "urn:oid:2."16"."840"."1"."113883"."6"."238""
+                "system": "urn:oid:2.16.840.1.113883.6.238"
             }, 
             "2076-8": {
                 "code": "2076-8", 
                 "display": "Native Hawaiian or Other Pacific Islander", 
-                "system": "urn:oid:2."16"."840"."1"."113883"."6"."238""
+                "system": "urn:oid:2.16.840.1.113883.6.238"
             }, 
             "2106-3": {
                 "code": "2106-3", 
                 "display": "White", 
-                "system": "urn:oid:2."16"."840"."1"."113883"."6"."238""
+                "system": "urn:oid:2.16.840.1.113883.6.238"
             }, 
             "2131-1": {
                 "code": "2131-1", 
                 "display": "Other Race", 
-                "system": "urn:oid:2."16"."840"."1"."113883"."6"."238""
+                "system": "urn:oid:2.16.840.1.113883.6.238"
             }
         },
 
@@ -4284,12 +4284,12 @@
             "H": {
                 "code": "2135-2", 
                 "display": "Hispanic or Latino", 
-                "system": "urn:oid:2."16"."840"."1"."113883"."6"."238""
+                "system": "urn:oid:2.16.840.1.113883.6.238"
             }, 
             "N": {
                 "code": "2186-5", 
                 "display": "Non Hispanic or Latino", 
-                "system": "urn:oid:2."16"."840"."1"."113883"."6"."238""
+                "system": "urn:oid:2.16.840.1.113883.6.238"
             }
         },
         "CodeSystem/EventReason": {
@@ -4355,7 +4355,7 @@
                 "display" : "email",
                 "system" : "http://hl7.org/fhir/contact-point-system"
             }, 
-            "X."400"": {
+            "X.400": {
                 "code" : "email",
                 "display" : "email",
                 "system" : "http://hl7.org/fhir/contact-point-system"
