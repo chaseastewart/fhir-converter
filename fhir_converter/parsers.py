@@ -15,7 +15,6 @@ from fhir_converter.utils import (
     sanitize_str,
 )
 
-
 @dataclass(frozen=True)
 class ParseXmlOpts:
     cdata_key: str = "_"
@@ -301,3 +300,149 @@ def parse_xml(
     parsed_dict = _xml_element_to_dict(parse_filter, parse_opts, tree.getroot())
     parsed_dict = {_get_xml_element_name(tree.getroot()): parsed_dict}
     return after_parse_xml(parsed_dict, tree, parse_opts)
+
+class Hl7v2DataValidator:
+    def validate_message_header(self, header):
+        # Implement validation logic here
+        pass
+
+class Hl7v2Data:
+    def __init__(self, message):
+        self.message = message
+        self.encoding_characters = None
+        self.meta = []
+        self.data = []
+
+class Hl7v2Segment:
+    def __init__(self, normalized_text, fields):
+        self.normalized_text = normalized_text
+        self.fields = fields
+
+
+class Hl7v2Field:
+    def __init__(self, value, components):
+        self.value = value
+        self.components = components
+        self.repeats = []
+
+class Hl7v2Component:
+    def __init__(self, value, subcomponents):
+        self.value = value
+        self.subcomponents = subcomponents
+
+
+class Hl7v2EncodingCharacters:
+    def __init__(self, field_separator, component_separator, repetition_separator, escape_character, subcomponent_separator):
+        self.field_separator = field_separator
+        self.component_separator = component_separator
+        self.repetition_separator = repetition_separator
+        self.escape_character = escape_character
+        self.subcomponent_separator = subcomponent_separator
+
+class Hl7v2EscapeSequenceProcessor:
+    @staticmethod
+    def unescape(value, encoding_characters):
+        # Implement unescape logic here
+        return value
+
+class SpecialCharProcessor:
+    @staticmethod
+    def escape(value):
+        # Implement escape logic here
+        return value
+
+class DataParseException(Exception):
+    def __init__(self, error_code, message, inner_exception=None):
+        super().__init__(message)
+        self.error_code = error_code
+        self.inner_exception = inner_exception
+
+class Hl7v2DataParser:
+    validator = Hl7v2DataValidator()
+
+    def parse(self, message):
+        if not message or message.isspace():
+            raise DataParseException("NullOrWhiteSpaceInput", "Input message is null or whitespace")
+
+        try:
+            result = Hl7v2Data(message)
+            segments = self.split_message_to_segments(message)
+            self.validator.validate_message_header(segments[0])
+            encoding_characters = self.parse_hl7v2_encoding_characters(segments[0])
+            result.encoding_characters = encoding_characters
+
+            for i, segment in enumerate(segments):
+                fields = self.parse_fields(segment, encoding_characters, is_header_segment=(i == 0))
+                normalized_text = self.normalize_text(segment, encoding_characters)
+                hl7_segment = Hl7v2Segment(normalized_text, fields)
+                result.meta.append(fields[0].value if fields[0] else "")
+                result.data.append(hl7_segment)
+
+            return result
+        except Exception as ex:
+            raise DataParseException("InputParsingError", f"Error parsing input: {str(ex)}", ex)
+
+    def parse_fields(self, data_string, encoding_characters, is_header_segment=False):
+        fields = []
+        field_values = data_string.split(encoding_characters.field_separator)
+        for f, field_value in enumerate(field_values):
+            if is_header_segment and f == 1:
+                field_separator_components = [None, Hl7v2Component(encoding_characters.field_separator, [None, encoding_characters.field_separator])]
+                field_separator_field = Hl7v2Field(encoding_characters.field_separator, field_separator_components)
+                fields.append(field_separator_field)
+
+                separator_field_components = [None, Hl7v2Component(field_value, [None, field_value])]
+                separator_field = Hl7v2Field(field_value, separator_field_components)
+                fields.append(separator_field)
+            else:
+                if field_value:
+                    field = Hl7v2Field(self.normalize_text(field_value, encoding_characters), [])
+                    repetitions = field_value.split(encoding_characters.repetition_separator)
+                    for repetition in repetitions:
+                        repetition_components = self.parse_components(repetition, encoding_characters)
+                        repetition_field = Hl7v2Field(self.normalize_text(repetition, encoding_characters), repetition_components)
+                        field.repeats.append(repetition_field)
+
+                    field.components = field.repeats[0].components
+                    fields.append(field)
+                else:
+                    fields.append(None)
+        return fields
+
+    def parse_components(self, data_string, encoding_characters):
+        components = [None]
+        component_values = data_string.split(encoding_characters.component_separator)
+        for component_value in component_values:
+            if component_value:
+                subcomponents = self.parse_subcomponents(component_value, encoding_characters)
+                component = Hl7v2Component(self.normalize_text(component_value, encoding_characters), subcomponents)
+                components.append(component)
+            else:
+                components.append(None)
+        return components
+
+    def parse_subcomponents(self, data_string, encoding_characters):
+        subcomponents = [None]
+        subcomponent_values = data_string.split(encoding_characters.subcomponent_separator)
+        for subcomponent_value in subcomponent_values:
+            subcomponents.append(self.normalize_text(subcomponent_value, encoding_characters))
+        return subcomponents
+
+    def parse_hl7v2_encoding_characters(self, header_segment):
+        return Hl7v2EncodingCharacters(
+            field_separator=header_segment[3],
+            component_separator=header_segment[4],
+            repetition_separator=header_segment[5],
+            escape_character=header_segment[6],
+            subcomponent_separator=header_segment[7]
+        )
+
+    def normalize_text(self, value, encoding_characters):
+        semantical_unescape = Hl7v2EscapeSequenceProcessor.unescape(value, encoding_characters)
+        grammar_escape = SpecialCharProcessor.escape(semantical_unescape)
+        return grammar_escape
+
+    def split_message_to_segments(self, message):
+        # Implement the logic to split the message into segments
+        return message.split('\r')
+    

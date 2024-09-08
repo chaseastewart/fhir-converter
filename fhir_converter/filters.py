@@ -41,7 +41,7 @@ from fhir_converter.utils import (
     transform_xml_str,
 )
 
-import hl7
+from fhir_converter.parsers import Hl7v2Data, Hl7v2Segment, Hl7v2Field, Hl7v2Component
 
 FilterT = Callable[..., Any]
 """Callable[..., Any]: A liquid filter function"""
@@ -382,106 +382,102 @@ def transform_narrative(text: str, *, context: Context) -> Mapping:
         },
     }
 
-@liquid_filter
-def get_first_segments(msg: 'hl7.Message', segment_names: str) -> Mapping[Any, Any]:
-    """get_first_segments Get the first segment that matches the given segment_name
-
-    Args:
-        msg (hl7.Message): the msg / hl7v2 message to search
-        segment_name (str): the list of segments to search the document with separated by |
-
-    Returns:
-        Mapping[Any, Any]: the list of segments, otherwise, empty
-    """
-    segments, search_segment_names = {}, str_arg(segment_names).split("|")
-    for segment_name in search_segment_names:
-        segment = None
-        try:
-            segment = msg.segment(segment_name)
-        except KeyError:
-            pass
-        if segment:
-            segments[segment_name] = _convert_hl7_container(segment)
-    return segments
-
-def _convert_hl7_container(container: 'hl7.Container') -> dict:
-    """Convert the hl7 container to a dictionary
-    """
-    container_dict = {}
-    for i in range(len(container)):
-        name = str(i)
-        if not isinstance(container, hl7.Segment):
-            name = str(i+1)
-        if len(container[i]) > 1:
-            # Repeats is a list of dictionaries converted from the container
-            container_dict[name] = {"Repeats": [_convert_hl7_container(repeat) for repeat in container[i]]
-                                ,"Value": str(container[i])}
-        else:
-            container_dict[name] = {"Value": str(container[i])}
-            if len(container[i][0]) > 1 and isinstance(container[i][0], list):
-                for j in range(len(container[i][0])):
-                    name_sub = str(j+1)
-                    container_dict[name][name_sub] = {"Value": str(container[i][0][j])}
-    return container_dict
-
-@liquid_filter
-def get_segment_lists(msg: 'hl7.Message', segment_names: str) -> List[Mapping[Any, Any]]:
-    """get_segments_list Get the segments that match the given segment_name
-
-    Args:
-        msg (hl7.Message): the msg / hl7v2 message to search
-        segment_name (str): the list of segments to search the document with separated by |
-
-    Returns:
-        List[Mapping[Any, Any]]: the list of segments, otherwise, empty
-    """
-    segments, search_segment_names = [], str_arg(segment_names).split("|")
-    for segment_name in search_segment_names:
-        segment = None
-        try:
-            segment = msg.segment(segment_name)
-        except KeyError:
-            pass
-        if segment:
-            segments.append(_convert_hl7_container(segment))
-    return segments
-
-def has_segments(msg: 'hl7.Message', segment_names: str) -> bool:
-    """has_segments Check if the message has the given segment_name
-
-    Args:
-        msg (hl7.Message): the msg / hl7v2 message to search
-        segment_name (str): the segment to search the document with
-
-    Returns:
-        bool: True if the segment is found, otherwise, False
-    """
-    result = False
-    try:
-        result = msg.segment(segment_names) is not None
-    except KeyError:
-        pass
+def get_first_segments(hl7v2_data: Hl7v2Data, segment_id_content : str) -> dict:
+    result = {}
+    segment_ids = segment_id_content.split("|")
+    for i in range(len(hl7v2_data.meta)):
+        if hl7v2_data.meta[i] in segment_ids and hl7v2_data.meta[i] not in result:
+            result[hl7v2_data.meta[i]] = _segment_to_dict(hl7v2_data.data[i])
     return result
 
-def get_related_segment_list(msg: 'hl7.Message', segment_name: str, related_segment_name: str) -> List[Mapping[Any, Any]]:
-    """get_related_segment_list Get the related segments that match the given segment_name
+def get_segment_lists(hl7v2_data, segment_id_content):
+    segment_ids = segment_id_content.split("|")
+    return _get_segment_lists_internal(hl7v2_data, segment_ids)
 
-    Args:
-        msg (hl7.Message): the msg / hl7v2 message to search
-        segment_name (str): the segment to search the document with
-        related_segment_name (str): the related segment to search the document with
+def get_related_segment_list(hl7v2_data, parent_segment, child_segment_id):
+    result = {}
+    segments = []
+    parent_found = False
+    child_index = -1
 
-    Returns:
-        List[Mapping[Any, Any]]: the list of related segments, otherwise, empty
-    """
-    segment = None
-    try:
-        segment = msg.segment(segment_name)
-    except KeyError:
-        pass
-    if segment:
-        return get_segment_lists(segment, related_segment_name)
-    return []
+    for i in range(len(hl7v2_data.meta)):
+        if hl7v2_data.data[i] is parent_segment:
+            parent_found = True
+        elif hl7v2_data.meta[i].lower() == child_segment_id.lower() and parent_found:
+            child_index = i
+            break
+
+    if child_index > -1:
+        while child_index < len(hl7v2_data.meta) and hl7v2_data.meta[child_index].lower() == child_segment_id.lower():
+            segments.append(_segment_to_dict(hl7v2_data.data[child_index]))
+            child_index += 1
+
+        result[child_segment_id] = segments
+
+    return result
+
+def get_parent_segment(hl7v2_data, child_segment_id, child_index, parent_segment_id):
+    result = {}
+    target_child_index = -1
+    found_child_segment_count = -1
+
+    for i in range(len(hl7v2_data.meta)):
+        if hl7v2_data.meta[i].lower() == child_segment_id.lower():
+            found_child_segment_count += 1
+            if found_child_segment_count == child_index:
+                target_child_index = i
+                break
+
+    for i in range(target_child_index, -1, -1):
+        if hl7v2_data.meta[i].lower() == parent_segment_id.lower():
+            result[parent_segment_id] = _segment_to_dict(hl7v2_data.data[i])
+            break
+
+    return result
+
+def has_segments(hl7v2_data, segment_id_content):
+    segment_ids = segment_id_content.split("|")
+    segment_lists = _get_segment_lists_internal(hl7v2_data, segment_ids)
+    return all(segment_id in segment_lists for segment_id in segment_ids)
+
+def _get_segment_lists_internal(hl7v2_data, segment_ids):
+    result = {}
+    for i in range(len(hl7v2_data.meta)):
+        if hl7v2_data.meta[i] in segment_ids:
+            if hl7v2_data.meta[i] in result:
+                result[hl7v2_data.meta[i]].append(_segment_to_dict(hl7v2_data.data[i]))
+            else:
+                result[hl7v2_data.meta[i]] = [_segment_to_dict(hl7v2_data.data[i])]
+    return result
+
+def _segment_to_dict(hl7v2_segment : Hl7v2Segment) -> dict:
+    result = {}
+    result['Value'] = hl7v2_segment.normalized_text
+    for i, field in enumerate(hl7v2_segment.fields):
+        result[str(i)] = _field_to_dict(field)
+    return result
+
+def _field_to_dict(hl7v2_field : Hl7v2Field) -> dict:
+    result = {}
+    if hl7v2_field:
+        result['Value'] = hl7v2_field.value
+        if hl7v2_field.repeats is not None and len(hl7v2_field.repeats) > 0:
+            result['Repeats'] = []
+            for i, repeat in enumerate(hl7v2_field.repeats):
+                result['Repeats'].append(_field_to_dict(repeat))
+        for i, component in enumerate(hl7v2_field.components):
+            result[str(i)] = _component_to_dict(component)
+    return result
+
+@staticmethod
+def _component_to_dict(hl7v2_component : Hl7v2Component) -> dict:
+    result = {}
+    if hl7v2_component:
+        result['Value'] = hl7v2_component.value
+        for i, subcomponent in enumerate(hl7v2_component.subcomponents):
+            if subcomponent is not None and subcomponent != hl7v2_component.value:
+                result[str(i)] = subcomponent
+    return result
 
 all_filters: Sequence[Tuple[str, FilterT]] = [
     ("to_json_string", to_json_string),

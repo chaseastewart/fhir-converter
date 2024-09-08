@@ -25,13 +25,12 @@ from liquid.loaders import BaseLoader, PackageLoader
 from lxml.etree import QName
 from pyjson5 import encode_io
 from pyjson5 import loads as json_loads
-import hl7
 
 from fhir_converter.exceptions import RenderingError, fail
 from fhir_converter.filters import all_filters, register_filters
 from fhir_converter.hl7 import parse_fhir
 from fhir_converter.loaders import make_template_system_loader, read_text
-from fhir_converter.parsers import ParseXmlOpts, parse_json, parse_xml, parse_xml_filter
+from fhir_converter.parsers import ParseXmlOpts, parse_json, parse_xml, parse_xml_filter, Hl7v2DataParser
 from fhir_converter.tags import all_tags, register_tags
 from fhir_converter.utils import (
     del_empty_dirs_quietly,
@@ -329,6 +328,7 @@ class Hl7v2Renderer(BaseFhirRenderer):
             template_globals: Optional[Mapping[str, Any]] = None,
     ) -> None:
         super().__init__(env)
+        self.env.mode = Mode.STRICT
         self.env.parse_loop_expression_value = parse_loop_expression
         self.template_globals = self._make_globals(template_globals)
 
@@ -353,7 +353,7 @@ class Hl7v2Renderer(BaseFhirRenderer):
         data_in = data_in.read()
         data_in = data_in.replace("\n", "\r")
 
-        return hl7.parse(data_in, encoding)
+        return Hl7v2DataParser().parse(data_in)
 
     def _render(
         self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
