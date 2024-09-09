@@ -281,7 +281,8 @@ Patient_ManagingOrganization_ID: A resource Id, used to fill "managingOrganizati
         {% if PID."7" -%}
             "birthDate":"{{ PID."7".Value | add_hyphens_date }}",
         {% endif -%}
-        {% if PID."7".Value.size > 8 -%}
+        {% assign PID_7_Size = PID."7".Value | size -%}
+        {% if PID_7_Size > 8 -%}
         "_birthDate" : {
             "extension" : [
                 {
