@@ -463,6 +463,6 @@ class Hl7v2DataParser:
         return grammar_escape
 
     def split_message_to_segments(self, message):
-        # Implement the logic to split the message into segments
-        return message.split('\r')
+        # Handle different line endings (CRLF, LF, CR)
+        return message.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     
