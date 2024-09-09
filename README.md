@@ -74,6 +74,7 @@ Built on the back of:
   - [Trailing commas in parameters](#trailing-commas-in-parameters)
   - [`times` filter](#times-filter)
   - [`size` attribute](#size-attribute)
+  - [double brackets in parameter](#double-brackets-in-parameter)
 
 
 <!--body-start-->
@@ -277,4 +278,20 @@ to:
 ```liquid
 {% assign PID_7_Size = PID."7".Value | size -%}
 {% if PID_7_Size > 8 -%}
+```
+
+### double brackets in parameter
+
+The liquid parser does not support double brackets in parameters. To fix this, we have to change the parameter to no brackets.
+
+Not working:
+
+```liquid
+{% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PV1' -%}
+```
+
+Working:
+
+```liquid
+{% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PV1' -%}
 ```
