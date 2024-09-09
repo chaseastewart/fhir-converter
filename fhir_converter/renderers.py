@@ -347,8 +347,6 @@ class Hl7v2Renderer(BaseFhirRenderer):
 
     @staticmethod
     def _parse_hl7v2(data_in: DataInput, encoding: str = "utf-8"):
-        # convert data_in to string knowing that it is a file like object
-        # or a string or an TextIOWrapper
 
         data_in = data_in.read()
         data_in = data_in.replace("\n", "\r")
