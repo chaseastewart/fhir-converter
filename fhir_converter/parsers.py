@@ -338,6 +338,11 @@ class Hl7v2Segment:
         self.normalized_text = normalized_text
         self.fields = fields
 
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, Hl7v2Segment):
+            return False
+        return self.normalized_text == value.normalized_text and self.fields == value.fields
+
 
 class Hl7v2Field:
     def __init__(self, value, components):
