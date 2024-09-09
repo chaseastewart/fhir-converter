@@ -118,8 +118,28 @@ def parse_json(
     Returns:
         Any: the decoded output
     """
-    json = json_loads(read_text(json_in, encoding))
+    json = json_loads(_fix_commas(read_text(json_in, encoding)))
     return _remove_empty_json(json) if ignore_empty_fields else json
+
+def _fix_commas(value: str) -> str:
+    """fix_double_comma Fixes double commas in the value
+
+    Args:
+        value (str): the value to fix
+
+    Returns:
+        str: the fixed value
+    """
+    value = value.replace("\n", "")
+    import re
+    value = re.sub(r",\s*,", ",", value)
+    # If a comme is in between [] or {} then remove it
+    value = re.sub(r"\[\s*,\s*\]", "[]", value)
+    value = re.sub(r"\{\s*,\s*\}", "{}", value)
+    # If a comme is after a : then remove it
+    value = re.sub(r":\s*,", ':"",', value)
+    return value
+
 
 
 def _get_xml_element_name(element: XmlElement) -> str:
