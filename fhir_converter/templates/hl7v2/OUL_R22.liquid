@@ -753,7 +753,7 @@
             {% include 'Extensions/Specimen/SpecimenExtension' ID: specimenId_spm, SPM: spmSegment -%}
             
             {% assign fullSpecimenId_spm = specimenId_spm | prepend: 'Specimen/' -%}    
-            {% assign checkParentSPM = hl7v2Data | get_parent_segment: 'OBX', {{obxSegmentPositionIndex_spm}}, 'SPM' -%}
+            {% assign checkParentSPM = hl7v2Data | get_parent_segment: 'OBX', obxSegmentPositionIndex_spm, 'SPM' -%}
             {% assign obxSegmentPositionIndex_spm = obxSegmentPositionIndex_spm | plus: 1 -%}    
             {% assign spm_obxSegmentLists = hl7v2Data | get_related_segment_list: spmSegment, 'OBX' -%}               
             {% for spm_obxSegment in spm_obxSegmentLists.OBX -%}

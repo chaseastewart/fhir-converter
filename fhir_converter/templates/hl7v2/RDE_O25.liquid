@@ -1472,7 +1472,7 @@
 
             {% endfor -%}
 
-            {% evaluate TaskId using 'ID/Task' RXE: rxeSegment, intent_value: 'filler-order', intent_new_value: 'refill-authorization-request' baseId: patientId -%}
+            {% evaluate TaskId using 'ID/Task' RXE: rxeSegment, intent_value: 'filler-order', intent_new_value: 'refill-authorization-request', baseId: patientId -%}
             {% assign medicationRequest_task = medicationRequestId_RXE | prepend: 'MedicationRequest/' %}
             {% include 'Resource/Task' RDE: "RDE_O25" , ID: TaskId, Task_Focus_ID: medicationRequest_task, Task_Encounter_ID: fullEncounterid, Task_For_ID: fullPatientId -%}
 

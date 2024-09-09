@@ -702,7 +702,7 @@
                 {% assign sac_spmSegmentLists = hl7v2Data | get_related_segment_list: spmSegment, 'SAC' -%}
 
                 {% assign fullSpecimenId_spm = specimenId_spm | prepend: 'Specimen/' -%}    
-                {% assign checkParentSPM = hl7v2Data | get_parent_segment: 'OBX', {{obxSegmentPositionIndex_spm}}, 'SPM' -%}
+                {% assign checkParentSPM = hl7v2Data | get_parent_segment: 'OBX', obxSegmentPositionIndex_spm, 'SPM' -%}
                 {% assign obxSegmentPositionIndex_spm = obxSegmentPositionIndex_spm | plus: 1 -%}    
                 {% assign spm_obxSegmentLists = hl7v2Data | get_related_segment_list: spmSegment, 'OBX' -%}               
                 {% for spm_obxSegment in spm_obxSegmentLists.OBX -%}
@@ -1067,7 +1067,7 @@
                         {% assign fullServiceRequestId = serviceRequestId | prepend: 'ServiceRequest/' -%}
                         {% include 'Reference/DiagnosticReport/BasedOn' ID: diagnosticId, REF: fullServiceRequestId -%}
                         {% include 'Reference/DiagnosticReport/Specimen' ID: diagnosticId, REF: fullSpecimenId_spm -%}  
-                        {% include 'Reference/DiagnosticReport/Encounter' REF: full_ServiceRequest_Encounter_ID,, ID: diagnosticId  %}
+                        {% include 'Reference/DiagnosticReport/Encounter' REF: full_ServiceRequest_Encounter_ID, ID: diagnosticId  %}
 
                         {% if obrSegment."10" %}
                             {% if obrSegment."10".Repeats[0]."9"."1" != "" and obrSegment."10".Repeats[0]."9"."1" != null and obrSegment."10".Repeats[0]."9"."2" != "" and obrSegment."10".Repeats[0]."9"."2" != null and obrSegment."10".Repeats[0]."9"."3" != "" and obrSegment."10".Repeats[0]."9"."3" != null -%}
