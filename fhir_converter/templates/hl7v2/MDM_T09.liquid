@@ -414,25 +414,25 @@
             {% assign con_25_indexValue = 0 -%}
             {% for con_25 in conSegment."25".Repeats -%}
                 {% if con_25."1".Value == "1" %}
-                {% if conSegment."24".Repeats[{{con_25_indexValue}}].Value != "" and conSegment."24".Repeats[{{con_25_indexValue}}].Value != null %}
-                        {% include 'Resource/Patient' CON: conSegment."24".Repeats[{{con_25_indexValue}}], ID: patientId -%}
+                {% if conSegment."24".Repeats[con_25_indexValue].Value != "" and conSegment."24".Repeats[con_25_indexValue].Value != null %}
+                        {% include 'Resource/Patient' CON: conSegment."24".Repeats[con_25_indexValue], ID: patientId -%}
                         {% include 'Reference/Consent/Performer' REF: fullPatientId, ID: consentID -%}
                     {% endif -%}
                 {% endif -%}
 
                 {% if con_25."1".Value == "2" or con_25."1".Value == "3" or con_25."1".Value == "4" or con_25."1".Value == "5" %}
-                    {% if conSegment."24".Repeats[{{con_25_indexValue}}].Value != "" and conSegment."24".Repeats[{{con_25_indexValue}}].Value != null %}
-                        {% evaluate conRelatedPersonId using 'ID/RelatedPerson' CON: conSegment."24".Repeats[{{con_25_indexValue}}], baseId: patientId -%}
-                        {% include 'Resource/RelatedPerson' ID: conRelatedPersonId, CON: conSegment."24".Repeats[{{con_25_indexValue}}], CON_25: con_25, RelatedPerson_Patient_ID: fullPatientId  -%}
+                    {% if conSegment."24".Repeats[con_25_indexValue].Value != "" and conSegment."24".Repeats[con_25_indexValue].Value != null %}
+                        {% evaluate conRelatedPersonId using 'ID/RelatedPerson' CON: conSegment."24".Repeats[con_25_indexValue], baseId: patientId -%}
+                        {% include 'Resource/RelatedPerson' ID: conRelatedPersonId, CON: conSegment."24".Repeats[con_25_indexValue], CON_25: con_25, RelatedPerson_Patient_ID: fullPatientId  -%}
                         {% assign fullRelatedPersonID = conRelatedPersonId | prepend: 'RelatedPerson/' -%}
                         {% include 'Reference/Consent/Performer' REF: fullRelatedPersonID, ID: consentID -%}
                     {% endif -%}
                 {% endif -%}
 
                 {% if con_25."1".Value == "6" or con_25."1".Value == "7" %}
-                {% if conSegment."24".Repeats[{{con_25_indexValue}}].Value != "" and conSegment."24".Repeats[{{con_25_indexValue}}].Value != null %}
-                        {% evaluate conPractitionerId using 'ID/Practitioner' XPN: conSegment."24".Repeats[{{con_25_indexValue}}] -%}
-                        {% include 'Resource/Practitioner' CON: conSegment."24".Repeats[{{con_25_indexValue}}], ID: conPractitionerId -%}
+                {% if conSegment."24".Repeats[con_25_indexValue].Value != "" and conSegment."24".Repeats[con_25_indexValue].Value != null %}
+                        {% evaluate conPractitionerId using 'ID/Practitioner' XPN: conSegment."24".Repeats[con_25_indexValue] -%}
+                        {% include 'Resource/Practitioner' CON: conSegment."24".Repeats[con_25_indexValue], ID: conPractitionerId -%}
                         {% assign fullConPractitionerId = conPractitionerId | prepend: 'Practitioner/' -%}
                         {% include 'Reference/Consent/Performer' REF: fullConPractitionerId, ID: consentID -%}
                     {% endif -%}
