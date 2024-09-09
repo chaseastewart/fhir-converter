@@ -1,5 +1,6 @@
 from base64 import b64decode
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest import TestCase
 from zlib import decompress
 
@@ -15,6 +16,7 @@ from pytest import fixture, raises
 from fhir_converter.filters import all_filters, register_filters
 from fhir_converter.hl7 import Hl7DtmPrecision
 
+from fhir_converter.parsers import Hl7v2DataParser
 
 class FilterTest:
     """Base Test that doesn't extend TestCase to avoid the generic
@@ -776,3 +778,119 @@ class BatchRenderTest(TestCase, FilterTest):
         Environment.output_stream_limit = 4
         result = self.bound_template.render(batch=["one"], template="__template__")
         self.assertEqual(result, "one,")
+
+class GenerateIdInputTest(TestCase, FilterTest):
+    template = """{{ datas | generate_id_input: resource_name, based_id_required, base_id }}"""
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_undefined(self) -> None:
+        result = self.bound_template.render()
+        self.assertEqual(result, "")
+
+    def test_empty(self) -> None:
+        result = self.bound_template.render(data="")
+        self.assertEqual(result, "")
+
+    def test_data(self) -> None:
+        result = self.bound_template.render(
+            datas="This is a test.",
+            resource_name = "Patient",
+            base_id = "123",
+            based_id_required=True)
+        self.assertEqual(result, "PatientThis is a test.123")
+
+class SignTest(TestCase, FilterTest):
+    template = """{{ data | sign }}"""
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_undefined(self) -> None:
+        result = self.bound_template.render()
+        self.assertEqual(result, "")
+
+    def test_empty(self) -> None:
+        result = self.bound_template.render(data="")
+        self.assertEqual(result, "")
+
+    def test_data_positif(self) -> None:
+        result = self.bound_template.render(data="1")
+        self.assertEqual(result, "1")
+
+    def test_data_negatif(self) -> None:
+        result = self.bound_template.render(data="-1")
+        self.assertEqual(result, "-1")
+
+    def test_data_float(self) -> None:
+        result = self.bound_template.render(data="1.5")
+        self.assertEqual(result, "1")
+
+    def test_data_zero(self) -> None:
+        result = self.bound_template.render(data="0")
+        self.assertEqual(result, "0")
+
+class DivideTest(TestCase, FilterTest):
+    template = """{{ data | divide: divisor }}"""
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_undefined(self) -> None:
+        result = self.bound_template.render()
+        self.assertEqual(result, "")
+
+    def test_empty(self) -> None:
+        result = self.bound_template.render(data="")
+        self.assertEqual(result, "")
+
+    def test_data_divisor(self) -> None:
+        result = self.bound_template.render(data="1", divisor="2")
+        self.assertEqual(result, "0.5")
+
+    def test_data_divisor_zero(self) -> None:
+        result = self.bound_template.render(data="1", divisor="0")
+        self.assertEqual(result, "0")
+
+    def test_data_divisor_negatif(self) -> None:
+        result = self.bound_template.render(data="1", divisor="-2")
+        self.assertEqual(result, "-0.5")
+
+    def test_data_float(self) -> None:
+        result = self.bound_template.render(data="1.5", divisor="2")
+        self.assertEqual(result, "0.75")
+
+    def test_data_zero(self) -> None:
+        result = self.bound_template.render(data="0", divisor="2")
+        self.assertEqual(result, "0.0")
+
+class TruncateNumberTest(TestCase, FilterTest):
+    template = """{{ data | truncate_number }}"""
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_undefined(self) -> None:
+        result = self.bound_template.render()
+        self.assertEqual(result, "")
+
+    def test_empty(self) -> None:
+        result = self.bound_template.render(data="")
+        self.assertEqual(result, "")
+
+    def test_data_precision(self) -> None:
+        result = self.bound_template.render(data="1.123456789")
+        self.assertEqual(result, "1")
+
+class GetFristSegments(TestCase, FilterTest):
+    template = """{{ data | get_first_segments: segment_list }}"""
+    simple_file = Path("tests/data/hl7v2/ADT-A01-02.hl7")
+    hl7v2_data = Hl7v2DataParser().parse(simple_file.read_text())
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_data(self) -> None:
+        result = self.bound_template.render(data=self.hl7v2_data, segment_list="MSH")
+        self.assertTrue(result.startswith(r"{'MSH':"))
