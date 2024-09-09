@@ -382,6 +382,7 @@ def transform_narrative(text: str, *, context: Context) -> Mapping:
         },
     }
 
+@liquid_filter
 def get_first_segments(hl7v2_data: Hl7v2Data, segment_id_content : str) -> dict:
     result = {}
     segment_ids = segment_id_content.split("|")
@@ -390,10 +391,12 @@ def get_first_segments(hl7v2_data: Hl7v2Data, segment_id_content : str) -> dict:
             result[hl7v2_data.meta[i]] = _segment_to_dict(hl7v2_data.data[i])
     return result
 
+@liquid_filter
 def get_segment_lists(hl7v2_data, segment_id_content):
     segment_ids = segment_id_content.split("|")
     return _get_segment_lists_internal(hl7v2_data, segment_ids)
 
+@liquid_filter
 def get_related_segment_list(hl7v2_data, parent_segment, child_segment_id):
     result = {}
     segments = []
@@ -416,6 +419,7 @@ def get_related_segment_list(hl7v2_data, parent_segment, child_segment_id):
 
     return result
 
+@liquid_filter
 def get_parent_segment(hl7v2_data, child_segment_id, child_index, parent_segment_id):
     result = {}
     target_child_index = -1
@@ -435,6 +439,7 @@ def get_parent_segment(hl7v2_data, child_segment_id, child_index, parent_segment
 
     return result
 
+@liquid_filter
 def has_segments(hl7v2_data, segment_id_content):
     segment_ids = segment_id_content.split("|")
     segment_lists = _get_segment_lists_internal(hl7v2_data, segment_ids)
@@ -469,7 +474,6 @@ def _field_to_dict(hl7v2_field : Hl7v2Field) -> dict:
             result[str(i)] = _component_to_dict(component)
     return result
 
-@staticmethod
 def _component_to_dict(hl7v2_component : Hl7v2Component) -> dict:
     result = {}
     if hl7v2_component:
