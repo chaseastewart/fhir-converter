@@ -510,6 +510,7 @@ all_filters: Sequence[Tuple[str, FilterT]] = [
     ("generate_id_input", generate_id_input),
     ("has_segments", has_segments),
     ("get_related_segment_list", get_related_segment_list),
+    ("get_parent_segment", get_parent_segment),
     ("sign", sign),
 ]
 """Sequence[tuple[str, FilterT]]: All of the filters provided by the module"""
