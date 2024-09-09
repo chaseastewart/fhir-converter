@@ -244,6 +244,23 @@ def sign(data:str) -> str:
     # cast string as integer or float, if negative return -1, if positive return 1
     return str(int(float(data)/abs(float(data))) if float(data) != 0 else 0)
 
+@string_filter
+def divide(data:str, divisor:str) -> str:
+    """Divide the given data string by the divisor string"""
+    if is_undefined_none_or_blank(data) or is_undefined_none_or_blank(divisor):
+        return ""
+    # if divisor is 0, return 0
+    if float(divisor) == 0:
+        return "0"
+    return str(float(data)/float(divisor))
+
+@string_filter
+def truncate_number(data: str) -> str:
+    """Truncate the given data string to the specified precision"""
+    if is_undefined_none_or_blank(data):
+        return ""
+    return f"{float(data):.{0}f}"
+
 @with_context
 @string_filter
 def get_property(
@@ -451,6 +468,25 @@ def has_segments(hl7v2_data, segment_id_content):
     segment_lists = _get_segment_lists_internal(hl7v2_data, segment_ids)
     return all(segment_id in segment_lists for segment_id in segment_ids)
 
+@liquid_filter
+def split_data_by_segments(hl7v2_data: Hl7v2Data, segment_id_separators):
+    results = []
+    segment_ids = set(segment_id_separators.split("|"))
+
+    if segment_id_separators == "" or not set(hl7v2_data.meta).intersection(segment_ids):
+        results.append(hl7v2_data)
+        return results
+
+    for i in range(len(hl7v2_data.meta)):
+        if hl7v2_data.meta[i] in segment_ids:
+            result= Hl7v2Data(hl7v2_data.message)
+            result.meta.append(hl7v2_data.meta[i])
+            result.data.append(hl7v2_data.data[i])
+            results.append(result)
+
+    return results
+
+
 def _get_segment_lists_internal(hl7v2_data, segment_ids):
     result = {}
     for i in range(len(hl7v2_data.meta)):
@@ -512,6 +548,9 @@ all_filters: Sequence[Tuple[str, FilterT]] = [
     ("get_related_segment_list", get_related_segment_list),
     ("get_parent_segment", get_parent_segment),
     ("sign", sign),
+    ("divide", divide),
+    ("truncate_number", truncate_number),
+    ("split_data_by_segments", split_data_by_segments)
 ]
 """Sequence[tuple[str, FilterT]]: All of the filters provided by the module"""
 
