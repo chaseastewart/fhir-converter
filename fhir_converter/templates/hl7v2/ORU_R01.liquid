@@ -777,9 +777,9 @@
         {% assign obxSegmentPositionIndex_obr = 0 -%}
         {% assign obxSegmentPositionIndex_spm = 0 -%}
         {% for obrSegment in obrSegmentLists.OBR -%}
-            {% assign checkParent = hl7v2Data | get_parent_segment: 'OBR', {{obrSegmentPositionIndex_orc}}, 'ORC' -%}
+            {% assign checkParent = hl7v2Data | get_parent_segment: 'OBR', obrSegmentPositionIndex_orc, 'ORC' -%}
             {% assign prtSegmentLists = hl7v2Data | get_related_segment_list: checkParent.ORC, 'PRT' -%}
-            {% assign checkParentTXA = hl7v2Data | get_parent_segment: 'OBR', {{obrSegmentPositionIndex_orc}}, 'TXA' -%}
+            {% assign checkParentTXA = hl7v2Data | get_parent_segment: 'OBR', obrSegmentPositionIndex_orc, 'TXA' -%}
             {% assign cti_obrSegmentLists = hl7v2Data | get_related_segment_list: obrSegment, 'CTI' -%}
             
             {% assign obxSegmentLists = hl7v2Data | get_related_segment_list: obrSegment, 'OBX' -%}
@@ -931,8 +931,8 @@
             {% endif -%} 
 
             {% assign ORDER_DOCUMENT_PRT = null %}
-            {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'TXA', {{obrSegmentPositionIndex_orc}}, 'OBX' -%}
-            {% assign checkParentPRT = hl7v2Data | get_parent_segment: 'TXA', {{obrSegmentPositionIndex_orc}}, 'PRT' -%}
+            {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'TXA', obrSegmentPositionIndex_orc, 'OBX' -%}
+            {% assign checkParentPRT = hl7v2Data | get_parent_segment: 'TXA', obrSegmentPositionIndex_orc, 'PRT' -%}
             {% assign prtSegmentListsOBX = hl7v2Data | get_related_segment_list: checkParentOBX.OBX, 'PRT' -%}
 
             {% if checkParentPRT.PRT == prtSegmentListsOBX.PRT[0] %}
@@ -1280,7 +1280,7 @@
 
             {%- comment -%} Observation Request - PRT relatated coding end {%- endcomment -%}
 
-            {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'OBX', {{obxSegmentPositionIndex_obr}}, 'OBR' -%}
+            {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'OBX', obxSegmentPositionIndex_obr, 'OBR' -%}
             
             {% assign observationId = null %}
             {%- assign obx_diagnosticReportID2 = null -%}
@@ -1650,7 +1650,7 @@
                 {% assign spm_obx_diagnosticReportID = null %}
                 {% assign observationId = null %}
 
-                {% assign checkParentSPM = hl7v2Data | get_parent_segment: 'OBX', {{obxSegmentPositionIndex_spm}}, 'SPM' -%}
+                {% assign checkParentSPM = hl7v2Data | get_parent_segment: 'OBX', obxSegmentPositionIndex_spm, 'SPM' -%}
                 {% assign obxSegmentPositionIndex_spm = obxSegmentPositionIndex_spm | plus: 1 -%}    
                 {% assign spm_obxSegmentLists = hl7v2Data | get_related_segment_list: spmSegment, 'OBX' -%}               
                 {% for spm_obxSegment in spm_obxSegmentLists.OBX -%}

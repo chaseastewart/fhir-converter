@@ -290,7 +290,7 @@
             {% assign tq1SegmentLists = hl7v2Data | get_related_segment_list: orcSegment, 'TQ1' -%}
 
             {% for obrSegment in obrSegmentLists.OBR -%}
-                {% assign checkParent = hl7v2Data | get_parent_segment: 'OBR', {{obrSegmentPositionIndex_orc}}, 'ORC' -%}
+                {% assign checkParent = hl7v2Data | get_parent_segment: 'OBR', obrSegmentPositionIndex_orc, 'ORC' -%}
                 {% assign obrSegmentPositionIndex_orc = obrSegmentPositionIndex_orc | plus: 1 -%}  
 
                 {% evaluate parentServiceRequestId_orc using 'ID/ServiceRequest' ORC: checkParent.ORC."31", baseId: patientId -%}

@@ -623,7 +623,7 @@
                 {% include 'Resource/PractitionerRole' OBR: obrSegment, collection_collector_practitioner: practitionerId_obr_10, ID: practitionerRoleId_OBR_10 -%}
             {% endif -%} 
 
-            {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'OBX', {{obxSegmentPositionIndex_obr}}, 'OBR' -%}
+            {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'OBX', obxSegmentPositionIndex_obr, 'OBR' -%}
             {% assign obxSegmentPositionIndex_obr = obxSegmentPositionIndex_obr | plus: 1 -%}   
             {% for obxSegment in obxSegmentLists.OBX -%}
                 {% assign prtSegmentLists = hl7v2Data | get_related_segment_list: obxSegment, 'PRT' -%}       
