@@ -70,6 +70,10 @@ Built on the back of:
 - [Benchmark](#benchmark)
 - [Related Projects](#related-projects)
 - [HL7v2-\>FHIR](#hl7v2-fhir)
+  - [Variable names issue](#variable-names-issue)
+  - [Trailing commas in parameters](#trailing-commas-in-parameters)
+  - [`times` filter](#times-filter)
+  - [`size` attribute](#size-attribute)
 
 
 <!--body-start-->
@@ -175,12 +179,102 @@ Pampi                   max=0.013       min=0.012       avg=0.012
 
 ## HL7v2->FHIR
 
-Updated liquid.expressions.common:parse_identifier() to support integers as identifiers. This is needed for HL7v2->FHIR mappings where the identifier is an integer.
+### Variable names issue
 
-Still need to solve the tokenization of variables in hl7v2 liquid templates. 
-
-Variables of this kind are not supported in python-liquid:
+When passing variables to the liquid parser, if the variable name containes a period, the variable name must be enclosed in quotes. For example, the following will not work:
 
 ```liquid
 "timestamp":"{{ firstSegments.MSH.7.4.Value }}"
+```
+
+The correct way to pass the variable is:
+
+```liquid
+"timestamp":"{{ firstSegments.MSH."7"."4".Value }}"
+```
+
+To make the `parse_identifier` work, we have to change it to understand `string` as well as `integer` values. This is done in the `parse_identifier` function in the `fhir_converter/filters.py` file. The function is as follows:
+
+```python
+def parse_identifier(stream: "TokenStream") -> Identifier:
+    """Read an identifier from the token stream.
+
+    An identifier might be chained with dots and square brackets, and might contain
+    more, possibly chained, identifiers within those brackets.
+    """
+    path: IdentifierPath = []
+
+    while True:
+        pos, typ, val = stream.current
+        if typ == TOKEN_IDENTIFIER or typ == TOKEN_INTEGER or typ == TOKEN_STRING:
+            path.append(IdentifierPathElement(val))
+        elif typ == TOKEN_IDENTINDEX:
+            path.append(IdentifierPathElement(to_int(val)))
+        elif typ == TOKEN_LBRACKET:
+            stream.next_token()
+            path.append(parse_identifier(stream))
+            # Eat close bracket
+            stream.next_token()
+            stream.expect(TOKEN_RBRACKET)
+        elif typ == TOKEN_FLOAT:
+            raise LiquidSyntaxError(
+                f"expected an identifier, found {val!r}",
+                linenum=pos,
+            )
+        elif typ == TOKEN_DOT:
+            pass
+        else:
+            stream.push(stream.current)
+            break
+
+        stream.next_token()
+
+    return Identifier(path)
+```
+
+### Trailing commas in parameters
+
+When passing parameters to a liquid snippet, a comma is required between parameters. But if there is a trailing comma, the parser will throw an error.
+
+For example, the following will not work:
+
+```liquid
+{% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2, -%}
+```
+
+The correct way to pass the parameters is:
+
+```liquid
+{% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2 -%}
+```
+
+### `times` filter
+
+The `times` filter does not support floating point numbers. To fix this, we have to change the parameter to integer
+
+Not working:
+
+```liquid
+  {{ 3.5 | times: 2.0 }}
+```
+
+Working:
+
+```liquid
+  {{ 3.5 | times: 2 }}
+```
+
+### `size` attribute
+
+The `size` attribute does not work with strings. To fix this, we have to change liquid template from :
+
+```liquid
+{% if PID."7".Value.size > 8 -%}
+```
+
+to:
+
+```liquid
+{% assign PID_7_Size = PID."7".Value | size -%}
+{% if PID_7_Size > 8 -%}
 ```
