@@ -349,7 +349,6 @@ class Hl7v2Renderer(BaseFhirRenderer):
     def _parse_hl7v2(data_in: DataInput, encoding: str = "utf-8"):
 
         data_in = data_in.read()
-        data_in = data_in.replace("\n", "\r")
 
         return Hl7v2DataParser().parse(data_in)
 
