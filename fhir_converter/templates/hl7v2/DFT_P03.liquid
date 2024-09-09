@@ -462,7 +462,7 @@
             {% evaluate encounterId using 'ID/Encounter' PV1: firstSegments.PV1, baseId: patientId -%}
             {% include 'Resource/Encounter' Root_Template: 'ADT_A01', PV1: firstSegments.PV1, PV2: firstSegments.PV2, PDA: firstSegments.PDA, ID: encounterId, AccountId:accountId -%}
             {% include 'Reference/Encounter/Subject' ID: encounterId, REF: fullPatientId -%}
-            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2, -%}
+            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2-%}
         
 
             {%- comment -%} VISIT - PRT related coding start {%- endcomment -%}

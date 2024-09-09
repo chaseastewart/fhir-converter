@@ -949,7 +949,7 @@
 
             {% include 'Resource/Encounter' Root_Template: 'REF_I14', PV1: firstSegments.PV1, PV2: firstSegments.PV2, ID: encounterId, AccountId:accountId -%}
             {% include 'Reference/Encounter/Subject' ID: encounterId, REF: fullPatientId -%}
-            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2, -%}
+            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2-%}
         {% endif -%}
 
         {% assign nteSegmentLists_RF1 = hl7v2Data | get_related_segment_list: firstSegments.PV1, 'NTE' -%}

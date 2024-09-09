@@ -406,7 +406,7 @@
             {% evaluate encounterId using 'ID/Encounter' PV1: firstSegments.PV1, baseId: patientId -%}
             {% include 'Resource/Encounter' Root_Template: 'RDE_O11', PV1: firstSegments.PV1, PV2: firstSegments.PV2, ID: encounterId, AccountId:accountId -%}
             {% include 'Reference/Encounter/Subject' ID: encounterId, REF: fullPatientId -%}
-            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2, -%}
+            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2-%}
 
             {% assign prtSegmentPositionIndex = 0 %}
             {% for prtSegment_PV1 in prtSegmentLists_PV1.PRT %}

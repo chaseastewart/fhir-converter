@@ -555,7 +555,7 @@
                 {% evaluate encounterId using 'ID/Encounter' PV1: pv1Segment, baseId: patientId -%}
                 {% include 'Resource/Encounter' Root_Template: 'OUL_R22', PV1: pv1Segment, PV2: pv2Segment, ID: encounterId, AccountId:accountId -%}
                 {% include 'Reference/Encounter/Subject' ID: encounterId, REF: fullPatientId -%}
-                {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: pv1Segment, PV2: pv2Segment, -%}
+                {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: pv1Segment, PV2: pv2Segment-%}
 
                 {%- comment -%} VISIT - PRT related coding start {%- endcomment -%}
                 {% for prtSegment in prtSegmentLists.PRT %}

@@ -296,7 +296,7 @@
             {% evaluate encounterId using 'ID/Encounter' PV1: firstSegments.PV1, baseId: patientId -%}
             {% include 'Resource/Encounter' Root_Template: 'ADT_A16', PV1: firstSegments.PV1, PV2: firstSegments.PV2, ID: encounterId, AccountId:accountId -%}
             {% include 'Reference/Encounter/Subject' ID: encounterId, REF: fullPatientId -%}
-            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2, -%}
+            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2-%}
         {% endif -%}
         
         {% assign arvSegmentLists1 = hl7v2Data | get_related_segment_list: firstSegments.PID, 'ARV' -%}

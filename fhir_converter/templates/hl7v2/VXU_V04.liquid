@@ -295,7 +295,7 @@
             {% evaluate encounterId using 'ID/Encounter' PV1: firstSegments.PV1, baseId: patientId -%}
             {% include 'Resource/Encounter' Root_Template: 'VXU_V04', PV1: firstSegments.PV1, PV2: firstSegments.PV2, PDA: firstSegments.PDA, ID: encounterId, AccountId:accountId -%}
             {% include 'Reference/Encounter/Subject' ID: encounterId, REF: fullPatientId -%}
-            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2, -%}
+            {% include 'Extensions/Encounter/EncounterExtension' ID: encounterId, PV1: firstSegments.PV1, PV2: firstSegments.PV2-%}
         {% endif -%}
 
         {% for nk1Segment in nk1SegmentLists.NK1 -%}
