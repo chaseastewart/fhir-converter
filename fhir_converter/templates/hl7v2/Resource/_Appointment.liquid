@@ -112,35 +112,35 @@
 
         {% if SCH."10".Value == 'Hr' or SCH."10".Value == 'hr' -%}
             {% if SCH."9" -%}
-            {% assign hour = SCH."9".Value | times: 1."0" %}
+            {% assign hour = SCH."9".Value | times: 1 %}
             {% assign minutesDuration = hour | times: 60 %}
             "minutesDuration": {{ minutesDuration }},
             {% endif -%}
         {% endif -%}
         {% if SCH."10".Value == 'ann' or SCH."10".Value == 'yr' -%}
             {% if SCH."9" -%}
-            {% assign year = SCH."9".Value | times: 1."0" %}
+            {% assign year = SCH."9".Value | times: 1 %}
             {% assign minutesDuration = year | times: 3628800 %}
             "minutesDuration": {{ minutesDuration }},
             {% endif -%}
         {% endif -%}
         {% if SCH."10".Value == 'd' -%}
             {% if SCH."9" -%}
-            {% assign day = SCH."9".Value | times: 1."0" %}
+            {% assign day = SCH."9".Value | times: 1 %}
             {% assign minutesDuration = day | times: 1440 %}
             "minutesDuration": {{ minutesDuration }},
             {% endif -%}
         {% endif -%}
         {% if SCH."10".Value == 'wk' -%}
             {% if SCH."9" -%}
-            {% assign wk = SCH."9".Value | times: 1."0" %}
+            {% assign wk = SCH."9".Value | times: 1 %}
             {% assign minutesDuration = wk | times: 10080 %}
             "minutesDuration": {{ minutesDuration }},
             {% endif -%}
         {% endif -%}
         {% if SCH."10".Value == 'mo' -%}
             {% if SCH."9" -%}
-            {% assign mo = SCH."9".Value | times: 1."0" %}
+            {% assign mo = SCH."9".Value | times: 1 %}
             {% assign minutesDuration = mo | times: 302400 %}
             "minutesDuration": {{ minutesDuration }},
             {% endif -%}

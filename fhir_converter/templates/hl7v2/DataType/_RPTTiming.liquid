@@ -25,35 +25,35 @@
         {% endif -%}
         {% if durationunit == 'h' -%}
             {% if RPT."9" -%}
-            {% assign hour = RPT."9".Value | times: 1."0" %}
+            {% assign hour = RPT."9".Value | times: 1 %}
             {% assign minutesDuration = hour | times: 60 %}
             "offset" : {{ minutesDuration }},
             {% endif -%}
         {% endif -%}
         {% if durationunit == 'd' -%}
             {% if RPT."9" -%}
-            {% assign day = RPT."9".Value | times: 1."0" %}
+            {% assign day = RPT."9".Value | times: 1 %}
             {% assign minutesDuration = day | times: 1440 %}
             "offset" : {{ minutesDuration }},
             {% endif -%}
         {% endif -%}
         {% if durationunit == 'wk' -%}
             {% if RPT."9" -%}
-            {% assign wk = RPT."9".Value | times: 1."0" %}
+            {% assign wk = RPT."9".Value | times: 1 %}
             {% assign minutesDuration = wk | times: 10080 %}
             "offset" : {{ minutesDuration }},
             {% endif -%}
         {% endif -%}
         {% if durationunit == 'mo' -%}
             {% if RPT."9" -%}
-            {% assign mo = RPT."9".Value | times: 1."0" %}
+            {% assign mo = RPT."9".Value | times: 1 %}
             {% assign minutesDuration = mo | times: 302400 %}
             "offset" : {{ minutesDuration }},
             {% endif -%}
         {% endif -%}   
         {% if durationunit == 'a' -%}
             {% if RPT."9" -%}
-            {% assign year = RPT."9".Value | times: 1."0" %}
+            {% assign year = RPT."9".Value | times: 1 %}
             {% assign minutesDuration = year | times: 3628800 %}
             "offset" : {{ minutesDuration }},
             {% endif -%}
