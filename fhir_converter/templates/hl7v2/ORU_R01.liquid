@@ -92,10 +92,10 @@
 
             {% for prtSegment in prtSegmentLists.PRT %}
                
-                {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'OBX' -%}
-                {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PV1' -%}
-                {% assign checkParentORC = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'ORC' -%}
-                {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'OBR' -%}
+                {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'OBX' -%}
+                {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PV1' -%}
+                {% assign checkParentORC = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'ORC' -%}
+                {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'OBR' -%}
 
                 {% if checkParentOBX.OBX.Value == null and checkParentPV1.PV1.Value == null and checkParentORC.ORC.Value == null and checkParentOBR.OBR.Value == null %}
 
@@ -374,9 +374,9 @@
                 
                 {%- comment -%} PATIENT_OBSERVATION - PRT related coding starts {%- endcomment -%}
                 {% for prtSegment in prtSegmentLists.PRT %}
-                    {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PV1' -%}
-                    {% assign checkParentORC = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'ORC' -%}
-                    {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'OBR' -%}
+                    {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PV1' -%}
+                    {% assign checkParentORC = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'ORC' -%}
+                    {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'OBR' -%}
                     
                     {% if checkParentPV1.PV1.Value == null and checkParentORC.ORC.Value == null and checkParentOBR.OBR.Value == null%}
                         
@@ -620,7 +620,7 @@
 
                 {%- comment -%} VISIT - PRT related coding start {%- endcomment -%}
                 {% for prtSegment in prtSegmentLists.PRT %}
-                    {% assign checkParentORC = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'ORC' -%}
+                    {% assign checkParentORC = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'ORC' -%}
                     {% unless checkParentORC.ORC %}
                         
                         {% unless prtSegment."2".Value == "DE" or prtSegment."2".Value == "UN" %}
@@ -725,7 +725,7 @@
 
         {% assign txaSegmentPositionIndex = 0 -%}
         {% for txaSegment in txaSegmentLists.TXA -%}
-            {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'TXA', {{txaSegmentPositionIndex}}, 'OBX' -%}  
+            {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'TXA', txaSegmentPositionIndex, 'OBX' -%}  
             {% assign txaSegmentPositionIndex = txaSegmentPositionIndex | plus: 1 -%}
 
             {% evaluate documentreferenceID using 'ID/DocumentReference' EI: txaSegment."12" -%}
@@ -942,7 +942,7 @@
             {%- comment -%} COMMON_ORDER  - PRT related coding start {%- endcomment -%}
 
             {% for prtSegment in prtSegmentLists.PRT %}
-                {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'OBR' -%}
+                {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'OBR' -%}
                 {% unless checkParentOBR.OBR %}
                     {% unless ORDER_DOCUMENT_PRT == prtSegment %} {%- comment -%} condition to check that current PRT is not a part of ORDER_DOCUMENT group {%- endcomment -%}
                         {% unless prtSegment."2".Value == "DE" or prtSegment."2".Value == "UN" %}
@@ -1160,8 +1160,8 @@
 
             {% for prtSegment in prtSegmentListsOBR.PRT %}
             
-                {% assign checkParentOBXPRT = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'OBX' -%}
-                {% assign checkParentSPMPRT = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'SPM' -%}
+                {% assign checkParentOBXPRT = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'OBX' -%}
+                {% assign checkParentSPMPRT = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'SPM' -%}
                 {% assign obxListSize = obxSegmentLists | size %}
                 {% assign sizeOBX = obxListSize | minus: 1 %}
                 {% assign spmListSize = spmSegmentLists | size %}
@@ -1737,8 +1737,8 @@
 
                     {%- comment -%} SPECIMEN_OBSERVATION - PRT related coding start {%- endcomment -%} 
                     {% for prtSegment in prtSegmentLists.PRT %}
-                        {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'OBR' -%}
-                        {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'OBX' -%}
+                        {% assign checkParentOBR = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'OBR' -%}
+                        {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'OBX' -%}
 
                         {% if checkParentOBR.OBR.Value == obrSegment.Value and checkParentOBX.OBX.Value == spm_obxSegment.Value %}
                        

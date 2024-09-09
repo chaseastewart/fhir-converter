@@ -195,9 +195,9 @@
         {% assign isPRTSegmentPresent = false %}
         {% for prtSegment in prtSegmentLists.PRT %}
         
-            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PV1' -%}
-            {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PR1' -%}
-            {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'IN1' -%}
+            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PV1' -%}
+            {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PR1' -%}
+            {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'IN1' -%}
 
             {% if checkParentPV1.PV1.Value == null and checkParentPR1.PR1.Value == null and checkParentIN1.IN1.Value == null %}
                 {% assign isPRTSegmentPresent = true %}
@@ -301,9 +301,9 @@
         {%- comment -%} PATIENT-ROL related coding starts {%- endcomment -%}
         {% assign rolSegmentLists_PID = hl7v2Data | get_related_segment_list: firstSegments.PID, 'ROL' -%}
         {% for rolSegment_PID in rolSegmentLists_PID.ROL %}
-            {% assign checkParentPV1_ROL = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'PV1' -%}
-            {% assign checkParentPR1_ROL = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'PR1' -%}
-            {% assign checkParentIN1_ROL = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'IN1' -%}
+            {% assign checkParentPV1_ROL = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'PV1' -%}
+            {% assign checkParentPR1_ROL = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'PR1' -%}
+            {% assign checkParentIN1_ROL = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'IN1' -%}
 
             {% if checkParentPV1_ROL.PV1.Value == null and checkParentPR1_ROL.PR1.Value == null and checkParentIN1_ROL.IN1.Value == null %}
                 {% unless isPRTSegmentPresent %}
@@ -488,9 +488,9 @@
             {% assign isPRTSegmentPresent = false %}
             {%- comment -%} VISIT -PV1- PRT related coding start {%- endcomment -%}
             {% for prtSegment in prtSegmentListsPV1.PRT %}
-                {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PV1' -%}
-                {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PR1' -%}
-                {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'IN1' -%}
+                {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PV1' -%}
+                {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PR1' -%}
+                {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'IN1' -%}
                 
                 {% if checkParentPV1.PV1.Value == pv1Segment.Value %}
                     {% unless checkParentPR1.PR1 == pr1Segment.PR1[0] %}
@@ -595,9 +595,9 @@
                      
             {% assign rolSegmentLists_PV1 = hl7v2Data | get_related_segment_list: pv1Segment, 'ROL' -%}       
             {% for rolSegment_PV1 in rolSegmentLists_PV1.ROL %}
-                {% assign checkParentPV1_ROL = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'PV1' -%}
-                {% assign checkParentPR1_ROL = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'PR1' -%}
-                {% assign checkParentIN1_ROL = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'IN1' -%}
+                {% assign checkParentPV1_ROL = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'PV1' -%}
+                {% assign checkParentPR1_ROL = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'PR1' -%}
+                {% assign checkParentIN1_ROL = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'IN1' -%}
                 {% if checkParentPV1_ROL.PV1.Value == pv1Segment.Value %}
                     {% unless checkParentPR1_ROL.PR1 == pr1Segment.PR1[0] %}
                         {% unless checkParentIN1_ROL.IN1 == in1Segment.IN1[0] %}
@@ -696,7 +696,7 @@
             {% include 'Resource/Observation' OBX: obxSegment, Observation_Subject_ID: fullPatientId, ID: observationId -%}
             {% include 'Extensions/Observation/ObservationExtension' OBX: obxSegment, ID: observationId %}
 
-            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'OBX', {{obxSegmentPositionIndex}}, 'PV1' -%}
+            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'OBX', obxSegmentPositionIndex, 'PV1' -%}
             
             {% evaluate encounterId using 'ID/Encounter' PV1: checkParentPV1.PV1, baseId: patientId -%}
             {% assign fullEncounterId = encounterId | prepend: 'Encounter/' -%}
@@ -707,7 +707,7 @@
         {% assign al1SegmentPositionIndex = 0 %}
 
         {% for al1Segment in al1SegmentLists.AL1 -%}
-            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'AL1', {{al1SegmentPositionIndex}}, 'PV1' -%}
+            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'AL1', al1SegmentPositionIndex, 'PV1' -%}
             
             {% evaluate encounterId using 'ID/Encounter' PV1: checkParentPV1.PV1, baseId: patientId -%}
             {% assign fullEncounterId = encounterId | prepend: 'Encounter/' -%}
@@ -734,7 +734,7 @@
             {% evaluate conditionId using 'ID/Condition' DG1: dg1Segment, baseId: patientId -%}
             {% include 'Resource/Condition' DG1: dg1Segment, Condition_Subject_ID: fullPatientId, baseId: patientId, ID: conditionId -%}
 
-            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'DG1', {{dg1SegmentPositionIndex}}, 'PV1' -%}
+            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'DG1', dg1SegmentPositionIndex, 'PV1' -%}
             
             {% evaluate encounterId using 'ID/Encounter' PV1: checkParentPV1.PV1, baseId: patientId -%}
             {% assign fullEncounterId = encounterId | prepend: 'Encounter/' -%}
@@ -804,8 +804,8 @@
             {% assign isPRTSegmentPresent = false %}
 
             {% for prtSegment in prtSegmentListsPR1.PRT %}
-                {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PR1' -%}
-                {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'IN1' -%}
+                {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PR1' -%}
+                {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'IN1' -%}
                      
                 {% if checkParentPR1.PR1.Value == pr1Segment.Value %}
                     {% unless checkParentIN1.IN1 == in1Segment.IN1[0] %}
@@ -919,8 +919,8 @@
 
             {% assign rolSegmentLists_PR1 = hl7v2Data | get_related_segment_list: pr1Segment, 'ROL' -%}
             {% for rolSegment_PR1 in rolSegmentLists_PR1.ROL %}
-                {% assign checkParentPR1_ROL = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'PR1' -%}
-                {% assign checkParentIN1_ROL = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'IN1' -%}
+                {% assign checkParentPR1_ROL = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'PR1' -%}
+                {% assign checkParentIN1_ROL = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'IN1' -%}
                 {% if checkParentPR1_ROL.PR1.Value == pr1Segment.Value %}
                     {% unless checkParentIN1_ROL.IN1 == in1Segment.IN1[0] %}
                         {% unless isPRTSegmentPresent %}
@@ -1116,13 +1116,13 @@
                 {% endif -%}
         
                 {%- comment -%} FINANCIAL_PROCEDURE- PRT relatated coding start {%- endcomment -%}
-                {% assign checkParentPV1IN1 = hl7v2Data | get_parent_segment: 'IN1', {{prtSegmentPositionIndex}}, 'PV1' -%}
+                {% assign checkParentPV1IN1 = hl7v2Data | get_parent_segment: 'IN1', prtSegmentPositionIndex, 'PV1' -%}
 
                 {% assign prtSegmentListsPR1 = hl7v2Data | get_related_segment_list: in1Segment, 'PRT' -%}
                 
                 {% for prtSegment in prtSegmentListsPR1.PRT %}
                 
-                    {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PV1' -%}
+                    {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PV1' -%}
                         
                     {% if checkParentPV1IN1.PV1.Value == checkParentPV1.Value %}
                         {% assign prtSegmentPositionIndex = prtSegmentPositionIndex | plus: 1 %}
@@ -1158,7 +1158,7 @@
                 {% include 'Extensions/Observation/ObservationExtension' ID: observationId, locationId: locationId_ACC -%}
             {% endif -%}
 
-            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'ACC', {{accSegmentPositionIndex}}, 'PV1' -%}
+            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'ACC', accSegmentPositionIndex, 'PV1' -%}
             
             {% evaluate encounterId using 'ID/Encounter' PV1: checkParentPV1.PV1, baseId: patientId -%}
             {% assign fullEncounterId = encounterId | prepend: 'Encounter/' -%}

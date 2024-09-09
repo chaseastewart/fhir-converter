@@ -349,7 +349,7 @@
             
             {% for prtSegment in prtSegmentListsPR1.PRT %}
             
-                {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PR1' -%}
+                {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PR1' -%}
                 
                 {% if checkParentPR1.PR1.Value == pr1Segment.Value %}
 

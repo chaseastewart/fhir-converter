@@ -125,8 +125,8 @@
                 {% assign prtSegmentLists = segmentsSubList | get_related_segment_list: firstSegments.PID, 'PRT' -%}
                 {% assign isPRTSegmentPresent = false %}
                 {% for prtSegment in prtSegmentLists.PRT %}
-                    {% assign checkParentPV1 = segmentsSubList | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PV1' -%}
-                    {% assign checkParentIN1 = segmentsSubList | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'IN1' -%}
+                    {% assign checkParentPV1 = segmentsSubList | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PV1' -%}
+                    {% assign checkParentIN1 = segmentsSubList | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'IN1' -%}
                     
                     {% unless checkParentPV1.PV1 %}
                         {% unless checkParentIN1.IN1 %}
@@ -233,8 +233,8 @@
                 {% assign rolSegmentLists = segmentsSubList | get_related_segment_list: firstSegments.PID, 'ROL' -%}
 
                 {% for rolSegment in rolSegmentLists.ROL %}
-                    {% assign checkParentPV1 = segmentsSubList | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'PV1' -%}
-                    {% assign checkParentIN1 = segmentsSubList | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'IN1' -%}
+                    {% assign checkParentPV1 = segmentsSubList | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'PV1' -%}
+                    {% assign checkParentIN1 = segmentsSubList | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'IN1' -%}
                     
                     {% unless checkParentPV1.PV1 %}
                         {% unless checkParentIN1.IN1 %}
@@ -493,7 +493,7 @@
                     {%- comment -%} VISIT - PRT related coding start {%- endcomment -%}
                     {% assign isPRTSegmentPresent = false %}
                     {% for prtSegment in prtSegmentLists.PRT %}
-                        {% assign checkParentIN1 = segmentsSubList | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'IN1' -%}
+                        {% assign checkParentIN1 = segmentsSubList | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'IN1' -%}
                        
                         {% unless checkParentIN1.IN1 %}
                             {% assign isPRTSegmentPresent = true %}
@@ -599,7 +599,7 @@
                     {%- comment -%} VISIT-ROL related coding starts {%- endcomment -%}
 
                     {% for rolSegment in rolSegmentLists.ROL %}
-                        {% assign checkParentIN1 = segmentsSubList | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'IN1' -%}
+                        {% assign checkParentIN1 = segmentsSubList | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'IN1' -%}
                         
                         {% unless checkParentIN1.IN1 %}
                             {% unless isPRTSegmentPresent %}
@@ -1239,7 +1239,7 @@
                     {% assign isPRTSegmentPresent = false %}
                     {% for prtSegment in prtSegmentListsPR1.PRT %}
                     
-                        {% assign checkParentIN1PRT = segmentsSubList | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'IN1' -%}
+                        {% assign checkParentIN1PRT = segmentsSubList | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'IN1' -%}
                         
                         {% unless checkParentIN1PRT.IN1 %}
                                 {% assign isPRTSegmentPresent = true %}
@@ -1361,7 +1361,7 @@
 
                     {% for rolSegment in rolSegmentLists.ROL %}
 
-                        {% assign checkParentIN1PRT = segmentsSubList | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'IN1' -%}
+                        {% assign checkParentIN1PRT = segmentsSubList | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'IN1' -%}
                         
                         {% unless checkParentIN1PRT.IN1 %}
                                 {% unless isPRTSegmentPresent %}

@@ -437,7 +437,7 @@
             
             {% assign orcSegmentPositionIndex = 0 -%}
             {% for obrSegment in obrSegmentLists.OBR -%}
-                {% assign checkParentORCOFOBR = hl7v2Data | get_parent_segment: 'OBR', {{orcSegmentPositionIndex}}, 'ORC' -%}
+                {% assign checkParentORCOFOBR = hl7v2Data | get_parent_segment: 'OBR', orcSegmentPositionIndex, 'ORC' -%}
                 {% assign orcSegmentPositionIndex = orcSegmentPositionIndex | plus: 1 -%}
                 {% if checkParentORCOFOBR.ORC.Value == orcSegment.Value %}
                     {%- comment -%}
@@ -554,7 +554,7 @@
 
                 {% assign nteSegmentLists_ODS = hl7v2Data | get_related_segment_list: odsSegment, 'NTE' -%}
 
-                {% assign checkParentORCOFODS = hl7v2Data | get_parent_segment: 'ODS', {{orcSegmentPositionIndex}}, 'ORC' -%}
+                {% assign checkParentORCOFODS = hl7v2Data | get_parent_segment: 'ODS', orcSegmentPositionIndex, 'ORC' -%}
                 {% assign orcSegmentPositionIndex = orcSegmentPositionIndex | plus: 1 -%}
                 {% if checkParentORCOFODS.ORC.Value == orcSegment.Value %}
                     
@@ -619,7 +619,7 @@
             {% assign supplyRequestID = null %}
             {% assign orcSegmentPositionIndex = 0 -%}
             {% for rqdSegment in rqdSegmentLists.RQD -%}
-                {% assign checkParentORCOFRQD = hl7v2Data | get_parent_segment: 'RQD', {{orcSegmentPositionIndex}}, 'ORC' -%}
+                {% assign checkParentORCOFRQD = hl7v2Data | get_parent_segment: 'RQD', orcSegmentPositionIndex, 'ORC' -%}
                 {% assign orcSegmentPositionIndex = orcSegmentPositionIndex | plus: 1 -%}
                 {% if checkParentORCOFRQD.ORC.Value == orcSegment.Value %}
                     {%- comment -%}
@@ -686,7 +686,7 @@
 
                 {% assign nteSegmentLists_RXO = hl7v2Data | get_related_segment_list: rxoSegment, 'NTE' -%}
 
-                {% assign checkParentORCOFRXO = hl7v2Data | get_parent_segment: 'RXO', {{orcSegmentPositionIndex}}, 'ORC' -%}
+                {% assign checkParentORCOFRXO = hl7v2Data | get_parent_segment: 'RXO', orcSegmentPositionIndex, 'ORC' -%}
                 {% assign orcSegmentPositionIndex = orcSegmentPositionIndex | plus: 1 -%}
                 {% if checkParentORCOFRXO.ORC.Value == orcSegment.Value %}
                     {%- comment -%}

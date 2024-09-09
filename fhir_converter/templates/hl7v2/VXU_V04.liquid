@@ -542,7 +542,7 @@
                 {% include 'Extensions/Observation/ObservationExtension' OBX: obxSegment, ID: observationId %}
 
                 {% for prtSegment in prtSegmentLists.PRT %}
-                    {% assign checkParentORC = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'ORC' -%}
+                    {% assign checkParentORC = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'ORC' -%}
                     
                     {% if checkParentORC.ORC.Value == null %}
                         

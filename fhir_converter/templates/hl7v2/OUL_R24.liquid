@@ -943,7 +943,7 @@
             {% endif %}
 
             {% if txaSegment -%}
-                {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'TXA', {{obrSegmentPositionIndex}}, 'OBX' -%}  
+                {% assign checkParentOBX = hl7v2Data | get_parent_segment: 'TXA', obrSegmentPositionIndex, 'OBX' -%}  
 
                 {% evaluate documentreferenceID using 'ID/DocumentReference' EI: txaSegment."12" -%}
                 {% include 'Resource/DocumentReference' TXA: txaSegment, OBX: checkParentOBX.OBX,  ID: documentreferenceID -%}
@@ -994,7 +994,7 @@
                 {%- comment -%} ORDER_DOCUMENT - PRT related coding start {%- endcomment -%}
 
                 {% assign ORDER_DOCUMENT_PRT = null %}
-                {% assign checkParentPRT = hl7v2Data | get_parent_segment: 'TXA', {{obrSegmentPositionIndex}}, 'PRT' -%}
+                {% assign checkParentPRT = hl7v2Data | get_parent_segment: 'TXA', obrSegmentPositionIndex, 'PRT' -%}
                 {% assign prtSegmentListsOBX = hl7v2Data | get_related_segment_list: checkParentOBX.OBX, 'PRT' -%}
 
                 {% if checkParentPRT.PRT == prtSegmentListsOBX.PRT[0] %}

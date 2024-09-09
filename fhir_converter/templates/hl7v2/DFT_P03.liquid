@@ -177,8 +177,8 @@
 
         {% for prtSegment in prtSegmentLists.PRT %}
 
-            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PV1' -%}
-            {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'FT1' -%}
+            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PV1' -%}
+            {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'FT1' -%}
             
             {% unless checkParentPV1.PV1 %}
                {% unless checkParentFT1.FT1 %}
@@ -285,8 +285,8 @@
         {% assign rolSegmentLists = hl7v2Data | get_related_segment_list: firstSegments.PID, 'ROL' -%}
 
         {% for rolSegment in rolSegmentLists.ROL %}
-            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'PV1' -%}
-            {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'FT1' -%}
+            {% assign checkParentPV1 = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'PV1' -%}
+            {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'FT1' -%}
             
             {% unless checkParentPV1.PV1 %}
                 {% unless checkParentFT1.FT1 %}
@@ -470,7 +470,7 @@
             {% assign prtSegmentLists = hl7v2Data | get_related_segment_list: firstSegments.PV1, 'PRT' -%}
 
             {% for prtSegment in prtSegmentLists.PRT %}  
-                {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'FT1' -%} 
+                {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'FT1' -%} 
                 
                 {% unless checkParentFT1.FT1 %}
                     {% assign isPRTSegmentPresent = true %}
@@ -573,7 +573,7 @@
             {% assign rolSegmentLists = hl7v2Data | get_related_segment_list: firstSegments.PV1, 'ROL' -%}
 
             {% for rolSegment in rolSegmentLists.ROL %}
-                {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'FT1' -%}
+                {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'FT1' -%}
                 
                 {% unless checkParentFT1.FT1 %}
                     {% unless isPRTSegmentPresent %}
@@ -811,7 +811,7 @@
                 
                 {% for ft1Segment in ft1SegmentLists.FT1 -%}
                     {% if ft1Segment."6".Value == 'CG' -%}
-                        {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'ORC', {{ft1SegmentPositionIndex}}, 'FT1' -%} 
+                        {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'ORC', ft1SegmentPositionIndex, 'FT1' -%} 
                         {% unless checkParentFT1.FT1 -%}                   
                             {% evaluate chargeitem_id using 'ID/ChargeItem' FT1: ft1Segment, baseId: patientId -%}
                             {% if fullServiceRequestId -%}
@@ -919,7 +919,7 @@
 
                     {% for ft1Segment in ft1SegmentLists.FT1 -%}
                         {% if ft1Segment."6".Value == 'CG' -%}
-                            {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'OBX', {{obxSegmentPositionIndex}}, 'FT1' -%} 
+                            {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'OBX', obxSegmentPositionIndex, 'FT1' -%} 
                             {% unless checkParentFT1.FT1 -%} 
                                 {% evaluate chargeitem_id using 'ID/ChargeItem' FT1: ft1Segment, baseId: patientId -%}
                                 {% if fullDiagnosticReportId -%}
@@ -1038,7 +1038,7 @@
                 {% assign prtSegmentLists = hl7v2Data | get_related_segment_list: ft1Segment, 'PRT' -%}
                 {% assign isPRTSegmentPresent = false %}
                 {% for prtSegment in prtSegmentLists.PRT %}
-                    {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'PR1' -%}
+                    {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'PR1' -%}
 
                     {% unless checkParentPR1.PR1 == pr1SegmentLists.PR1[0] %}
                         {% assign isPRTSegmentPresent = true %}
@@ -1153,7 +1153,7 @@
 
                 {% for rolSegment in rolSegmentLists.ROL %}
 
-                    {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'PR1' -%}
+                    {% assign checkParentPR1 = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'PR1' -%}
 
                     {% unless checkParentPR1.PR1 == pr1SegmentLists.PR1[0] %}
                             {% unless isPRTSegmentPresent %}
@@ -1285,8 +1285,8 @@
                 {% assign prtSegmentLists = hl7v2Data | get_related_segment_list: pr1Segment, 'PRT' -%}
 
                 {% for prtSegment in prtSegmentLists.PRT %}
-                    {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'IN1' -%}
-                    {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'PRT', {{prtSegmentPositionIndex}}, 'FT1' -%}
+                    {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'IN1' -%}
+                    {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'PRT', prtSegmentPositionIndex, 'FT1' -%}
 
                     {% unless checkParentIN1.IN1 %}
                         {% if checkParentFT1.FT1.Value == ft1Segment.Value %}
@@ -1404,8 +1404,8 @@
                 {% assign rolSegmentLists = hl7v2Data | get_related_segment_list: pr1Segment, 'ROL' -%}
 
                 {% for rolSegment in rolSegmentLists.ROL %}
-                    {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'IN1' -%}
-                    {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'ROL', {{rolSegmentPositionIndex}}, 'FT1' -%}
+                    {% assign checkParentIN1 = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'IN1' -%}
+                    {% assign checkParentFT1 = hl7v2Data | get_parent_segment: 'ROL', rolSegmentPositionIndex, 'FT1' -%}
 
                     {% unless checkParentIN1.IN1 %}
                         {% if checkParentFT1.FT1.Value == ft1Segment.Value %}
