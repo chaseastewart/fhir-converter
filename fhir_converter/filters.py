@@ -232,11 +232,17 @@ def generate_uuid(data: str) -> str:
 @string_filter
 def generate_id_input(data: str, resource_name:str ,based_id_required:bool,base_id:str = None) -> str:
     """Generates an input string for generate_uuid with 1) the resource type, 2) whether a base ID is required, 3) the base ID (optional)"""
+    if based_id_required:
+        return resource_name + data + base_id
+    return resource_name + data
+
+@string_filter
+def sign(data:str) -> str:
+    """Sign the given data string"""
     if is_undefined_none_or_blank(data):
         return ""
-    if based_id_required:
-        return data + resource_name + base_id
-    return data + resource_name
+    # cast string as integer or float, if negative return -1, if positive return 1
+    return str(int(float(data)/abs(float(data))) if float(data) != 0 else 0)
 
 @with_context
 @string_filter
@@ -504,6 +510,7 @@ all_filters: Sequence[Tuple[str, FilterT]] = [
     ("generate_id_input", generate_id_input),
     ("has_segments", has_segments),
     ("get_related_segment_list", get_related_segment_list),
+    ("sign", sign),
 ]
 """Sequence[tuple[str, FilterT]]: All of the filters provided by the module"""
 
