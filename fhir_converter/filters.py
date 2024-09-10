@@ -520,9 +520,11 @@ def _component_to_dict(hl7v2_component : Hl7v2Component) -> dict:
     result = {}
     if hl7v2_component:
         result['Value'] = hl7v2_component.value
-        for i, subcomponent in enumerate(hl7v2_component.subcomponents):
-            if subcomponent is not None and subcomponent != hl7v2_component.value:
-                result[str(i)] = subcomponent
+        if (hl7v2_component.subcomponents is not None
+            and isinstance(hl7v2_component.subcomponents, list)):
+            for i, subcomponent in enumerate(hl7v2_component.subcomponents):
+                if subcomponent != hl7v2_component.value:
+                    result[str(i)] = subcomponent
     return result
 
 all_filters: Sequence[Tuple[str, FilterT]] = [

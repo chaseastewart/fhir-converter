@@ -15,7 +15,8 @@ from pytest import fixture, raises
 from fhir_converter.filters import all_filters, register_filters
 from fhir_converter.hl7 import Hl7DtmPrecision
 
-from fhir_converter.parsers import Hl7v2Data, Hl7v2Segment
+from fhir_converter.parsers import Hl7v2Data, Hl7v2Segment, Hl7v2Field, Hl7v2Component
+from fhir_converter.filters import _component_to_dict, _field_to_dict, _segment_to_dict, _get_segment_lists_internal
 
 class FilterTest:
     """Base Test that doesn't extend TestCase to avoid the generic
@@ -964,3 +965,40 @@ class HasSegmentsTest(TestCase, FilterTest):
     def test_data_found(self) -> None:
         result = self.bound_template.render(data=self.hl7v2_data, segment_name="EVN")
         self.assertEqual(result, 'true')
+
+
+class Hl7v2DataToDictTest(TestCase):
+    def test_component_to_dict_without_sub(self) -> None:
+        hl7v2_component_0 = Hl7v2Component('Component0', None)
+        result = _component_to_dict(hl7v2_component_0)
+        self.assertEqual(result, {'Value': 'Component0'})
+
+    def test_component_to_dict_with_sub(self) -> None:
+        hl7v2_subcomponent_0 = 'SubComponent0'
+        hl7v2_subcomponent_1 = 'SubComponent1'
+        hl7v2_component_0 = Hl7v2Component('Component0', [hl7v2_subcomponent_0, hl7v2_subcomponent_1])
+        result = _component_to_dict(hl7v2_component_0)
+        self.assertEqual(result, {'Value': 'Component0', '0': 'SubComponent0', '1': 'SubComponent1'})
+        
+    def test_field_to_dict(self) -> None:
+        hl7v2_component_0 = Hl7v2Component('Component0', None)
+        hl7v2_field_0 = Hl7v2Field('Field0', [hl7v2_component_0])
+        result = _field_to_dict(hl7v2_field_0)
+        self.assertEqual(result, {'Value': 'Field0', '0': {'Value': 'Component0'}})
+
+    def test_segment_to_dict(self) -> None:
+        hl7v2_component_0 = Hl7v2Component('Component0', None)
+        hl7v2_field_0 = Hl7v2Field('Field0', [hl7v2_component_0])
+        hl7v2_segment_0 = Hl7v2Segment('Segment0', [hl7v2_field_0])
+        result = _segment_to_dict(hl7v2_segment_0)
+        self.assertEqual(result, {'Value': 'Segment0', '0': {'Value': 'Field0', '0': {'Value': 'Component0'}}})
+
+    def test_get_segment_lists_internal(self) -> None:
+        hl7v2_component_0 = Hl7v2Component('Component0', None)
+        hl7v2_field_0 = Hl7v2Field('Field0', [hl7v2_component_0])
+        hl7v2_segment_0 = Hl7v2Segment('Segment0', [hl7v2_field_0])
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.append('Segment0')
+        hl7v2_data.data.append(hl7v2_segment_0)
+        result = _get_segment_lists_internal(hl7v2_data, 'Segment0')
+        self.assertEqual(result, {'Segment0': [{'Value': 'Segment0', '0': {'Value': 'Field0', '0': {'Value': 'Component0'}}}]})
