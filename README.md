@@ -39,6 +39,7 @@ Whats supported:
 
 * **CDA->FHIR R4**
 * **STU3->FHIR R4**
+* **HL7v2->FHIR R4**
 
 Key features:
 
@@ -49,7 +50,7 @@ Key features:
 
 Limitations:
 
-* **Additional work** is needed to support JSON->FHIR, HL7v2->FHIR and FHIR->HL7v2.
+* **Additional work** is needed to support JSON->FHIR and FHIR->HL7v2.
 * **Comma between parameters**. Python-liquid **requires** a comma between parameters. Templates brought to this environment may need commas added.
 * **Variable names when passing variables to a snippet**. Python-liquid **requires** the identifier / variable name. Templates brought to this environment may need changes. See [Resource.liquid](https://github.com/chaseastewart/fhir-converter/blob/main/fhir_converter/templates/stu3/Resource.liquid) as an example of a template that has been updated.
 * **C# date format strings** are supported to an extent to mimimize the impact of migrating templates. See [filters](https://github.com/chaseastewart/fhir-converter/blob/cf3311cc2cc0acd3e9105dfc5ba23bb1d06d8393/fhir_converter/filters.py) for more information.
