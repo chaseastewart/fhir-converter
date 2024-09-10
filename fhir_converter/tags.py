@@ -30,7 +30,7 @@ from liquid.token import (
 )
 from liquid.undefined import is_undefined
 
-from fhir_converter.common import parse_unchained_identifier, parse_string_or_identifier, parse_obj
+from fhir_converter.expressions.common import parse_unchained_identifier, parse_string_or_identifier, parse_obj
 
 from pyjson5 import encode_io
 from pyjson5 import loads as json_loads

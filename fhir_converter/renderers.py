@@ -44,7 +44,11 @@ from fhir_converter.utils import (
     walk_path,
 )
 
-from fhir_converter.expressions import parse_loop_expression
+from fhir_converter.expressions import (
+    parse_loop_expression,
+    parse_boolean_expression,
+    parse_filtered_expression
+)
 
 from liquid.mode import Mode
 
@@ -330,6 +334,8 @@ class Hl7v2Renderer(BaseFhirRenderer):
         super().__init__(env)
         self.env.mode = Mode.STRICT
         self.env.parse_loop_expression_value = parse_loop_expression
+        self.env.parse_boolean_expression_value = parse_boolean_expression
+        self.env.parse_filtered_expression_value = parse_filtered_expression
         self.template_globals = self._make_globals(template_globals)
 
 
