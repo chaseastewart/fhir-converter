@@ -7,4 +7,4 @@
         {{ DG1.Value }}
     {% endif -%}
 {% endcapture -%}
-{{ identifiers | generate_id_input: 'EpisodeOfCare', false, | generate_uuid }}
+{{ identifiers | generate_id_input: 'EpisodeOfCare', false | generate_uuid }}
