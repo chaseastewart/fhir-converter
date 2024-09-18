@@ -4,10 +4,10 @@
         "value":"{{ XTN."1".Value }}",
         {% endunless -%}
     {% endif -%}
-    {% if XTN."3".Value == "X."400"" or XTN."3".Value == "Internet" -%}
+    {% if XTN."3".Value == "X.400" or XTN."3".Value == "Internet" -%}
         "value":"{{ XTN."4".Value }}",
     {% endif -%}
-    {% if XTN."3".Value != "X."400"" and  XTN."3".Value != "Internet" -%}
+    {% if XTN."3".Value != "X.400" and  XTN."3".Value != "Internet" -%}
         "value":"{{ XTN."12".Value }}",
     {% endif -%}
     {% if XTN."2" -%}
