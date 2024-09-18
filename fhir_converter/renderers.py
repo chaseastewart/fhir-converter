@@ -28,7 +28,7 @@ from pyjson5 import loads as json_loads
 
 from fhir_converter.exceptions import RenderingError, fail
 from fhir_converter.filters import all_filters, register_filters
-from fhir_converter.hl7 import parse_fhir
+from fhir_converter.hl7 import parse_fhir, post_process_fhir
 from fhir_converter.loaders import make_template_system_loader, read_text
 from fhir_converter.parsers import ParseXmlOpts, parse_json, parse_xml, parse_xml_filter, Hl7v2DataParser
 from fhir_converter.tags import all_tags, register_tags
@@ -362,7 +362,7 @@ class Hl7v2Renderer(BaseFhirRenderer):
         self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
     ) -> MutableMapping:
         template = self.env.get_template(template_name, globals=self.template_globals)
-        return parse_fhir(
+        return post_process_fhir(
             template.render({"hl7v2Data": self._parse_hl7v2(data_in, encoding)})
         )
         

@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 from os import PathLike
+import re
 from typing import IO, Any, Callable, Dict, List, Optional, Union
 
 from lxml import etree
 from pyjson5 import loads as json_loads
+
+from json5.loader import DefaultLoader, loads
+from json5.model import JSONObject
+
 from typing_extensions import TypeAlias
 
 from fhir_converter.utils import (
@@ -13,6 +18,7 @@ from fhir_converter.utils import (
     parse_etree,
     read_text,
     sanitize_str,
+    merge_dict
 )
 
 @dataclass(frozen=True)
@@ -36,6 +42,37 @@ AfterParseXml: TypeAlias = Callable[
     ParsedXml,
 ]
 
+class Json5SkipEmptyLoader(DefaultLoader):
+    def load(self, node):
+        if isinstance(node, JSONObject):
+            return self.json_object_to_python(node)
+        else:
+            return super().load(node)
+
+    def json_object_to_python(self, node):
+        d = {}
+        for key_value_pair in node.key_value_pairs:
+            key = self.load(key_value_pair.key)
+            value = self.load(key_value_pair.value)
+            if value is None or value == "" or value == {} or value == []:
+                continue
+            if key in d:
+                if isinstance(d[key], list):
+                    d[key].append(value)
+                elif isinstance(d[key], dict):
+                    merge_dict(d[key], value)
+                else:
+                    d[key] = [d[key], value]
+            else:
+                d[key] = value
+        if self.env.object_pairs_hook:
+            return self.env.object_pairs_hook(list(d.items()))
+        elif self.env.object_hook:
+            return self.env.object_hook(d)
+        else:
+            return d
+        
+json5_skip_empty_loader = Json5SkipEmptyLoader()
 
 def _remove_empty_json_list(obj: List[Any]) -> List[Any]:
     """remove_empty_json_list Removes any empty values from the JSON list
@@ -118,7 +155,7 @@ def parse_json(
     Returns:
         Any: the decoded output
     """
-    json = json_loads(_fix_commas(read_text(json_in, encoding)))
+    json = loads(_fix_commas(read_text(json_in, encoding)), loader=json5_skip_empty_loader)
     return _remove_empty_json(json) if ignore_empty_fields else json
 
 def _fix_commas(value: str) -> str:
@@ -130,8 +167,9 @@ def _fix_commas(value: str) -> str:
     Returns:
         str: the fixed value
     """
+    # Remove any new lines
     value = value.replace("\n", "")
-    import re
+
     value = re.sub(r",\s*,", ",", value)
     # If a comme is in between [] or {} then remove it
     value = re.sub(r"\[\s*,\s*\]", "[]", value)
