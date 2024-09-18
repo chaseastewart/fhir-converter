@@ -62,7 +62,8 @@ class Json5SkipEmptyLoader(DefaultLoader):
                 elif isinstance(d[key], dict):
                     merge_dict(d[key], value)
                 else:
-                    d[key] = [d[key], value]
+                    if value:
+                        d[key] = value
             else:
                 d[key] = value
         if self.env.object_pairs_hook:
