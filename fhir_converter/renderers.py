@@ -42,6 +42,7 @@ from fhir_converter.utils import (
     mkdir,
     sanitize_str,
     walk_path,
+    read_text as reader,
 )
 
 from fhir_converter.expressions import (
@@ -354,9 +355,7 @@ class Hl7v2Renderer(BaseFhirRenderer):
     @staticmethod
     def _parse_hl7v2(data_in: DataInput, encoding: str = "utf-8"):
 
-        data_in = data_in.read()
-
-        return Hl7v2DataParser().parse(data_in)
+        return Hl7v2DataParser().parse(reader(data_in, encoding))
 
     def _render(
         self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
