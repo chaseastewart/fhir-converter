@@ -427,7 +427,7 @@ def get_related_segment_list(hl7v2_data, parent_segment, child_segment_id):
     child_index = -1
 
     for i in range(len(hl7v2_data.meta)):
-        if hl7v2_data.data[i] == parent_segment:
+        if _segment_to_dict(hl7v2_data.data[i]) == parent_segment:
             parent_found = True
         elif hl7v2_data.meta[i].lower() == child_segment_id.lower() and parent_found:
             child_index = i
