@@ -333,7 +333,8 @@ class Hl7v2Renderer(BaseFhirRenderer):
             template_globals: Optional[Mapping[str, Any]] = None,
     ) -> None:
         super().__init__(env)
-        self.env.mode = Mode.STRICT
+        # TODO: Remove this mode setting when the liquid library is updated
+        self.env.mode = Mode.WARN
         self.env.parse_loop_expression_value = parse_loop_expression
         self.env.parse_boolean_expression_value = parse_boolean_expression
         self.env.parse_filtered_expression_value = parse_filtered_expression
