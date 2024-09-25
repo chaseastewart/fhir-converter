@@ -232,6 +232,8 @@ def generate_uuid(data: str) -> str:
 @string_filter
 def generate_id_input(data: str, resource_name:str ,based_id_required:bool,base_id:str = None) -> str:
     """Generates an input string for generate_uuid with 1) the resource type, 2) whether a base ID is required, 3) the base ID (optional)"""
+    if data is None or data.strip() == "":
+        return None
     if based_id_required:
         return resource_name + data + base_id
     return resource_name + data
@@ -502,7 +504,7 @@ def _segment_to_dict(hl7v2_segment : Hl7v2Segment) -> dict:
     result['Value'] = hl7v2_segment.normalized_text
     for i, field in enumerate(hl7v2_segment.fields):
         result[str(i)] = _field_to_dict(field)
-    return result
+    return result if result != {} else None
 
 def _field_to_dict(hl7v2_field : Hl7v2Field) -> dict:
     result = {}
@@ -514,7 +516,7 @@ def _field_to_dict(hl7v2_field : Hl7v2Field) -> dict:
                 result['Repeats'].append(_field_to_dict(repeat))
         for i, component in enumerate(hl7v2_field.components):
             result[str(i)] = _component_to_dict(component)
-    return result
+    return result if result != {} else None
 
 def _component_to_dict(hl7v2_component : Hl7v2Component) -> dict:
     result = {}
@@ -525,7 +527,7 @@ def _component_to_dict(hl7v2_component : Hl7v2Component) -> dict:
             for i, subcomponent in enumerate(hl7v2_component.subcomponents):
                 if subcomponent != hl7v2_component.value:
                     result[str(i)] = subcomponent
-    return result
+    return result if result != {} else None
 
 all_filters: Sequence[Tuple[str, FilterT]] = [
     ("to_json_string", to_json_string),
