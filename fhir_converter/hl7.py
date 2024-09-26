@@ -223,6 +223,27 @@ def to_fhir_dtm(dt: datetime, precision: Optional[FhirDtmPrecision] = None) -> s
         return iso_dtm[: FhirDtmPrecision.MONTH]
     return iso_dtm[: FhirDtmPrecision.YEAR]
 
+def post_process_fhir(json_data: str) -> Any:
+    """post_process_fhir Post processes the FHIR object
+    1/ if we have two concecutively entries with the same resourceType
+    and the second entry has only extensions, we merge the extensions into the first entry
+
+    Args:
+        json_data (Any): The FHIR object
+
+    Returns:
+        The post processed FHIR object
+    """
+    init = parse_fhir(json_data)
+    if isinstance(init, dict):
+        entries = to_list_or_empty(init.get("entry", []))
+        for i in range(1, len(entries)-1):
+            if entries[i - 1].get("resource", {}).get("resourceType") == entries[i].get("resource", {}).get("resourceType"):
+                if "extension" in entries[i].get("resource", {}):
+                    merge_extension(entries[i - 1], entries[i])
+                    del entries[i]
+    return init
+
 
 def parse_fhir(json_input: str) -> Any:
     """parse_fhir Parses the given json input string to a FHIR object. In
@@ -251,6 +272,17 @@ def parse_fhir(json_input: str) -> Any:
             json_data["entry"] = list(unique_entrys.values())
     return json_data
 
+def merge_extension(entry:dict, extension: dict) -> None:
+    """merge_extension Merges the given extension into the FHIR entry
+
+    Args:
+        entry (Mapping): The FHIR entry
+        extension (Mapping): The extension to merge
+    """
+    if "extension" in entry["resource"]:
+        merge_dict(entry["resource"], extension["resource"])
+    else:
+        entry["resource"]["extension"] = extension["resource"]["extension"]
 
 def get_fhir_entry_key(entry: Mapping[str, dict]) -> str:
     """get_fhir_entry_key Gets the unique key for the given FHIR

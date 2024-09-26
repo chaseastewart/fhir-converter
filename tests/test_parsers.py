@@ -5,7 +5,7 @@ from lxml import etree
 from pyjson5 import Json5EOF
 from pytest import raises
 
-from fhir_converter.parsers import ParseXmlOpts, parse_json, parse_xml
+from fhir_converter.parsers import ParseXmlOpts, parse_json, parse_xml, Hl7v2DataParser
 
 
 class ParseJsonTest(TestCase):
@@ -343,3 +343,24 @@ class ParseXmlTest(TestCase):
                 }
             },
         )
+
+class Hl7v2DataParserTest(TestCase):
+    def test_parse_hl7v2(self) -> None:
+        simple_file = Path("tests/data/hl7v2/ADT-A01-02.hl7")
+        with simple_file.open() as hl7v2_in:
+            hl7v2_str = hl7v2_in.read()
+        hl7v2_parser = Hl7v2DataParser()
+        hl7v2_data = hl7v2_parser.parse(hl7v2_str)
+
+        self.assertEqual(hl7v2_str, hl7v2_data.message)
+        # assert meta data = [MSH, EVN, PID, PV1]
+        meta_data = ["MSH", "EVN", "PID", "PV1"]
+        self.assertEqual(meta_data, hl7v2_data.meta)
+
+        # assert encoding_chars = ["^", "~", "&", "\\", "|"]
+        self.assertEqual("^", hl7v2_data.encoding_characters.component_separator)
+        self.assertEqual("~", hl7v2_data.encoding_characters.repetition_separator)
+        self.assertEqual("\\", hl7v2_data.encoding_characters.escape_character)
+        self.assertEqual("&", hl7v2_data.encoding_characters.subcomponent_separator)
+
+        # TODO: assert message_header = MSH
