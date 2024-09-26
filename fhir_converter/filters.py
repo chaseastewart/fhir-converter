@@ -232,8 +232,6 @@ def generate_uuid(data: str) -> str:
 @string_filter
 def generate_id_input(data: str, resource_name:str ,based_id_required:bool,base_id:str = None) -> str:
     """Generates an input string for generate_uuid with 1) the resource type, 2) whether a base ID is required, 3) the base ID (optional)"""
-    if data is None or data.strip() == "":
-        return None
     if based_id_required:
         return resource_name + data + base_id
     return resource_name + data
