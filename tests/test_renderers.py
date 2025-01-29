@@ -7,7 +7,7 @@ from unittest import TestCase
 
 from liquid import FileExtensionLoader
 from liquid.utils import LRUCache
-from lxml.etree import XMLSyntaxError
+from lxml import etree
 from pyjson5 import Json5EOF
 from pytest import raises
 
@@ -21,7 +21,12 @@ from fhir_converter.renderers import (
     make_environment,
     stu3_default_loader,
 )
-from fhir_converter.utils import sanitize_str
+from fhir_converter.utils import (
+    etree_element_to_str,
+    etree_to_str,
+    parse_etree,
+    sanitize_str,
+)
 
 
 class MakeEnvironmentTest(TestCase):
@@ -305,26 +310,70 @@ class CcdaRendererTest(TestCase):
     def _validate_str(self, fhir_str: str) -> None:
         self._validate(loads(fhir_str))
 
-    def _validate_parse_cda(self, xml: Mapping) -> None:
+    def _validate_parsed_code(self, section: Mapping, expected_code: Mapping) -> None:
+        self.assertEqual(section.get("code"), expected_code)
+
+    def _validate_parsed_section_text(
+        self,
+        cda_doc: etree._ElementTree,
+        section: Mapping,
+        template_id: str,
+        render_narrative: bool = True,
+    ) -> None:
+        self.assertIn("text", section)
+        if render_narrative:
+            cda_section = cda_doc.xpath(
+                f"""//*[local-name()='section']/*[local-name()='templateId'
+                    and @root='{template_id}']/parent::*""",
+            )
+            self.assertEqual(1, len(cda_section))
+
+            self.assertIn("_originalData", section["text"])
+            self.assertEqual(
+                section["text"]["_originalData"],
+                sanitize_str(
+                    etree_element_to_str(
+                        cda_section[0],
+                        standalone=True,
+                    )
+                ),
+            )
+        else:
+            self.assertNotIn("_originalData", section["text"])
+
+    def _validate_parse_cda(self, xml: Mapping, render_narrative: bool = False) -> None:
+        cda_doc = parse_etree(
+            self.ccda_file,
+            remove_blank_text=True,
+            remove_comments=True,
+        )
+
         self.assertIn("ClinicalDocument", xml)
         allergies = get_ccda_section(
             xml, search_template_ids="2.16.840.1.113883.10.20.22.2.6"
         )
         self.assertIsNotNone(allergies)
-        self.assertEqual(
-            allergies.get("code"),  # type: ignore
+        self._validate_parsed_code(
+            allergies,  # type: ignore
             {
                 "code": "48765-2",
                 "codeSystem": "2.16.840.1.113883.6.1",
                 "codeSystemName": "LOINC",
             },
         )
+        self._validate_parsed_section_text(
+            cda_doc,
+            allergies,  # type: ignore
+            "2.16.840.1.113883.10.20.22.2.6",
+            render_narrative,
+        )
+
         meds = get_ccda_section(
             xml, search_template_ids="2.16.840.1.113883.10.20.22.2.1.1"
         )
         self.assertIsNotNone(meds)
-        self.assertEqual(
-            meds.get("code"),  # type: ignore
+        self._validate_parsed_code(
+            meds,  # type: ignore
             {
                 "code": "10160-0",
                 "codeSystem": "2.16.840.1.113883.6.1",
@@ -332,12 +381,30 @@ class CcdaRendererTest(TestCase):
                 "displayName": "HISTORY OF MEDICATION USE",
             },
         )
+        self._validate_parsed_section_text(
+            cda_doc,
+            meds,  # type: ignore
+            "2.16.840.1.113883.10.20.22.2.1.1",
+            render_narrative,
+        )
+
         # TODO additional validation
+
+        self.assertIn("_originalData", xml)
+        self.assertEqual(
+            xml["_originalData"],
+            sanitize_str(
+                etree_to_str(
+                    cda_doc,
+                    standalone=True,
+                )
+            ),
+        )
 
     def test_render_fhir_string_xml_error(self) -> None:
         with raises(RenderingError, match="Failed to render FHIR") as exc_info:
             CcdaRenderer().render_fhir_string("CCD", "")
-        self.assertIsInstance(exc_info.value.__cause__, XMLSyntaxError)
+        self.assertIsInstance(exc_info.value.__cause__, etree.XMLSyntaxError)
 
     def test_render_fhir_string_text(self) -> None:
         self._validate_str(
@@ -362,7 +429,7 @@ class CcdaRendererTest(TestCase):
     def test_render_to_fhir_xml_error(self) -> None:
         with raises(RenderingError, match="Failed to render FHIR") as exc_info:
             CcdaRenderer().render_to_fhir("CCD", "")
-        self.assertIsInstance(exc_info.value.__cause__, XMLSyntaxError)
+        self.assertIsInstance(exc_info.value.__cause__, etree.XMLSyntaxError)
         self.assertEqual(
             str(exc_info.value.__cause__),
             "Document is empty, line 1, column 1 (<string>, line 1)",
@@ -475,3 +542,11 @@ class CcdaRendererTest(TestCase):
     def test_parse_cda_binary_io(self) -> None:
         with self.ccda_file.open("rb") as xml_in:
             self._validate_parse_cda(CcdaRenderer()._parse_cda(data_in=xml_in))
+
+    def test_parse_cda_render_narrative(self) -> None:
+        self._validate_parse_cda(
+            CcdaRenderer(template_globals={"render_narrative": True})._parse_cda(
+                data_in=self.ccda_file
+            ),
+            render_narrative=True,
+        )
