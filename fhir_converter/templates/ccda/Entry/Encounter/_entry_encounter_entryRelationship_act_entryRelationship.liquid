@@ -3,5 +3,5 @@
     {% include 'Resource/Condition' conditionEntry: entryRelationship.observation, ID: observationId -%}
     {% include 'Reference/Condition/Subject' ID: observationId, REF: fullPatientId -%}
     {% assign fullObservationId = observationId | prepend: 'Condition/' -%}
-    {% include 'Reference/Encounter/Diagnosis_Condition' ID: encounterId -%}
+    {% include 'Reference/Encounter/Diagnosis_Condition' ID: encounterId, REF: fullObservationId -%}
 {% endif -%}
