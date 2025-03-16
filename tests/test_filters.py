@@ -6,9 +6,9 @@ from zlib import decompress
 from liquid import BoundTemplate, DictLoader, Environment
 from liquid.exceptions import (
     FilterArgumentError,
-    NoSuchFilterFunc,
+    UnknownFilterError,
     OutputStreamLimitError,
-    TemplateNotFound,
+    TemplateNotFoundError,
 )
 from pytest import fixture, raises
 
@@ -30,7 +30,7 @@ class FilterTest:
         self.bound_template = env.from_string(self.template)
 
     def test_unregistered(self) -> None:
-        with raises(NoSuchFilterFunc):
+        with raises(UnknownFilterError):
             env = Environment()
             env.filters.clear()
             env.from_string(self.template).render()
@@ -246,11 +246,15 @@ class DateTest(TestCase, FilterTest):
         self.assertEqual(result, "YYYY")
 
     def test_unsupported_format(self) -> None:
-        result = self.bound_template.render(dt=self.iso_datetime_complete, format="ffff")
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="ffff"
+        )
         self.assertEqual(result, "ffff")
 
     def test_year(self) -> None:
-        result = self.bound_template.render(dt=self.iso_datetime_complete, format="yyyy")
+        result = self.bound_template.render(
+            dt=self.iso_datetime_complete, format="yyyy"
+        )
         self.assertEqual(result, "2014")
 
     def test_year_python(self) -> None:
@@ -436,7 +440,8 @@ class NowTest(TestCase, FilterTest):
     @fixture(autouse=True, scope="function")
     def to_fhir_dtm_mock(self, mocker):
         mocked = mocker.patch(
-            "fhir_converter.filters.to_fhir_dtm", return_value="2024-01-10T06:34:57.920Z"
+            "fhir_converter.filters.to_fhir_dtm",
+            return_value="2024-01-10T06:34:57.920Z",
         )
         self._to_fhir_dtm_mock = mocked
         return mocked
@@ -601,7 +606,11 @@ class GetFirstCcdaSectionsByTemplateIdTest(TestCase, FilterTest):
             "component": {
                 "structuredBody": {
                     "component": [
-                        {"section": {"templateId": [{"root": "2.2"}, {"root": "2.2.1"}]}},
+                        {
+                            "section": {
+                                "templateId": [{"root": "2.2"}, {"root": "2.2.1"}]
+                            }
+                        },
                         {"section": {"templateId": [{"root": "2.6"}]}},
                         {"section": {"templateId": [{"root": "2.5.1"}]}},
                     ]
@@ -666,7 +675,11 @@ class GetCcdaSectionByTemplateIdTest(TestCase, FilterTest):
             "component": {
                 "structuredBody": {
                     "component": [
-                        {"section": {"templateId": [{"root": "2.2"}, {"root": "2.2.1"}]}},
+                        {
+                            "section": {
+                                "templateId": [{"root": "2.2"}, {"root": "2.2.1"}]
+                            }
+                        },
                         {"section": {"templateId": [{"root": "2.6"}]}},
                         {"section": {"templateId": [{"root": "2.5.1"}]}},
                     ]
@@ -710,7 +723,9 @@ class GetCcdaSectionByTemplateIdTest(TestCase, FilterTest):
         )
 
     def test_found_multiple_ids(self) -> None:
-        result = self.bound_template.render(msg=self.msg, id="2.5", id2="2.6", id3="2.7")
+        result = self.bound_template.render(
+            msg=self.msg, id="2.5", id2="2.6", id3="2.7"
+        )
         self.assertEqual(
             result,
             "{'templateId': [{'root': '2.6'}]}",
@@ -764,7 +779,7 @@ class BatchRenderTest(TestCase, FilterTest):
         self.assertEqual(result, "one, \ntwo,  \n\nthree,   \n\n\n")
 
     def test_template_not_found(self) -> None:
-        with raises(TemplateNotFound):
+        with raises(TemplateNotFoundError):
             self.bound_template.render(batch=["one"], template="undefined")
 
     def test_output_limit_reached(self) -> None:

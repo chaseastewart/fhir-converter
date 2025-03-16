@@ -12,7 +12,7 @@ from traceback import print_exception
 from typing import Any, Final, List, Mapping, Optional, Type
 
 from frozendict import frozendict
-from liquid import Environment, FileExtensionLoader
+from liquid import Environment, FileSystemLoader
 from psutil import Process
 
 from fhir_converter.exceptions import fail
@@ -88,7 +88,7 @@ def get_user_defined_environment(
 ) -> Optional[Environment]:
     if args.template_dir:
         return make_environment(
-            loader=FileExtensionLoader(search_path=args.template_dir),
+            loader=FileSystemLoader(search_path=args.template_dir, ext=".liquid"),
             additional_loaders=[defaults["loader"]],
         )
     return None
@@ -202,7 +202,9 @@ def absolute_path(path: str) -> Path:
     return Path(path).absolute()
 
 
-def parse_args(argparser: argparse.ArgumentParser, argv: List[str]) -> argparse.Namespace:
+def parse_args(
+    argparser: argparse.ArgumentParser, argv: List[str]
+) -> argparse.Namespace:
     args = argparser.parse_args(argv)
     if not args.from_dir and not args.from_file:
         argparser.error("Either --from-file or --from-dir must be specified.")

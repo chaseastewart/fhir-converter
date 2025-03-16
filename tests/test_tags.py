@@ -1,11 +1,8 @@
 from typing import Optional
 from unittest import TestCase
 
-from liquid import BoundTemplate, DictLoader, Environment
-from liquid.ast import ChildNode
-from liquid.exceptions import LiquidSyntaxError, TemplateNotFound
-from liquid.expression import Identifier, IdentifierPathElement, StringLiteral
-from liquid.loaders import BaseLoader
+from liquid import BaseLoader, BoundTemplate, DictLoader, Environment
+from liquid.exceptions import LiquidSyntaxError, TemplateNotFoundError
 from pyjson5 import Json5Exception
 from pytest import raises
 
@@ -33,11 +30,14 @@ class MergeDiffTest(TestCase):
             get_template(source=self.block, register=False).render()
 
     def test_missing_endmerge(self) -> None:
-        with raises(LiquidSyntaxError, match="expected tag with value 'endmergeDiff'"):
+        with raises(
+            LiquidSyntaxError,
+            match="expected tag endmergeDiff, found end of expression",
+        ):
             get_template(source=self.missing_endmerge).render()
 
     def test_missing_identifier(self) -> None:
-        with raises(LiquidSyntaxError, match="expected 'expression', found 'tag'"):
+        with raises(LiquidSyntaxError, match="missing expression"):
             get_template(source=self.missing_identifier).render()
 
     def test_invalid(self) -> None:
@@ -51,11 +51,15 @@ class MergeDiffTest(TestCase):
 
     def test_space(self) -> None:
         template = get_template(source=self.block)
-        self.assertEqual(template.render(var={"test": "ok"}, block=" "), '{"test":"ok"}')
+        self.assertEqual(
+            template.render(var={"test": "ok"}, block=" "), '{"test":"ok"}'
+        )
 
     def test_empty_quote(self) -> None:
         template = get_template(source=self.block)
-        self.assertEqual(template.render(var={"test": "ok"}, block='""'), '{"test":"ok"}')
+        self.assertEqual(
+            template.render(var={"test": "ok"}, block='""'), '{"test":"ok"}'
+        )
 
     def test_str(self) -> None:
         template = get_template(source=self.block)
@@ -74,18 +78,15 @@ class MergeDiffTest(TestCase):
 
     def test_add(self) -> None:
         template = get_template(source=self.block)
-        self.assertEqual(len(template.tree.statements), 1)
+        self.assertEqual(len(template.nodes), 1)
 
-        node = template.tree.statements[0]
+        node = template.nodes[0]
         self.assertIsInstance(node, MergeDiffNode)
+        self.assertEqual(str(node), "{% mergeDiff var %}{{ block }}{% endmergeDiff %}")
 
         self.assertEqual(
-            repr(node),
-            "MergeDiff(tok=Token(linenum=1, type='tag', value='mergeDiff') identifier=var)",
+            template.render(var={}, block={"test": "add"}), '{"test":"add"}'
         )
-        self.assertEqual(str(node), "mergeDiff var { `block` }")
-        self.assertTrue(len(node.children()) > 0)
-        self.assertEqual(template.render(var={}, block={"test": "add"}), '{"test":"add"}')
 
     def test_update(self) -> None:
         template = get_template(source=self.block)
@@ -180,7 +181,7 @@ class EvaluateTest(TestCase):
             get_template(source=self.no_arg, register=False).render()
 
     def test_template_not_found(self) -> None:
-        with raises(TemplateNotFound):
+        with raises(TemplateNotFoundError):
             get_template(source=self.not_found).render()
 
     def test_missing_keyword(self) -> None:
@@ -193,88 +194,35 @@ class EvaluateTest(TestCase):
 
     def test_no_arg(self) -> None:
         template = get_template(source=self.no_arg, loader=self.loader)
-        self.assertEqual(len(template.tree.statements), 2)
+        self.assertEqual(len(template.nodes), 2)
 
-        node = template.tree.statements[0]
+        node = template.nodes[0]
         self.assertIsInstance(node, EvaluateNode)
-        self.assertEqual(
-            repr(node),
-            "EvaluateNode(tok=Token(linenum=1, type='tag', value='evaluate'), name=var)",
-        )
-        self.assertEqual(str(node), "evaluate(var using 'no_arg')")
-        self.assertEqual(
-            node.children(),
-            [
-                ChildNode(
-                    linenum=1,
-                    expression=StringLiteral(value="no_arg"),
-                    template_scope=["var"],
-                    block_scope=[],
-                    load_mode="include",
-                    load_context={"tag": "evaluate"},
-                )
-            ],
-        )
-
+        self.assertEqual(str(node), "{% evaluate var using 'no_arg' %}")
+        self.assertEqual(template.variables(), ["var"])
         self.assertEqual(template.render(), "ok")
 
     def test_single_arg(self) -> None:
         template = get_template(source=self.single_arg, loader=self.loader)
-        self.assertEqual(len(template.tree.statements), 2)
+        self.assertEqual(len(template.nodes), 2)
 
-        node = template.tree.statements[0]
+        node = template.nodes[0]
         self.assertIsInstance(node, EvaluateNode)
-        self.assertEqual(str(node), "evaluate(var using 'single_arg', arg1=val)")
-        self.assertEqual(
-            node.children(),
-            [
-                ChildNode(
-                    linenum=1,
-                    expression=StringLiteral(value="single_arg"),
-                    template_scope=["var"],
-                    block_scope=["arg1"],
-                    load_mode="include",
-                    load_context={"tag": "evaluate"},
-                ),
-                ChildNode(
-                    linenum=1,
-                    expression=Identifier(path=[IdentifierPathElement(value="val")]),
-                ),
-            ],
-        )
-
+        self.assertEqual(str(node), "{% evaluate var using 'single_arg' arg1:val %}")
+        self.assertEqual(template.variables(), ["val", "arg1", "var"])
         self.assertEqual(template.render(val="test"), "test")
 
     def test_multiple_args(self) -> None:
         template = get_template(source=self.multi_arg, loader=self.loader)
-        self.assertEqual(len(template.tree.statements), 2)
+        self.assertEqual(len(template.nodes), 2)
 
-        node = template.tree.statements[0]
+        node = template.nodes[0]
         self.assertIsInstance(node, EvaluateNode)
+
         self.assertEqual(
             str(node),
-            "evaluate(var using 'multi_arg', arg1=val1, arg2=val2)",
-        )
-        self.assertEqual(
-            node.children(),
-            [
-                ChildNode(
-                    linenum=1,
-                    expression=StringLiteral(value="multi_arg"),
-                    template_scope=["var"],
-                    block_scope=["arg1", "arg2"],
-                    load_mode="include",
-                    load_context={"tag": "evaluate"},
-                ),
-                ChildNode(
-                    linenum=1,
-                    expression=Identifier(path=[IdentifierPathElement(value="val1")]),
-                ),
-                ChildNode(
-                    linenum=1,
-                    expression=Identifier(path=[IdentifierPathElement(value="val2")]),
-                ),
-            ],
+            "{% evaluate var using 'multi_arg' arg1:val1, arg2:val2 %}",
         )
 
+        self.assertEqual(template.variables(), ["val1", "val2", "arg1", "arg2", "var"])
         self.assertEqual(template.render(val1="test", val2="ok"), "test, ok")

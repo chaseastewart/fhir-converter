@@ -20,8 +20,7 @@ from typing import (
 )
 
 from frozendict import frozendict
-from liquid import Environment
-from liquid.loaders import BaseLoader, PackageLoader
+from liquid import Environment, BaseLoader, PackageLoader
 from lxml.etree import QName
 from pyjson5 import encode_io
 from pyjson5 import loads as json_loads
@@ -227,7 +226,9 @@ class CcdaRenderer(BaseFhirRenderer):
     def _make_globals(self, globals: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
         template_globals = dict(globals or {})
         if "code_mapping" not in template_globals:
-            value_set = json_loads(read_text(self.env, filename="ValueSet/ValueSet.json"))
+            value_set = json_loads(
+                read_text(self.env, filename="ValueSet/ValueSet.json")
+            )
             template_globals["code_mapping"] = frozendict(value_set.get("Mapping", {}))
 
         self.render_narrative = template_globals.get("render_narrative", False)
@@ -340,7 +341,6 @@ def make_environment(
             cache_size=cache_size,
             additional_loaders=additional_loaders,
         ),
-        cache_size=cache_size,
         **kwargs,
     )
     register_filters(env, all_filters, replace=True)
