@@ -3,10 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from liquid import ChoiceLoader, Context, Environment
-from liquid.builtin.loaders.mixins import CachingLoaderMixin
-from liquid.exceptions import TemplateNotFound
-from liquid.loaders import BaseLoader, TemplateSource
+from liquid import ChoiceLoader, RenderContext, Environment, CachingLoaderMixin
+from liquid.exceptions import TemplateNotFoundError
+from liquid.loader import BaseLoader, TemplateSource
 
 
 class TemplateSystemLoader(ChoiceLoader):
@@ -24,50 +23,24 @@ class TemplateSystemLoader(ChoiceLoader):
         self,
         env: Environment,
         template_name: str,
+        *,
+        context: Optional[RenderContext] = None,
+        **kwargs: object,
     ) -> TemplateSource:
-        return super().get_source(env, self._resolve_template_name(template_name))
+        return super().get_source(
+            env, self._resolve_template_name(template_name), context=context, **kwargs
+        )
 
     async def get_source_async(
         self,
         env: Environment,
         template_name: str,
+        *,
+        context: Optional[RenderContext] = None,
+        **kwargs: object,
     ) -> TemplateSource:
         return await super().get_source_async(
-            env, self._resolve_template_name(template_name)
-        )
-
-    def get_source_with_args(
-        self,
-        env: Environment,
-        template_name: str,
-        **kwargs: object,
-    ) -> TemplateSource:
-        return super().get_source_with_args(
-            env, self._resolve_template_name(template_name), **kwargs
-        )
-
-    async def get_source_with_args_async(
-        self,
-        env: Environment,
-        template_name: str,
-        **kwargs: object,
-    ) -> TemplateSource:
-        return await super().get_source_with_args_async(
-            env, self._resolve_template_name(template_name), **kwargs
-        )
-
-    def get_source_with_context(
-        self, context: Context, template_name: str, **kwargs: str
-    ) -> TemplateSource:
-        return super().get_source_with_context(
-            context, self._resolve_template_name(template_name), **kwargs
-        )
-
-    async def get_source_with_context_async(
-        self, context: Context, template_name: str, **kwargs: str
-    ) -> TemplateSource:
-        return await super().get_source_with_context_async(
-            context, self._resolve_template_name(template_name), **kwargs
+            env, self._resolve_template_name(template_name), context=context, **kwargs
         )
 
     def _resolve_template_name(self, template_name: str) -> str:
@@ -97,7 +70,7 @@ class CachingTemplateSystemLoader(CachingLoaderMixin, TemplateSystemLoader):
         super().__init__(
             auto_reload=auto_reload,
             namespace_key=namespace_key,
-            cache_size=cache_size,
+            capacity=cache_size,
         )
 
         TemplateSystemLoader.__init__(self, loaders)
@@ -157,6 +130,6 @@ def read_text(env: Environment, filename: str) -> str:
         FileNotFoundError: when the file could not be found
     """
     try:
-        return env.loader.get_source(env, filename).source
-    except TemplateNotFound:
+        return env.loader.get_source(env, filename).text
+    except TemplateNotFoundError:
         raise FileNotFoundError(f"File not found {filename}")

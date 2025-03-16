@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, cast
 from unittest import TestCase
 
-from liquid import FileExtensionLoader
+from liquid import FileSystemLoader
 from liquid.utils import LRUCache
 from lxml.etree import XMLSyntaxError
 from pyjson5 import Json5EOF
@@ -27,9 +27,6 @@ from fhir_converter.utils import sanitize_str
 class MakeEnvironmentTest(TestCase):
     def test_defaults(self) -> None:
         env = make_environment(loader=ccda_default_loader)
-        self.assertFalse(env.auto_reload)
-        self.assertIsNone(env.cache)
-
         self.assertIsInstance(env.loader, CachingTemplateSystemLoader)
         loader = cast(CachingTemplateSystemLoader, env.loader)
         self.assertFalse(loader.auto_reload)
@@ -40,28 +37,21 @@ class MakeEnvironmentTest(TestCase):
 
     def test_auto_reload(self) -> None:
         env = make_environment(loader=ccda_default_loader, auto_reload=True)
-        self.assertFalse(env.auto_reload)
-        self.assertIsNone(env.cache)
-
         loader = cast(CachingTemplateSystemLoader, env.loader)
         self.assertTrue(loader.auto_reload)
 
     def test_cache_size(self) -> None:
         env = make_environment(loader=ccda_default_loader, cache_size=1)
-        self.assertFalse(env.auto_reload)
-        self.assertIsNone(env.cache)
 
         loader = cast(CachingTemplateSystemLoader, env.loader)
         self.assertEqual(loader.cache.capacity, 1)  # type: ignore
 
     def test_cache_disabled(self) -> None:
         env = make_environment(loader=ccda_default_loader, cache_size=0)
-        self.assertFalse(env.auto_reload)
-        self.assertIsNone(env.cache)
         self.assertIsInstance(env.loader, TemplateSystemLoader)
 
     def test_additional_loaders(self) -> None:
-        loader = FileExtensionLoader(search_path="data/templates/ccda")
+        loader = FileSystemLoader(search_path="data/templates/ccda")
         env = make_environment(
             loader,
             additional_loaders=[ccda_default_loader],
@@ -131,7 +121,9 @@ class Stu3FhirRendererTest(TestCase):
 
     def test_render_to_fhir_bytes(self) -> None:
         self._validate(
-            Stu3FhirRenderer().render_to_fhir("Immunization", self.stu3_file.read_bytes())
+            Stu3FhirRenderer().render_to_fhir(
+                "Immunization", self.stu3_file.read_bytes()
+            )
         )
 
     def test_render_to_fhir_text_io(self) -> None:
@@ -376,7 +368,9 @@ class CcdaRendererTest(TestCase):
         )
 
     def test_render_to_fhir_bytes(self) -> None:
-        self._validate(CcdaRenderer().render_to_fhir("CCD", self.ccda_file.read_bytes()))
+        self._validate(
+            CcdaRenderer().render_to_fhir("CCD", self.ccda_file.read_bytes())
+        )
 
     def test_render_to_fhir_text_io(self) -> None:
         with self.ccda_file.open(encoding="utf-8") as xml_in:
@@ -458,7 +452,9 @@ class CcdaRendererTest(TestCase):
 
     def test_parse_cda_text(self) -> None:
         self._validate_parse_cda(
-            CcdaRenderer()._parse_cda(data_in=self.ccda_file.read_text(encoding="utf-8"))
+            CcdaRenderer()._parse_cda(
+                data_in=self.ccda_file.read_text(encoding="utf-8")
+            )
         )
 
     def test_parse_cda_bytes(self) -> None:
