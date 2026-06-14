@@ -1,9 +1,14 @@
 from dataclasses import dataclass
+import json as std_json
 from os import PathLike
-from typing import IO, Any, Callable, Dict, List, Optional, Union
+import re
+from typing import IO, Any, Callable, Dict, List, Optional, Pattern, Tuple, Union
 
 from lxml import etree
-from pyjson5 import loads as json_loads
+
+from json5.loader import DefaultLoader, loads
+from json5.model import JSONObject
+
 from typing_extensions import TypeAlias
 
 from fhir_converter.utils import (
@@ -13,8 +18,25 @@ from fhir_converter.utils import (
     parse_etree,
     read_text,
     sanitize_str,
+    merge_dict
 )
 
+# Try to import orjson for fast JSON parsing (2-4x faster than json5)
+# Falls back to json5 if not available
+try:
+    import orjson
+    _ORJSON_AVAILABLE = True
+except ImportError:
+    _ORJSON_AVAILABLE = False
+
+# Pre-compiled regex patterns for performance
+_COMMA_PATTERNS: Tuple[Tuple[Pattern, str], ...] = (
+    (re.compile(r",\s*,"), ","),
+    (re.compile(r"\[\s*,\s*\]"), "[]"),
+    (re.compile(r"\{\s*,\s*\}"), "{}"),
+    (re.compile(r":\s*,"), ':"",'),
+)
+_TRAILING_COMMA_PATTERN: Pattern = re.compile(r",\s*([}\]])")
 
 @dataclass(frozen=True)
 class ParseXmlOpts:
@@ -37,6 +59,56 @@ AfterParseXml: TypeAlias = Callable[
     ParsedXml,
 ]
 
+class Json5SkipEmptyLoader(DefaultLoader):
+    def load(self, node):
+        if isinstance(node, JSONObject):
+            return self.json_object_to_python(node)
+        else:
+            return super().load(node)
+
+    def json_object_to_python(self, node):
+        d = {}
+        for key_value_pair in node.key_value_pairs:
+            key = self.load(key_value_pair.key)
+            value = self.load(key_value_pair.value)
+            if value is None or value == "" or value == {} or value == []:
+                continue
+            if key in d:
+                if isinstance(d[key], list):
+                    d[key].append(value)
+                elif isinstance(d[key], dict):
+                    merge_dict(d[key], value)
+                else:
+                    if value:
+                        d[key] = value
+            else:
+                d[key] = value
+        if self.env.object_pairs_hook:
+            return self.env.object_pairs_hook(list(d.items()))
+        elif self.env.object_hook:
+            return self.env.object_hook(d)
+        else:
+            return d
+        
+json5_skip_empty_loader = Json5SkipEmptyLoader()
+
+
+def _json_object_pairs_skip_empty(pairs: List[Tuple[Any, Any]]) -> Dict[Any, Any]:
+    d = {}
+    for key, value in pairs:
+        if value is None or value == "" or value == {} or value == []:
+            continue
+        if key in d:
+            if isinstance(d[key], list):
+                d[key].append(value)
+            elif isinstance(d[key], dict):
+                merge_dict(d[key], value)
+            else:
+                if value:
+                    d[key] = value
+        else:
+            d[key] = value
+    return d
 
 def _remove_empty_json_list(obj: List[Any]) -> List[Any]:
     """remove_empty_json_list Removes any empty values from the JSON list
@@ -105,9 +177,15 @@ def _remove_empty_json(obj: Any) -> Any:
 
 
 def parse_json(
-    json_in: JsonDataIn, encoding: str = "utf-8", ignore_empty_fields: bool = True
+    json_in: JsonDataIn, 
+    encoding: str = "utf-8", 
+    ignore_empty_fields: bool = True,
+    use_fast_parser: bool = True
 ) -> Any:
-    """parse_json Parses the JSON string using a JSON 5 compliant decoder
+    """parse_json Parses the JSON string using the fastest available parser
+    
+    Performance optimized: Uses orjson (2-4x faster) when available, 
+    falls back to json5 for compatibility.
 
     Any empty JSON will be removed from decoded output. See remove_empty_json
 
@@ -115,12 +193,70 @@ def parse_json(
         json_in (JsonDataIn): the json to decode
         encoding (str, optional): the character encoding to use. Defaults to "utf-8"
         ignore_empty_fields (bool): Whether to ignore empty fields. Defaults to True
+        use_fast_parser (bool): Use orjson if available for better performance. Defaults to True
 
     Returns:
         Any: the decoded output
     """
-    json = json_loads(read_text(json_in, encoding))
+    text = read_text(json_in, encoding)
+    
+    # Try fast parser first if enabled and available
+    if use_fast_parser and _ORJSON_AVAILABLE:
+        try:
+            # orjson is much faster but doesn't support JSON5 features
+            # It returns bytes, so we need to handle the result
+            json = orjson.loads(text)
+            return _remove_empty_json(json) if ignore_empty_fields else json
+        except (orjson.JSONDecodeError, ValueError):
+            # Fall through to json5 parser if orjson fails
+            # This handles JSON5 features like trailing commas, comments
+            pass
+    
+    # Fallback to json5 parser (supports JSON5 syntax)
+    loader = json5_skip_empty_loader if ignore_empty_fields else DefaultLoader()
+    json = loads(_fix_commas(text), loader=loader)
     return _remove_empty_json(json) if ignore_empty_fields else json
+
+
+def _parse_generated_json(json_in: JsonDataIn, encoding: str = "utf-8") -> Any:
+    """Parse JSON generated by bundled templates using a strict fast path.
+
+    The Liquid templates emit standard JSON with a few predictable artifacts such
+    as trailing commas. Normalize those artifacts, preserve the JSON5 duplicate
+    key merge behavior, and fall back to the existing JSON5 parser when the
+    generated text uses JSON5 syntax the strict parser can't handle.
+    """
+    text = read_text(json_in, encoding)
+    try:
+        json = std_json.loads(
+            _TRAILING_COMMA_PATTERN.sub(r"\1", _fix_commas(text)),
+            object_pairs_hook=_json_object_pairs_skip_empty,
+        )
+    except ValueError:
+        return parse_json(text, encoding, use_fast_parser=False)
+    return _remove_empty_json(json)
+
+def _fix_commas(value: str) -> str:
+    """fix_double_comma Fixes double commas in the value using pre-compiled patterns
+    
+    Performance optimized: Uses pre-compiled regex patterns to avoid
+    re-compilation overhead on every call.
+
+    Args:
+        value (str): the value to fix
+
+    Returns:
+        str: the fixed value
+    """
+    # Remove any new lines
+    value = value.replace("\n", "")
+
+    # Apply all comma-fixing patterns efficiently
+    for pattern, replacement in _COMMA_PATTERNS:
+        value = pattern.sub(replacement, value)
+    
+    return value
+
 
 
 def _get_xml_element_name(element: XmlElement) -> str:
@@ -301,3 +437,154 @@ def parse_xml(
     parsed_dict = _xml_element_to_dict(parse_filter, parse_opts, tree.getroot())
     parsed_dict = {_get_xml_element_name(tree.getroot()): parsed_dict}
     return after_parse_xml(parsed_dict, tree, parse_opts)
+
+class Hl7v2DataValidator:
+    def validate_message_header(self, header):
+        # Implement validation logic here
+        pass
+
+class Hl7v2Data:
+    def __init__(self, message):
+        self.message = message
+        self.encoding_characters = None
+        self.meta = []
+        self.data = []
+
+class Hl7v2Segment:
+    def __init__(self, normalized_text, fields):
+        self.normalized_text = normalized_text
+        self.fields = fields
+
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, Hl7v2Segment):
+            return False
+        return self.normalized_text == value.normalized_text and self.fields == value.fields
+
+
+class Hl7v2Field:
+    def __init__(self, value, components):
+        self.value = value
+        self.components = components
+        self.repeats = []
+
+class Hl7v2Component:
+    def __init__(self, value, subcomponents):
+        self.value = value
+        self.subcomponents = subcomponents
+
+
+class Hl7v2EncodingCharacters:
+    def __init__(self, field_separator, component_separator, repetition_separator, escape_character, subcomponent_separator):
+        self.field_separator = field_separator
+        self.component_separator = component_separator
+        self.repetition_separator = repetition_separator
+        self.escape_character = escape_character
+        self.subcomponent_separator = subcomponent_separator
+
+class Hl7v2EscapeSequenceProcessor:
+    @staticmethod
+    def unescape(value, encoding_characters):
+        # Implement unescape logic here
+        return value
+
+class SpecialCharProcessor:
+    @staticmethod
+    def escape(value):
+        # Implement escape logic here
+        return value
+
+class DataParseException(Exception):
+    def __init__(self, error_code, message, inner_exception=None):
+        super().__init__(message)
+        self.error_code = error_code
+        self.inner_exception = inner_exception
+
+class Hl7v2DataParser:
+    validator = Hl7v2DataValidator()
+
+    def parse(self, message):
+        if not message or message.isspace():
+            raise DataParseException("NullOrWhiteSpaceInput", "Input message is null or whitespace")
+
+        try:
+            result = Hl7v2Data(message)
+            segments = self.split_message_to_segments(message)
+            self.validator.validate_message_header(segments[0])
+            encoding_characters = self.parse_hl7v2_encoding_characters(segments[0])
+            result.encoding_characters = encoding_characters
+
+            for i, segment in enumerate(segments):
+                fields = self.parse_fields(segment, encoding_characters, is_header_segment=(i == 0))
+                normalized_text = self.normalize_text(segment, encoding_characters)
+                hl7_segment = Hl7v2Segment(normalized_text, fields)
+                result.meta.append(fields[0].value if fields[0] else "")
+                result.data.append(hl7_segment)
+
+            return result
+        except Exception as ex:
+            raise DataParseException("InputParsingError", f"Error parsing input: {str(ex)}", ex)
+
+    def parse_fields(self, data_string, encoding_characters, is_header_segment=False):
+        fields = []
+        field_values = data_string.split(encoding_characters.field_separator)
+        for f, field_value in enumerate(field_values):
+            if is_header_segment and f == 1:
+                field_separator_components = [None, Hl7v2Component(encoding_characters.field_separator, [None, encoding_characters.field_separator])]
+                field_separator_field = Hl7v2Field(encoding_characters.field_separator, field_separator_components)
+                fields.append(field_separator_field)
+
+                separator_field_components = [None, Hl7v2Component(field_value, [None, field_value])]
+                separator_field = Hl7v2Field(field_value, separator_field_components)
+                fields.append(separator_field)
+            else:
+                if field_value:
+                    field = Hl7v2Field(self.normalize_text(field_value, encoding_characters), [])
+                    repetitions = field_value.split(encoding_characters.repetition_separator)
+                    for repetition in repetitions:
+                        repetition_components = self.parse_components(repetition, encoding_characters)
+                        repetition_field = Hl7v2Field(self.normalize_text(repetition, encoding_characters), repetition_components)
+                        field.repeats.append(repetition_field)
+
+                    field.components = field.repeats[0].components
+                    fields.append(field)
+                else:
+                    fields.append(None)
+        return fields
+
+    def parse_components(self, data_string, encoding_characters):
+        components = [None]
+        component_values = data_string.split(encoding_characters.component_separator)
+        for component_value in component_values:
+            if component_value:
+                subcomponents = self.parse_subcomponents(component_value, encoding_characters)
+                component = Hl7v2Component(self.normalize_text(component_value, encoding_characters), subcomponents)
+                components.append(component)
+            else:
+                components.append(None)
+        return components
+
+    def parse_subcomponents(self, data_string, encoding_characters):
+        subcomponents = [None]
+        subcomponent_values = data_string.split(encoding_characters.subcomponent_separator)
+        for subcomponent_value in subcomponent_values:
+            subcomponents.append(self.normalize_text(subcomponent_value, encoding_characters))
+        return subcomponents
+
+    def parse_hl7v2_encoding_characters(self, header_segment):
+        return Hl7v2EncodingCharacters(
+            field_separator=header_segment[3],
+            component_separator=header_segment[4],
+            repetition_separator=header_segment[5],
+            escape_character=header_segment[6],
+            subcomponent_separator=header_segment[7]
+        )
+
+    def normalize_text(self, value, encoding_characters):
+        semantical_unescape = Hl7v2EscapeSequenceProcessor.unescape(value, encoding_characters)
+        grammar_escape = SpecialCharProcessor.escape(semantical_unescape)
+        return grammar_escape
+
+    def split_message_to_segments(self, message):
+        # Handle different line endings (CRLF, LF, CR)
+        return message.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    

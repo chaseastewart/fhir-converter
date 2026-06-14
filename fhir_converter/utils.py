@@ -1,11 +1,13 @@
 from io import BytesIO
+from os import path as os_path
 from os import PathLike
 from os import remove as os_remove
 from os import walk as os_walk
 from pathlib import Path
-from re import Pattern
+from re import Pattern, sub as re_sub
 from re import compile as re_compile
 from typing import IO, Any, Dict, Final, Generator, List, Optional, Tuple, Union
+import json
 
 from liquid import Undefined
 from lxml import etree
@@ -17,6 +19,15 @@ FileDataIn: TypeAlias = Union[DataIn, PathLike]
 line_endings_pattern: Final[Pattern] = re_compile(r"\r\n?|\n")
 sanitize_pattern: Final[Pattern] = re_compile(r"\s\s+|\r\n?|\n")
 
+def encode_io(obj, fp, supply_bytes=False):
+    """Helper function to encode JSON to a file-like object"""
+    json_str = json.dumps(obj, default=str, separators=(',', ':'))
+    if json_str == '""':
+        json_str = r"{}"
+    if supply_bytes:
+        if not isinstance(json_str, bytes):
+            json_str = json_str.encode('utf-8')
+    fp.write(json_str)
 
 def sanitize_str(text: Optional[str], repl: str = " ") -> str:
     """sanitize_str trims leading / trailing spaces replacing line endings and
@@ -124,6 +135,9 @@ def blank_str_to_empty(obj: str) -> str:
 def merge_dict(a: Dict[Any, Any], b: Dict[Any, Any]) -> Dict[Any, Any]:
     """merge_dict Merges the key/value pair mappings similarly to
     newtonsoft Merge.
+    
+    Performance optimized: Reduces dictionary lookups by using dict.get()
+    instead of checking membership then accessing.
 
     See https://www.newtonsoft.com/json/help/html/MergeJson.htm
 
@@ -138,20 +152,26 @@ def merge_dict(a: Dict[Any, Any], b: Dict[Any, Any]) -> Dict[Any, Any]:
         if bv is None:
             continue
 
-        if bk not in a:
+        # Use get() for single lookup instead of 'in' check + access
+        av = a.get(bk)
+        
+        if av is None:
+            # Key doesn't exist in a, add it
             a[bk] = bv
+        elif type(av) != type(bv):
+            # Type mismatch, replace
+            a[bk] = bv
+        elif isinstance(bv, dict):
+            # Recursively merge dictionaries
+            merge_dict(av, bv)
+        elif isinstance(bv, list):
+            # Merge lists (avoiding duplicates)
+            for v in bv:
+                if v not in av:
+                    av.append(v)
         else:
-            av = a[bk]
-            if type(av) != type(bv):
-                a[bk] = bv
-            elif isinstance(bv, dict):
-                merge_dict(av, bv)
-            elif isinstance(bv, list):
-                for v in bv:
-                    if v not in av:
-                        av.append(v)
-            else:
-                a[bk] = bv
+            # Replace scalar value
+            a[bk] = bv
     return a
 
 
@@ -392,3 +412,45 @@ def transform_xml_str(xslt: etree.XSLT, xml: str) -> str:
             )
         )
     )
+
+def escape_liquid_variable(value: Path) -> str:
+    """escape_liquid_variable Escapes with quotes the integer in variables name
+
+    Args:
+        value (Path): the file to read
+
+    Returns:
+        str: the escaped integer
+    """
+    with open(value, mode="r", encoding="utf-8") as file:
+        to_process = file.read()
+    # for each line in the file
+    # if the line contains a variable name with an integer ( e.g. a number prefixed with a . (dot) )
+    # escape the integer with quotes (e.g. .1 -> . "1")
+    return re_sub(r"\.(\d+)", r'."\1"', to_process)
+
+def process_liquid_folder_escape_variable(folder_in: Path, folder_out: Path) -> None:
+    """process_liquid_folder_escape_variable Processes the liquid files 
+    by walking all sub directory from the input folder and escaping the 
+    integer in the variable name and writes the output to the output folder
+    if the output folder does not exist it will be created, it will keep the
+    same directory structure as the input
+
+    Args:
+        folder_in (Path): the input folder
+        folder_out (Path): the output folder
+    """
+
+    for full_paths, dirs, filenames in walk_path(folder_in):
+        for filename in filenames:
+            in_file = full_paths.joinpath(filename)
+            out_file = Path(os_path.join(folder_out, os_path.relpath(in_file, folder_in)))
+            if not out_file.parent.is_dir():
+                out_file.parent.mkdir(parents=True)
+            with open(out_file, mode="w", encoding="utf-8") as out:
+                out.write(escape_liquid_variable(in_file))
+
+
+if __name__ == '__main__':
+    process_liquid_folder_escape_variable(Path("fhir_converter/templates/hl7v2_orgi"), Path("fhir_converter/templates/hl7v2"))
+    print("Done")

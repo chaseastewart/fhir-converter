@@ -1,20 +1,22 @@
 from base64 import b64encode
+from bisect import bisect_right
 from datetime import datetime, timezone
 from functools import partial, wraps
 from hashlib import sha1, sha256
 from re import Match, Pattern
 from re import compile as re_compile
 from re import findall as re_findall
-from typing import Any, Callable, Final, Iterable, List, Mapping, Sequence, Tuple
-from uuid import UUID
+from typing import Any, Callable, Dict, Final, Iterable, List, Mapping, Sequence, Tuple
+import uuid
+import json
 from zlib import compress as z_compress
 
 from dateutil import parser
 from frozendict import frozendict
 from isodate import isotzinfo, parse_datetime
-from liquid import Environment
+from liquid import Environment, Undefined
 from liquid.builtin.filters.misc import date as liquid_date
-from liquid.context import Context
+from liquid import RenderContext
 from liquid.exceptions import FilterArgumentError
 from liquid.filter import (
     flatten,
@@ -24,7 +26,6 @@ from liquid.filter import (
     with_context,
     with_environment,
 )
-from pyjson5 import dumps as json_dumps
 
 from fhir_converter.hl7 import (
     Hl7DtmPrecision,
@@ -41,8 +42,13 @@ from fhir_converter.utils import (
     transform_xml_str,
 )
 
+from fhir_converter.parsers import Hl7v2Data, Hl7v2Segment, Hl7v2Field, Hl7v2Component
+
 FilterT = Callable[..., Any]
 """Callable[..., Any]: A liquid filter function"""
+
+_HL7V2_SEGMENT_DICT_CACHE = "_fhir_converter_segment_dicts"
+_HL7V2_SEGMENT_INDEX_CACHE = "_fhir_converter_segment_index"
 
 date_format_map: Final[Mapping[str, str]] = frozendict(
     {
@@ -100,7 +106,7 @@ def mapping_filter(_filter: FilterT) -> FilterT:
     @wraps(_filter)
     def wrapper(val: Any, *args: Any, **kwargs: Any) -> Any:
         if not isinstance(val, Mapping):
-            raise FilterArgumentError(f"expected a mapping, found {type(val).__name__}")
+            raise FilterArgumentError(f"expected a mapping, found {type(val).__name__}", token=None)
         return _filter(val, *args, **kwargs)
 
     return wrapper
@@ -111,7 +117,10 @@ def to_json_string(obj: Any) -> str:
     """Serialize the given object to json"""
     if is_undefined_none_or_blank(obj):
         return ""
-    return json_dumps(obj)
+    json_str = json.dumps(obj, default=str, separators=(',', ':'))
+    if json_str == '""':
+        json_str = r"{}"
+    return json_str
 
 
 @liquid_filter
@@ -225,13 +234,52 @@ def generate_uuid(data: str) -> str:
     """Generate a UUID using the sha256 hash of the given data string"""
     if is_undefined_none_or_blank(data):
         return ""
-    return str(UUID(bytes=sha256(data.encode()).digest()[:16]))
+    data = data.strip().replace("\r", "").replace("\n", "")
+    return str(uuid.uuid5(uuid.NAMESPACE_DNS, data))
 
+@string_filter
+def generate_id_input(data: str, resource_name: str, based_id_required: bool, base_id: str = None) -> str:
+    """Generates an input string for generate_uuid with 1) the resource type, 2) whether a base ID is required, 3) the base ID (optional)"""
+    if isinstance(resource_name, Undefined):
+        resource_name = ""
+    if isinstance(based_id_required, Undefined):
+        based_id_required = False
+    if isinstance(base_id, Undefined):
+        base_id = ""
+
+    if based_id_required:
+        return resource_name + data + base_id
+    return resource_name + data
+
+@string_filter
+def sign(data:str) -> str:
+    """Sign the given data string"""
+    if is_undefined_none_or_blank(data):
+        return ""
+    # cast string as integer or float, if negative return -1, if positive return 1
+    return str(int(float(data)/abs(float(data))) if float(data) != 0 else 0)
+
+@string_filter
+def divide(data:str, divisor:str) -> str:
+    """Divide the given data string by the divisor string"""
+    if is_undefined_none_or_blank(data) or is_undefined_none_or_blank(divisor):
+        return ""
+    # if divisor is 0, return 0
+    if float(divisor) == 0:
+        return "0"
+    return str(float(data)/float(divisor))
+
+@string_filter
+def truncate_number(data: str) -> str:
+    """Truncate the given data string to the specified precision"""
+    if is_undefined_none_or_blank(data):
+        return ""
+    return f"{float(data):.{0}f}"
 
 @with_context
 @string_filter
 def get_property(
-    code: str, mapping_key: Any, property_name: Any = None, *, context: Context
+    code: str, mapping_key: Any, property_name: Any = None, *, context: RenderContext
 ) -> str:
     """get_property Get the codified property mapping from the ``code_mapping`` global in
     the supplied context. ``mapping_key`` indicates the type of mapping.  Mappings may be
@@ -313,7 +361,7 @@ def get_ccda_section_by_template_id(
 @with_context
 @sequence_filter
 def batch_render(
-    batch: Sequence[Any], template_name: Any, arg_name: Any, *, context: Context
+    batch: Sequence[Any], template_name: Any, arg_name: Any, *, context: RenderContext
 ) -> str:
     """batch_render Render the given batch data with the supplied template passing
     the data in the batch as the specified arg / parameter name to the template
@@ -333,7 +381,7 @@ def batch_render(
     """
     if is_undefined_none_or_blank(batch):
         return ""
-    template = context.get_template_with_context(str_arg(template_name))
+    template = context.get_template(str_arg(template_name))
     with context.get_buffer() as buffer:
         for data in batch:
             with context.extend(namespace={str_arg(arg_name): data}, template=template):
@@ -346,7 +394,7 @@ def batch_render(
 
 @with_context
 @string_filter
-def transform_narrative(text: str, *, context: Context) -> Mapping:
+def transform_narrative(text: str, *, context: RenderContext) -> Mapping:
     """transform_narrative transform the given narrative text
 
     Args:
@@ -372,6 +420,211 @@ def transform_narrative(text: str, *, context: Context) -> Mapping:
         },
     }
 
+@liquid_filter
+def get_first_segments(hl7v2_data: Hl7v2Data, segment_id_content : str) -> dict:
+    result = {}
+    segment_ids = set(segment_id_content.split("|"))
+    segment_index = _get_hl7v2_segment_index(hl7v2_data)
+    segment_dicts = segment_index["segment_dicts"]
+    for i in range(len(hl7v2_data.meta)):
+        if hl7v2_data.meta[i] in segment_ids and hl7v2_data.meta[i] not in result:
+            result[hl7v2_data.meta[i]] = segment_dicts[i]
+    return result
+
+@liquid_filter
+def get_segment_lists(hl7v2_data, segment_id_content):
+    segment_ids = segment_id_content.split("|")
+    return _get_segment_lists_internal(hl7v2_data, segment_ids)
+
+@liquid_filter
+def get_related_segment_list(hl7v2_data, parent_segment, child_segment_id):
+    segment_index = _get_hl7v2_segment_index(hl7v2_data)
+    segment_dicts = segment_index["segment_dicts"]
+    meta_lower = segment_index["meta_lower"]
+    child_segment_id_lower = child_segment_id.lower()
+    parent_index = _get_matching_segment_index(segment_index, parent_segment)
+    cache_key = (parent_index, child_segment_id_lower)
+    related_cache = segment_index["related_cache"]
+
+    if cache_key not in related_cache:
+        child_index = -1
+
+        if parent_index > -1:
+            for i in range(parent_index + 1, len(meta_lower)):
+                if segment_dicts[i] == parent_segment:
+                    continue
+                if meta_lower[i] == child_segment_id_lower:
+                    child_index = i
+                    break
+
+        segments = []
+        if child_index > -1:
+            while child_index < len(meta_lower) and meta_lower[child_index] == child_segment_id_lower:
+                segments.append(segment_dicts[child_index])
+                child_index += 1
+        related_cache[cache_key] = segments
+
+    segments = related_cache[cache_key]
+    return {child_segment_id: list(segments)} if segments else {}
+
+@liquid_filter
+def get_parent_segment(hl7v2_data, child_segment_id, child_index, parent_segment_id):
+    segment_index = _get_hl7v2_segment_index(hl7v2_data)
+    segment_dicts = segment_index["segment_dicts"]
+    child_segment_id_lower = child_segment_id.lower()
+    parent_segment_id_lower = parent_segment_id.lower()
+    cache_key = (child_segment_id_lower, child_index, parent_segment_id_lower)
+    parent_cache = segment_index["parent_cache"]
+
+    if cache_key not in parent_cache:
+        parent_index = -1
+        child_positions = segment_index["positions_by_lower"].get(child_segment_id_lower, [])
+        if isinstance(child_index, int) and 0 <= child_index < len(child_positions):
+            target_child_index = child_positions[child_index]
+            parent_positions = segment_index["positions_by_lower"].get(parent_segment_id_lower, [])
+            parent_position = bisect_right(parent_positions, target_child_index) - 1
+            if parent_position > -1:
+                parent_index = parent_positions[parent_position]
+        parent_cache[cache_key] = parent_index
+
+    parent_index = parent_cache[cache_key]
+    return {parent_segment_id: segment_dicts[parent_index]} if parent_index > -1 else {}
+
+@liquid_filter
+def has_segments(hl7v2_data, segment_id_content):
+    segment_ids = set(segment_id_content.split("|"))
+    return segment_ids.issubset(_get_hl7v2_segment_index(hl7v2_data)["meta_set"])
+
+@liquid_filter
+def split_data_by_segments(hl7v2_data: Hl7v2Data, segment_id_separators):
+    results = []
+    segment_ids = set(segment_id_separators.split("|"))
+
+    if segment_id_separators == "" or not set(hl7v2_data.meta).intersection(segment_ids):
+        results.append(hl7v2_data)
+        return results
+
+    for i in range(len(hl7v2_data.meta)):
+        if hl7v2_data.meta[i] in segment_ids:
+            result= Hl7v2Data(hl7v2_data.message)
+            result.meta.append(hl7v2_data.meta[i])
+            result.data.append(hl7v2_data.data[i])
+            results.append(result)
+
+    return results
+
+
+def _get_segment_lists_internal(hl7v2_data, segment_ids):
+    result = {}
+    segment_ids = _segment_id_set(segment_ids)
+    segment_index = _get_hl7v2_segment_index(hl7v2_data)
+    segment_dicts = segment_index["segment_dicts"]
+    for segment_id in segment_ids:
+        for i in segment_index["positions_by_id"].get(segment_id, []):
+            if segment_id in result:
+                result[segment_id].append(segment_dicts[i])
+            else:
+                result[segment_id] = [segment_dicts[i]]
+    return result
+
+def _segment_id_set(segment_ids) -> set:
+    if isinstance(segment_ids, str):
+        return set(segment_ids.split("|"))
+    return set(segment_ids)
+
+def _get_hl7v2_segment_dicts(hl7v2_data: Hl7v2Data) -> List[dict]:
+    return _get_hl7v2_segment_index(hl7v2_data)["segment_dicts"]
+
+def _get_hl7v2_segment_index(hl7v2_data: Hl7v2Data) -> Dict[str, Any]:
+    segment_index = getattr(hl7v2_data, _HL7V2_SEGMENT_INDEX_CACHE, None)
+    if (
+        segment_index is None
+        or segment_index["data_len"] != len(hl7v2_data.data)
+        or segment_index["meta_len"] != len(hl7v2_data.meta)
+    ):
+        segment_dicts = [_segment_to_dict(segment) for segment in hl7v2_data.data]
+        meta_lower = [segment_id.lower() for segment_id in hl7v2_data.meta]
+        positions_by_id: Dict[str, List[int]] = {}
+        positions_by_lower: Dict[str, List[int]] = {}
+        first_segment_index_by_value: Dict[Any, int] = {}
+        first_segment_index_by_object_id: Dict[int, int] = {}
+
+        for i, segment_id in enumerate(hl7v2_data.meta):
+            segment_key = _hashable_json_value(segment_dicts[i])
+            positions_by_id.setdefault(segment_id, []).append(i)
+            positions_by_lower.setdefault(meta_lower[i], []).append(i)
+            first_segment_index_by_value.setdefault(segment_key, i)
+            first_segment_index_by_object_id[id(segment_dicts[i])] = (
+                first_segment_index_by_value[segment_key]
+            )
+
+        segment_index = {
+            "data_len": len(hl7v2_data.data),
+            "meta_len": len(hl7v2_data.meta),
+            "segment_dicts": segment_dicts,
+            "meta_lower": meta_lower,
+            "meta_set": set(hl7v2_data.meta),
+            "positions_by_id": positions_by_id,
+            "positions_by_lower": positions_by_lower,
+            "first_segment_index_by_value": first_segment_index_by_value,
+            "first_segment_index_by_object_id": first_segment_index_by_object_id,
+            "related_cache": {},
+            "parent_cache": {},
+        }
+        setattr(hl7v2_data, _HL7V2_SEGMENT_INDEX_CACHE, segment_index)
+        setattr(hl7v2_data, _HL7V2_SEGMENT_DICT_CACHE, segment_dicts)
+    return segment_index
+
+def _get_matching_segment_index(segment_index: Dict[str, Any], segment: Any) -> int:
+    object_index = segment_index["first_segment_index_by_object_id"].get(id(segment))
+    if object_index is not None:
+        return object_index
+    return segment_index["first_segment_index_by_value"].get(
+        _hashable_json_value(segment),
+        -1,
+    )
+
+def _hashable_json_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return tuple(
+            sorted(
+                (key, _hashable_json_value(item))
+                for key, item in value.items()
+            )
+        )
+    if isinstance(value, list):
+        return tuple(_hashable_json_value(item) for item in value)
+    return value
+
+def _segment_to_dict(hl7v2_segment : Hl7v2Segment) -> dict:
+    result = {}
+    result['Value'] = hl7v2_segment.normalized_text
+    for i, field in enumerate(hl7v2_segment.fields):
+        result[str(i)] = _field_to_dict(field)
+    return result if result != {} else None
+
+def _field_to_dict(hl7v2_field : Hl7v2Field) -> dict:
+    result = {}
+    if hl7v2_field:
+        result['Value'] = hl7v2_field.value
+        if hl7v2_field.repeats is not None and len(hl7v2_field.repeats) > 0:
+            result['Repeats'] = []
+            for i, repeat in enumerate(hl7v2_field.repeats):
+                result['Repeats'].append(_field_to_dict(repeat))
+        for i, component in enumerate(hl7v2_field.components):
+            result[str(i)] = _component_to_dict(component)
+    return result if result != {} else None
+
+def _component_to_dict(hl7v2_component : Hl7v2Component) -> dict:
+    result = {}
+    if hl7v2_component:
+        result['Value'] = hl7v2_component.value
+        if (hl7v2_component.subcomponents is not None
+            and isinstance(hl7v2_component.subcomponents, list)):
+            for i, subcomponent in enumerate(hl7v2_component.subcomponents):
+                if subcomponent != hl7v2_component.value:
+                    result[str(i)] = subcomponent
+    return result if result != {} else None
 
 all_filters: Sequence[Tuple[str, FilterT]] = [
     ("to_json_string", to_json_string),
@@ -389,6 +642,16 @@ all_filters: Sequence[Tuple[str, FilterT]] = [
     ("get_ccda_section_by_template_id", get_ccda_section_by_template_id),
     ("batch_render", batch_render),
     ("transform_narrative", transform_narrative),
+    ("get_first_segments", get_first_segments),
+    ("get_segment_lists", get_segment_lists),
+    ("generate_id_input", generate_id_input),
+    ("has_segments", has_segments),
+    ("get_related_segment_list", get_related_segment_list),
+    ("get_parent_segment", get_parent_segment),
+    ("sign", sign),
+    ("divide", divide),
+    ("truncate_number", truncate_number),
+    ("split_data_by_segments", split_data_by_segments)
 ]
 """Sequence[tuple[str, FilterT]]: All of the filters provided by the module"""
 

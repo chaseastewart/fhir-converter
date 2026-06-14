@@ -20,18 +20,19 @@ from typing import (
 )
 
 from frozendict import frozendict
-from liquid import Environment
-from liquid.loaders import BaseLoader, PackageLoader
+from liquid import Environment, PackageLoader
+from liquid.loader import BaseLoader
 from lxml.etree import QName
-from pyjson5 import encode_io
-from pyjson5 import loads as json_loads
+from json5 import loads as json_loads
 
+from fhir_converter.utils import encode_io
 from fhir_converter.exceptions import RenderingError, fail
 from fhir_converter.filters import all_filters, register_filters
-from fhir_converter.hl7 import parse_fhir
+from fhir_converter.hl7 import parse_fhir, post_process_fhir
 from fhir_converter.loaders import make_template_system_loader, read_text
-from fhir_converter.parsers import ParseXmlOpts, parse_json, parse_xml, parse_xml_filter
+from fhir_converter.parsers import ParseXmlOpts, parse_json, parse_xml, parse_xml_filter, Hl7v2DataParser
 from fhir_converter.tags import all_tags, register_tags
+from fhir_converter.liquid_extensions import enable_fhir_syntax
 from fhir_converter.utils import (
     del_empty_dirs_quietly,
     del_path_quietly,
@@ -42,7 +43,17 @@ from fhir_converter.utils import (
     mkdir,
     sanitize_str,
     walk_path,
+    read_text as reader,
 )
+
+# Expressions personnalisées temporairement désactivées pour la migration
+# from fhir_converter.expressions import (
+#     parse_loop_expression,
+#     parse_boolean_expression,
+#     parse_filtered_expression
+# )
+
+from liquid.mode import Mode
 
 DataInput = Union[IO, AnyStr]
 """ Union[str, IO]: The rendering data input types"""
@@ -65,6 +76,11 @@ stu3_default_loader: Final[PackageLoader] = PackageLoader(
     package="fhir_converter.templates", package_path="stu3"
 )
 """PackageLoader: The default loader for the stu3 templates"""
+
+hl7v2_default_loader: Final[PackageLoader] = PackageLoader(
+    package="fhir_converter.templates", package_path="hl7v2"
+)
+"""PackageLoader: The default loader for the hl7v2 templates"""
 
 
 class FhirRendererDefaults(TypedDict):
@@ -308,6 +324,52 @@ class Stu3FhirRenderer(BaseFhirRenderer):
         return parse_fhir(
             json_input=template.render({"msg": self._parse_stu3(data_in, encoding)}),
         )
+    
+class Hl7v2Renderer(BaseFhirRenderer):
+    """HL7v2 to FHIR renderer"""
+
+    __slots__ = ("env", "template_globals")
+
+    def __init__(
+            self, env: Optional[Environment] = None,
+            template_globals: Optional[Mapping[str, Any]] = None,
+    ) -> None:
+        super().__init__(env)
+        # TODO: Remove this mode setting when the liquid library is updated
+        # Note: Mode.WARN n'existe peut-être plus dans liquid 2.0
+        # self.env.mode = Mode.WARN
+        # Expressions personnalisées temporairement désactivées
+        # self.env.parse_loop_expression_value = parse_loop_expression
+        # self.env.parse_boolean_expression_value = parse_boolean_expression
+        # self.env.parse_filtered_expression_value = parse_filtered_expression
+        self.template_globals = self._make_globals(template_globals)
+
+
+    @staticmethod
+    def defaults() -> FhirRendererDefaults:
+        return {"loader": hl7v2_default_loader}
+
+    def _make_globals(self, globals: Optional[Mapping[str, Any]]) -> Mapping[str, Any]:
+        template_globals = dict(globals or {})
+        if "code_mapping" not in template_globals:
+            value_set = json_loads(read_text(self.env, filename="CodeSystem/CodeSystem.json"))
+            template_globals["code_mapping"] = frozendict(value_set.get("Mapping", {}))
+
+        return frozendict(template_globals)
+
+    @staticmethod
+    def _parse_hl7v2(data_in: DataInput, encoding: str = "utf-8"):
+
+        return Hl7v2DataParser().parse(reader(data_in, encoding))
+
+    def _render(
+        self, template_name: str, data_in: DataInput, encoding: str = "utf-8"
+    ) -> MutableMapping:
+        template = self.env.get_template(template_name, globals=self.template_globals)
+        return post_process_fhir(
+            template.render({"hl7v2Data": self._parse_hl7v2(data_in, encoding)})
+        )
+        
 
 
 def make_environment(
@@ -333,6 +395,9 @@ def make_environment(
     Returns:
         Environment: The rendering environment
     """
+    # Activer le support de la syntaxe FHIR ."nombre" pour la compatibilité
+    enable_fhir_syntax()
+    
     env = Environment(
         loader=make_template_system_loader(
             loader,
@@ -340,7 +405,7 @@ def make_environment(
             cache_size=cache_size,
             additional_loaders=additional_loaders,
         ),
-        cache_size=cache_size,
+        # cache_size removed in liquid 2.0 - now handled by loaders
         **kwargs,
     )
     register_filters(env, all_filters, replace=True)

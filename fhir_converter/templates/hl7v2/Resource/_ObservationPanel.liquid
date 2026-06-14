@@ -1,0 +1,117 @@
+{% comment -%}
+This template creates a single Observation resource with components for panel observations
+(e.g., Blood Pressure Panel with systolic, diastolic, and mean pressure components)
+
+Parameters:
+- OBR: The OBR segment containing the panel information
+- OBXList: List of OBX segments that are part of this panel
+- Observation_Subject_ID: Reference to the patient
+- Observation_ServiceRequest_ID: Reference to the service request  
+- ID: The observation ID
+{% endcomment -%}
+
+{% evaluate Device_ID_OBX_18 using 'ID/Device' EI: OBXList[0]."18".Repeats[0] -%}
+{% evaluate Organization_ID_OBX_23 using 'ID/Organization' XON: OBXList[0]."23" -%}
+{% evaluate PractitionerRole_ID_OBX_25 using 'ID/PractitionerRole' XCN: OBXList[0]."25" -%}
+
+{
+    "fullUrl":"urn:uuid:{{ ID }}",
+    "resource":{
+        "resourceType": "Observation",
+        "id":"{{ ID }}",
+        
+        "status": "{{ OBXList[0]."11"."1".Value | get_property: 'CodeSystem/ObservationStatus', 'code' }}",
+        
+        "code": {
+            {% include 'DataType/CWECodeableConcept' CWE: OBR."4" -%}
+        },
+
+        "component": [
+            {% for obxSegment in OBXList -%}
+            {
+                "code": {
+                    {% include 'DataType/CWECodeableConcept' CWE: obxSegment."3" -%}
+                },
+                {% if obxSegment."2".Value == 'NM' %}
+                    "valueQuantity": {
+                        {% include 'DataType/NMQuantity' NM_val: obxSegment."5", NM_unit: obxSegment."6" -%}
+                    },
+                {% elsif obxSegment."2".Value == 'ST' or obxSegment."2".Value == 'TX' or obxSegment."2".Value == 'FT' %}
+                    "valueString": "{{ obxSegment."5".Value }}",
+                {% elsif obxSegment."2".Value == 'CWE' or obxSegment."2".Value == 'CE' %}
+                    "valueCodeableConcept": {
+                        {% include 'DataType/CWECodeableConcept' CWE: obxSegment."5" -%}
+                    },
+                {% endif %}
+                {% if obxSegment."7" %}
+                    "referenceRange": [
+                        {
+                            "text": "{{ obxSegment."7".Value }}"
+                        }
+                    ],
+                {% endif %}
+                {% if obxSegment."8" %}
+                    "interpretation": [
+                        {
+                            {% include 'DataType/CWECodeableConcept' mapping: 'CodeSystem/ObservationInterpretation', CWE: obxSegment."8" -%}
+                        }
+                    ],
+                {% endif %}
+            }{% unless forloop.last %},{% endunless %}
+            {% endfor -%}
+        ],
+
+        {% if OBXList[0]."14" %}
+            "effectiveDateTime":"{{ OBXList[0]."14".Value | format_as_date_time }}",
+        {% endif %}
+
+        {% if OBXList[0]."15" %}
+            "method": {
+                "coding": [
+                    {
+                        "code": "{{ OBXList[0]."15".Value }}"
+                    }
+                ]
+            },
+        {% endif %}
+
+        {% if Device_ID_OBX_18 %}
+            "device": {
+                "reference":"Device/{{ Device_ID_OBX_18 }}"
+            },
+        {% endif %}
+
+        {% if PractitionerRole_ID_OBX_25 or Organization_ID_OBX_23 %}
+            "performer": [
+                {% if PractitionerRole_ID_OBX_25 %}
+                {
+                    "reference":"PractitionerRole/{{ PractitionerRole_ID_OBX_25 }}"
+                },
+                {% endif %}
+                {% if Organization_ID_OBX_23 %}
+                {
+                    "reference":"Organization/{{ Organization_ID_OBX_23 }}"
+                },
+                {% endif %}
+            ],
+        {% endif %}
+
+        {% if Observation_Subject_ID %}
+            "subject":{
+                "reference":"{{ Observation_Subject_ID }}"
+            },
+        {% endif %}
+
+        {% if Observation_ServiceRequest_ID %}
+            "basedOn": [
+                {
+                    "reference":"ServiceRequest/{{ Observation_ServiceRequest_ID }}"
+                }
+            ],
+        {% endif %}
+    },
+    "request":{
+        "method":"PUT",
+        "url":"Observation/{{ ID }}"
+    }
+},

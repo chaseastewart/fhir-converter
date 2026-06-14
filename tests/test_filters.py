@@ -6,15 +6,24 @@ from zlib import decompress
 from liquid import BoundTemplate, DictLoader, Environment
 from liquid.exceptions import (
     FilterArgumentError,
-    NoSuchFilterFunc,
+    UnknownFilterError,  # NoSuchFilterFunc -> UnknownFilterError in liquid 2.0
     OutputStreamLimitError,
-    TemplateNotFound,
+    TemplateNotFoundError,  # TemplateNotFound -> TemplateNotFoundError in liquid 2.0
 )
 from pytest import fixture, raises
 
 from fhir_converter.filters import all_filters, register_filters
 from fhir_converter.hl7 import Hl7DtmPrecision
 
+from fhir_converter.parsers import Hl7v2Data, Hl7v2Segment, Hl7v2Field, Hl7v2Component
+from fhir_converter.filters import (
+    _component_to_dict,
+    _field_to_dict,
+    _get_hl7v2_segment_dicts,
+    _get_segment_lists_internal,
+    _segment_to_dict,
+    get_related_segment_list,
+)
 
 class FilterTest:
     """Base Test that doesn't extend TestCase to avoid the generic
@@ -30,7 +39,7 @@ class FilterTest:
         self.bound_template = env.from_string(self.template)
 
     def test_unregistered(self) -> None:
-        with raises(NoSuchFilterFunc):
+        with raises(UnknownFilterError):
             env = Environment()
             env.filters.clear()
             env.from_string(self.template).render()
@@ -467,7 +476,7 @@ class GenerateUuidTest(TestCase, FilterTest):
 
     def test_uuid(self) -> None:
         result = self.bound_template.render(data="This is a test.")
-        self.assertEqual(result, "a8a2f6eb-e286-697c-527e-b35a58b55395")
+        self.assertEqual(result, "08b9a802-08d3-5a58-a0ff-ad195172929b")
 
 
 class GetPropertTest(TestCase, FilterTest):
@@ -764,7 +773,7 @@ class BatchRenderTest(TestCase, FilterTest):
         self.assertEqual(result, "one, \ntwo,  \n\nthree,   \n\n\n")
 
     def test_template_not_found(self) -> None:
-        with raises(TemplateNotFound):
+        with raises(TemplateNotFoundError):
             self.bound_template.render(batch=["one"], template="undefined")
 
     def test_output_limit_reached(self) -> None:
@@ -776,3 +785,354 @@ class BatchRenderTest(TestCase, FilterTest):
         Environment.output_stream_limit = 4
         result = self.bound_template.render(batch=["one"], template="__template__")
         self.assertEqual(result, "one,")
+
+class GenerateIdInputTest(TestCase, FilterTest):
+    template = """{{ datas | generate_id_input: resource_name, based_id_required, base_id }}"""
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_undefined(self) -> None:
+        result = self.bound_template.render()
+        self.assertEqual(result, "")
+
+    def test_empty(self) -> None:
+        result = self.bound_template.render(data="")
+        self.assertEqual(result, "")
+
+    def test_data(self) -> None:
+        result = self.bound_template.render(
+            datas="This is a test.",
+            resource_name = "Patient",
+            base_id = "123",
+            based_id_required=True)
+        self.assertEqual(result, "PatientThis is a test.123")
+
+class SignTest(TestCase, FilterTest):
+    template = """{{ data | sign }}"""
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_undefined(self) -> None:
+        result = self.bound_template.render()
+        self.assertEqual(result, "")
+
+    def test_empty(self) -> None:
+        result = self.bound_template.render(data="")
+        self.assertEqual(result, "")
+
+    def test_data_positif(self) -> None:
+        result = self.bound_template.render(data="1")
+        self.assertEqual(result, "1")
+
+    def test_data_negatif(self) -> None:
+        result = self.bound_template.render(data="-1")
+        self.assertEqual(result, "-1")
+
+    def test_data_float(self) -> None:
+        result = self.bound_template.render(data="1.5")
+        self.assertEqual(result, "1")
+
+    def test_data_zero(self) -> None:
+        result = self.bound_template.render(data="0")
+        self.assertEqual(result, "0")
+
+class DivideTest(TestCase, FilterTest):
+    template = """{{ data | divide: divisor }}"""
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_undefined(self) -> None:
+        result = self.bound_template.render()
+        self.assertEqual(result, "")
+
+    def test_empty(self) -> None:
+        result = self.bound_template.render(data="")
+        self.assertEqual(result, "")
+
+    def test_data_divisor(self) -> None:
+        result = self.bound_template.render(data="1", divisor="2")
+        self.assertEqual(result, "0.5")
+
+    def test_data_divisor_zero(self) -> None:
+        result = self.bound_template.render(data="1", divisor="0")
+        self.assertEqual(result, "0")
+
+    def test_data_divisor_negatif(self) -> None:
+        result = self.bound_template.render(data="1", divisor="-2")
+        self.assertEqual(result, "-0.5")
+
+    def test_data_float(self) -> None:
+        result = self.bound_template.render(data="1.5", divisor="2")
+        self.assertEqual(result, "0.75")
+
+    def test_data_zero(self) -> None:
+        result = self.bound_template.render(data="0", divisor="2")
+        self.assertEqual(result, "0.0")
+
+class TruncateNumberTest(TestCase, FilterTest):
+    template = """{{ data | truncate_number }}"""
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_undefined(self) -> None:
+        result = self.bound_template.render()
+        self.assertEqual(result, "")
+
+    def test_empty(self) -> None:
+        result = self.bound_template.render(data="")
+        self.assertEqual(result, "")
+
+    def test_data_precision(self) -> None:
+        result = self.bound_template.render(data="1.123456789")
+        self.assertEqual(result, "1")
+
+class GetFristSegmentsTest(TestCase, FilterTest):
+    template = """{{ data | get_first_segments: segment_list }}"""
+    hl7v2_data = Hl7v2Data('')
+    hl7v2_data.meta.append('MSH')
+    hl7v2_data.data.append(Hl7v2Segment('Field', []))
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_data(self) -> None:
+        result = self.bound_template.render(data=self.hl7v2_data, segment_list="MSH")
+        self.assertTrue(result.startswith(r"{'MSH': {'Value': 'Field'}}"))
+
+class GetSegmentListsTest(TestCase, FilterTest):
+    template = """{{ data | get_segment_lists: segment }}"""
+    hl7v2_data = Hl7v2Data('')
+    hl7v2_data.meta.append('MSH')
+    hl7v2_data.data.append(Hl7v2Segment('Field', []))
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_data(self) -> None:
+        result = self.bound_template.render(data=self.hl7v2_data, segment="MSH")
+        self.assertTrue(result.startswith(r"{'MSH': [{'Value': 'Field'}]}"))
+
+class GetRelatedSegmentListTest(TestCase, FilterTest):
+    template = """{{ data | get_related_segment_list: segments, related_segment_name }}"""
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_empty_data(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        result = self.bound_template.render(
+            data=hl7v2_data, 
+            segments={"Value": "MSH"}, 
+            related_segment_name="EVN"
+        )
+        self.assertEqual(result, "{}")
+
+    def test_no_matching_parent(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.extend(['MSH', 'EVN'])
+        hl7v2_data.data.extend([
+            Hl7v2Segment('MSH Field', []),
+            Hl7v2Segment('EVN Field', [])
+        ])
+        result = self.bound_template.render(
+            data=hl7v2_data,
+            segments={"Value": "PID"},  # Non-existent parent
+            related_segment_name="EVN"
+        )
+        self.assertEqual(result, "{}")
+
+    def test_no_matching_child(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.extend(['MSH', 'EVN'])
+        hl7v2_data.data.extend([
+            Hl7v2Segment('MSH Field', []),
+            Hl7v2Segment('EVN Field', [])
+        ])
+        result = self.bound_template.render(
+            data=hl7v2_data,
+            segments={"Value": "MSH Field"},
+            related_segment_name="PID"  # Non-existent child
+        )
+        self.assertEqual(result, "{}")
+
+    def test_single_child_segment(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.extend(['MSH', 'EVN'])
+        hl7v2_data.data.extend([
+            Hl7v2Segment('MSH Field', []),
+            Hl7v2Segment('EVN Field', [])
+        ])
+        result = self.bound_template.render(
+            data=hl7v2_data,
+            segments={"Value": "MSH Field"},
+            related_segment_name="EVN"
+        )
+        self.assertEqual(result, "{'EVN': [{'Value': 'EVN Field'}]}")
+
+    def test_multiple_child_segments(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.extend(['MSH', 'EVN', 'EVN'])
+        hl7v2_data.data.extend([
+            Hl7v2Segment('MSH Field', []),
+            Hl7v2Segment('EVN Field 1', []),
+            Hl7v2Segment('EVN Field 2', [])
+        ])
+        result = self.bound_template.render(
+            data=hl7v2_data,
+            segments={"Value": "MSH Field"},
+            related_segment_name="EVN"
+        )
+        self.assertEqual(
+            result, 
+            "{'EVN': [{'Value': 'EVN Field 1'}, {'Value': 'EVN Field 2'}]}"
+        )
+
+    def test_case_insensitive_matching(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.extend(['MSH', 'evn'])  # lowercase EVN
+        hl7v2_data.data.extend([
+            Hl7v2Segment('MSH Field', []),
+            Hl7v2Segment('EVN Field', [])
+        ])
+        result = self.bound_template.render(
+            data=hl7v2_data,
+            segments={"Value": "MSH Field"},
+            related_segment_name="EVN"  # uppercase EVN
+        )
+        self.assertEqual(result, "{'EVN': [{'Value': 'EVN Field'}]}")
+
+class GetParentSegmentTest(TestCase, FilterTest):
+    template = """{{ data | get_parent_segment: child_segment_id, child_index, parent_segment_id }}"""
+    hl7v2_data = Hl7v2Data('')
+    hl7v2_data.meta.append('MSH')
+    hl7v2_data.meta.append('EVN')
+    hl7v2_data.data.append(Hl7v2Segment('Field', []))
+    hl7v2_data.data.append(Hl7v2Segment('EVN', []))
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_data_not_found(self) -> None:
+        result = self.bound_template.render(data=self.hl7v2_data, child_segment_id="MSH", child_index=0, parent_segment_id="EVN")
+        self.assertTrue(result.startswith(r"{}"))
+
+    def test_data_found(self) -> None:
+        result = self.bound_template.render(data=self.hl7v2_data, child_segment_id="EVN", child_index=0, parent_segment_id="MSH")
+        self.assertTrue(result.startswith(r"{'MSH': {'Value': 'Field'}}"))
+
+class HasSegmentsTest(TestCase, FilterTest):
+    template = """{{ data | has_segments: segment_name }}"""
+    hl7v2_data = Hl7v2Data('')
+    hl7v2_data.meta.append('MSH')
+    hl7v2_data.meta.append('EVN')
+    hl7v2_data.data.append(Hl7v2Segment('Field', []))
+    hl7v2_data.data.append(Hl7v2Segment('EVN', []))
+
+    def setUp(self) -> None:
+        self.setup_template()
+
+    def test_data_not_found(self) -> None:
+        result = self.bound_template.render(data=self.hl7v2_data, segment_name="PID")
+        self.assertEqual(result, 'false')
+
+    def test_data_found(self) -> None:
+        result = self.bound_template.render(data=self.hl7v2_data, segment_name="EVN")
+        self.assertEqual(result, 'true')
+
+
+class Hl7v2DataToDictTest(TestCase):
+    def test_component_to_dict_without_sub(self) -> None:
+        hl7v2_component_0 = Hl7v2Component('Component0', None)
+        result = _component_to_dict(hl7v2_component_0)
+        self.assertEqual(result, {'Value': 'Component0'})
+
+    def test_component_to_dict_with_sub(self) -> None:
+        hl7v2_subcomponent_0 = 'SubComponent0'
+        hl7v2_subcomponent_1 = 'SubComponent1'
+        hl7v2_component_0 = Hl7v2Component('Component0', [hl7v2_subcomponent_0, hl7v2_subcomponent_1])
+        result = _component_to_dict(hl7v2_component_0)
+        self.assertEqual(result, {'Value': 'Component0', '0': 'SubComponent0', '1': 'SubComponent1'})
+        
+    def test_field_to_dict(self) -> None:
+        hl7v2_component_0 = Hl7v2Component('Component0', None)
+        hl7v2_field_0 = Hl7v2Field('Field0', [hl7v2_component_0])
+        result = _field_to_dict(hl7v2_field_0)
+        self.assertEqual(result, {'Value': 'Field0', '0': {'Value': 'Component0'}})
+
+    def test_segment_to_dict(self) -> None:
+        hl7v2_component_0 = Hl7v2Component('Component0', None)
+        hl7v2_field_0 = Hl7v2Field('Field0', [hl7v2_component_0])
+        hl7v2_segment_0 = Hl7v2Segment('Segment0', [hl7v2_field_0])
+        result = _segment_to_dict(hl7v2_segment_0)
+        self.assertEqual(result, {'Value': 'Segment0', '0': {'Value': 'Field0', '0': {'Value': 'Component0'}}})
+
+    def test_get_segment_lists_internal(self) -> None:
+        hl7v2_component_0 = Hl7v2Component('Component0', None)
+        hl7v2_field_0 = Hl7v2Field('Field0', [hl7v2_component_0])
+        hl7v2_segment_0 = Hl7v2Segment('Segment0', [hl7v2_field_0])
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.append('Segment0')
+        hl7v2_data.data.append(hl7v2_segment_0)
+        result = _get_segment_lists_internal(hl7v2_data, 'Segment0')
+        self.assertEqual(result, {'Segment0': [{'Value': 'Segment0', '0': {'Value': 'Field0', '0': {'Value': 'Component0'}}}]})
+
+    def test_segment_list_uses_cached_dicts(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.append('MSH')
+        hl7v2_data.data.append(Hl7v2Segment('MSH Field', []))
+
+        first = _get_segment_lists_internal(hl7v2_data, 'MSH')
+        second = _get_segment_lists_internal(hl7v2_data, 'MSH')
+
+        self.assertIs(first['MSH'][0], second['MSH'][0])
+        self.assertIs(first['MSH'][0], _get_hl7v2_segment_dicts(hl7v2_data)[0])
+
+    def test_related_segment_preserves_parent_equality_matching(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.extend(['MSH', 'EVN'])
+        hl7v2_data.data.extend([
+            Hl7v2Segment('MSH Field', []),
+            Hl7v2Segment('EVN Field', [])
+        ])
+
+        result = get_related_segment_list(
+            hl7v2_data,
+            {"Value": "MSH Field"},
+            "EVN",
+        )
+
+        self.assertEqual(result, {'EVN': [{'Value': 'EVN Field'}]})
+        self.assertIs(result['EVN'][0], _get_hl7v2_segment_dicts(hl7v2_data)[1])
+
+    def test_related_segment_uses_first_equal_parent(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.extend(['PID', 'EVN', 'PID', 'EVN'])
+        hl7v2_data.data.extend([
+            Hl7v2Segment('PID Field', []),
+            Hl7v2Segment('First EVN Field', []),
+            Hl7v2Segment('PID Field', []),
+            Hl7v2Segment('Second EVN Field', [])
+        ])
+        second_pid = _get_hl7v2_segment_dicts(hl7v2_data)[2]
+
+        result = get_related_segment_list(hl7v2_data, second_pid, "EVN")
+
+        self.assertEqual(result, {'EVN': [{'Value': 'First EVN Field'}]})
+
+    def test_related_segment_cache_returns_new_result_list(self) -> None:
+        hl7v2_data = Hl7v2Data('')
+        hl7v2_data.meta.extend(['MSH', 'EVN'])
+        hl7v2_data.data.extend([
+            Hl7v2Segment('MSH Field', []),
+            Hl7v2Segment('EVN Field', [])
+        ])
+
+        first = get_related_segment_list(hl7v2_data, {"Value": "MSH Field"}, "EVN")
+        first['EVN'].append({"Value": "mutated"})
+        second = get_related_segment_list(hl7v2_data, {"Value": "MSH Field"}, "EVN")
+
+        self.assertEqual(second, {'EVN': [{'Value': 'EVN Field'}]})

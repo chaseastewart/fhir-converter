@@ -223,6 +223,165 @@ class ParseHl7DtmTest(TestCase):
         self.assertEqual(result.precision, Hl7DtmPrecision.MIN)
         self.assertEqual("2024-02-10T06:35:00+04:00", result.dt.isoformat())
 
+    # Edge case tests for invalid dates
+    def test_invalid_day_too_high(self) -> None:
+        """Test that day 55 is invalid"""
+        with raises(ValueError):
+            parse_hl7_dtm("20240555")
+
+    def test_invalid_day_32(self) -> None:
+        """Test that day 32 is invalid for any month"""
+        with raises(ValueError):
+            parse_hl7_dtm("20240132")
+
+    def test_invalid_month_00(self) -> None:
+        """Test that month 00 is invalid"""
+        with raises(ValueError):
+            parse_hl7_dtm("20240010")
+
+    def test_invalid_month_13(self) -> None:
+        """Test that month 13 is invalid"""
+        with raises(ValueError):
+            parse_hl7_dtm("20241310")
+
+    def test_february_30_non_leap_year(self) -> None:
+        """Test that Feb 30 is invalid in non-leap year"""
+        with raises(ValueError):
+            parse_hl7_dtm("20230230")
+
+    def test_february_29_non_leap_year(self) -> None:
+        """Test that Feb 29 is invalid in non-leap year"""
+        with raises(ValueError):
+            parse_hl7_dtm("20230229")
+
+    def test_february_29_leap_year(self) -> None:
+        """Test that Feb 29 is valid in leap year"""
+        result = parse_hl7_dtm("20240229")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2024-02-29T00:00:00", result.dt.isoformat())
+
+    def test_february_28_non_leap_year(self) -> None:
+        """Test that Feb 28 is valid in non-leap year"""
+        result = parse_hl7_dtm("20230228")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2023-02-28T00:00:00", result.dt.isoformat())
+
+    def test_april_31(self) -> None:
+        """Test that April 31 is invalid (April has 30 days)"""
+        with raises(ValueError):
+            parse_hl7_dtm("20240431")
+
+    def test_june_31(self) -> None:
+        """Test that June 31 is invalid (June has 30 days)"""
+        with raises(ValueError):
+            parse_hl7_dtm("20240631")
+
+    def test_september_31(self) -> None:
+        """Test that September 31 is invalid (September has 30 days)"""
+        with raises(ValueError):
+            parse_hl7_dtm("20240931")
+
+    def test_november_31(self) -> None:
+        """Test that November 31 is invalid (November has 30 days)"""
+        with raises(ValueError):
+            parse_hl7_dtm("20241131")
+
+    def test_january_31(self) -> None:
+        """Test that January 31 is valid (January has 31 days)"""
+        result = parse_hl7_dtm("20240131")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2024-01-31T00:00:00", result.dt.isoformat())
+
+    def test_march_31(self) -> None:
+        """Test that March 31 is valid (March has 31 days)"""
+        result = parse_hl7_dtm("20240331")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2024-03-31T00:00:00", result.dt.isoformat())
+
+    def test_may_31(self) -> None:
+        """Test that May 31 is valid (May has 31 days)"""
+        result = parse_hl7_dtm("20240531")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2024-05-31T00:00:00", result.dt.isoformat())
+
+    def test_july_31(self) -> None:
+        """Test that July 31 is valid (July has 31 days)"""
+        result = parse_hl7_dtm("20240731")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2024-07-31T00:00:00", result.dt.isoformat())
+
+    def test_august_31(self) -> None:
+        """Test that August 31 is valid (August has 31 days)"""
+        result = parse_hl7_dtm("20240831")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2024-08-31T00:00:00", result.dt.isoformat())
+
+    def test_october_31(self) -> None:
+        """Test that October 31 is valid (October has 31 days)"""
+        result = parse_hl7_dtm("20241031")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2024-10-31T00:00:00", result.dt.isoformat())
+
+    def test_december_31(self) -> None:
+        """Test that December 31 is valid (December has 31 days)"""
+        result = parse_hl7_dtm("20241231")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2024-12-31T00:00:00", result.dt.isoformat())
+
+    def test_invalid_hour_24(self) -> None:
+        """Test that hour 24 is invalid"""
+        with raises(ValueError):
+            parse_hl7_dtm("2024010124")
+
+    def test_invalid_hour_25(self) -> None:
+        """Test that hour 25 is invalid"""
+        with raises(ValueError):
+            parse_hl7_dtm("2024010125")
+
+    def test_invalid_minute_60(self) -> None:
+        """Test that minute 60 is invalid"""
+        with raises(ValueError):
+            parse_hl7_dtm("202401010060")
+
+    def test_invalid_second_60(self) -> None:
+        """Test that second 60 is invalid"""
+        with raises(ValueError):
+            parse_hl7_dtm("20240101000060")
+
+    def test_valid_hour_23(self) -> None:
+        """Test that hour 23 is valid"""
+        result = parse_hl7_dtm("2024010123")
+        self.assertEqual(result.precision, Hl7DtmPrecision.HOUR)
+        self.assertEqual("2024-01-01T23:00:00", result.dt.isoformat())
+
+    def test_valid_minute_59(self) -> None:
+        """Test that minute 59 is valid"""
+        result = parse_hl7_dtm("202401010059")
+        self.assertEqual(result.precision, Hl7DtmPrecision.MIN)
+        self.assertEqual("2024-01-01T00:59:00", result.dt.isoformat())
+
+    def test_valid_second_59(self) -> None:
+        """Test that second 59 is valid"""
+        result = parse_hl7_dtm("20240101000059")
+        self.assertEqual(result.precision, Hl7DtmPrecision.SEC)
+        self.assertEqual("2024-01-01T00:00:59", result.dt.isoformat())
+
+    def test_century_year_2000_leap(self) -> None:
+        """Test that year 2000 is a leap year (divisible by 400)"""
+        result = parse_hl7_dtm("20000229")
+        self.assertEqual(result.precision, Hl7DtmPrecision.DAY)
+        self.assertEqual("2000-02-29T00:00:00", result.dt.isoformat())
+
+    def test_century_year_1900_not_leap(self) -> None:
+        """Test that year 1900 is not a leap year (divisible by 100 but not 400)"""
+        with raises(ValueError):
+            parse_hl7_dtm("19000229")
+
+    def test_invalid_date_with_full_timestamp(self) -> None:
+        """Test invalid date with complete timestamp (like the Nadine.hl7 example)"""
+        with raises(ValueError):
+            parse_hl7_dtm("202405551151000")
+
 
 class Hl7ToFhirDtmTest(TestCase):
     def test_year(self) -> None:
@@ -248,13 +407,13 @@ class Hl7ToFhirDtmTest(TestCase):
         )
 
     def test_local_hour(self) -> None:
-        self.assertEqual("2024-02-10", hl7_to_fhir_dtm("2024021006"))
+        self.assertEqual("2024-02-10T06:00:00Z", hl7_to_fhir_dtm("2024021006"))
 
     def test_local_min(self) -> None:
-        self.assertEqual("2024-02-10", hl7_to_fhir_dtm("202402100635"))
+        self.assertEqual("2024-02-10T06:35:00Z", hl7_to_fhir_dtm("202402100635"))
 
     def test_local_sec(self) -> None:
-        self.assertEqual("2024-02-10", hl7_to_fhir_dtm("20240210063557"))
+        self.assertEqual("2024-02-10T06:35:57Z", hl7_to_fhir_dtm("20240210063557"))
 
     def test_tz_utc(self) -> None:
         self.assertEqual(
@@ -293,6 +452,67 @@ class ParseFhirTest(TestCase):
         self.assertEqual(
             {"resourceType": "Bundle", "type": "batch"},
             parse_fhir('{"resourceType": "Bundle", "type": "batch", "entry": []}'),
+        )
+
+    def test_trailing_commas_and_duplicate_keys(self) -> None:
+        self.assertEqual(
+            {
+                "resourceType": "Bundle",
+                "type": "batch",
+                "entry": [
+                    {
+                        "resource": {
+                            "resourceType": "Patient",
+                            "id": "patient-1",
+                            "name": {"family": "Doe", "given": ["John"]},
+                        }
+                    }
+                ],
+            },
+            parse_fhir(
+                """
+                {
+                    "resourceType": "Bundle",
+                    "type": "batch",
+                    "entry": [
+                        {
+                            "resource": {
+                                "resourceType": "Patient",
+                                "id": "patient-1",
+                                "name": {"family": "Doe"},
+                                "name": {"given": ["John"]},
+                            },
+                        },
+                    ],
+                }
+                """
+            ),
+        )
+
+    def test_empty_fields_are_skipped_by_fast_parser(self) -> None:
+        self.assertEqual(
+            {
+                "resourceType": "Patient",
+                "id": "patient-1",
+                "active": False,
+            },
+            parse_fhir(
+                """
+                {
+                    "resourceType": "Patient",
+                    "id": "patient-1",
+                    "name": [],
+                    "gender": "",
+                    "active": false,
+                }
+                """
+            ),
+        )
+
+    def test_json5_fallback(self) -> None:
+        self.assertEqual(
+            {"resourceType": "Bundle", "type": "batch"},
+            parse_fhir("{'resourceType':'Bundle','type':'batch','entry':[],}"),
         )
 
     def test(self) -> None:

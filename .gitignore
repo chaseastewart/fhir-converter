@@ -40,3 +40,7 @@ htmlcov/
 site/
 _site/
 docs/docstrings/
+
+# other
+
+data/*

@@ -12,7 +12,7 @@ from traceback import print_exception
 from typing import Any, Final, List, Mapping, Optional, Type
 
 from frozendict import frozendict
-from liquid import Environment, FileExtensionLoader
+from liquid import Environment, FileSystemLoader
 from psutil import Process
 
 from fhir_converter.exceptions import fail
@@ -88,7 +88,7 @@ def get_user_defined_environment(
 ) -> Optional[Environment]:
     if args.template_dir:
         return make_environment(
-            loader=FileExtensionLoader(search_path=args.template_dir),
+            loader=FileSystemLoader(search_path=args.template_dir),
             additional_loaders=[defaults["loader"]],
         )
     return None

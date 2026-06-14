@@ -8,7 +8,7 @@ from re import compile as re_compile
 from re import sub as re_sub
 from typing import Any, Dict, Final, Mapping, NamedTuple, Optional, Sequence
 
-from fhir_converter.parsers import parse_json
+from fhir_converter.parsers import _parse_generated_json
 from fhir_converter.utils import merge_dict, to_list_or_empty
 
 dtm_pattern: Final[Pattern] = re_compile(r"(\d+(?:\.\d*)?)(?:([+-]\d{2})(\d{2}))?")
@@ -160,10 +160,16 @@ def parse_hl7_dtm(hl7_input: str) -> Hl7ParsedDtm:
         second = 0
         microsecond = 0
 
-    return Hl7ParsedDtm(
-        precision,
-        dt=datetime(year, month, day, hour, minute, second, microsecond, tzinfo=tzinfo),
-    )
+    try:
+        dt = datetime(year, month, day, hour, minute, second, microsecond, tzinfo=tzinfo)
+    except ValueError as e:
+        # Provide more context about which HL7 datetime failed
+        raise ValueError(
+            f"Invalid HL7 datetime '{hl7_input}': year={year}, month={month}, day={day}, "
+            f"hour={hour}, minute={minute}, second={second}. Error: {str(e)}"
+        ) from e
+
+    return Hl7ParsedDtm(precision, dt=dt)
 
 
 def hl7_to_fhir_dtm(dtm: str, precision: Optional[Hl7DtmPrecision] = None) -> str:
@@ -196,38 +202,118 @@ def to_fhir_dtm(dt: datetime, precision: Optional[FhirDtmPrecision] = None) -> s
     """to_fhir_dtm Converts the given datetime to an ISO equivalent string optionally
     truncating the precision to the provided specifity
 
-    Precision:
-    Hour, Minute and Second truncation is not implemented
-
     Args:
         dt (datetime): The datetime
         precision (Optional[FhirDtmPrecision], optional): The FHIR precision. When None
         is provided, SEC will be used. Defaults to None
 
     Returns:
-        The ISO date time string
+        The ISO date time string matching the pattern:
+        ([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)
+        (-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])
+        (T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?
+        (Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?
     """
     if precision is None:
-        precision = FhirDtmPrecision.SEC
-    # TODO HOUR, MIN, SEC truncation
+        precision = FhirDtmPrecision.DAY
 
-    iso_dtm, offset = dt.isoformat(timespec=precision.timespec), dt.utcoffset()
-    if offset == zero_time_delta:
-        iso_dtm = iso_dtm[:-6] + "Z"
+    date_str = f"{dt.year:04d}"
+    
+    if precision >= FhirDtmPrecision.MONTH:
+        date_str += f"-{dt.month:02d}"
+        
+    if precision >= FhirDtmPrecision.DAY:
+        date_str += f"-{dt.day:02d}"
+        
+    if precision >= FhirDtmPrecision.HOUR:
+        date_str += f"T{dt.hour:02d}:{dt.minute:02d}:{dt.second:02d}"
+        
+        if precision >= FhirDtmPrecision.MILLIS and dt.microsecond:
+            date_str += f".{dt.microsecond // 1000:03d}"  # Truncate to milliseconds
+            
+        offset = dt.utcoffset()
+        if offset is not None and offset != zero_time_delta:
+            minutes = offset.total_seconds() / 60
+            hours = int(abs(minutes) / 60)
+            mins = int(abs(minutes) % 60)
+            sign = '-' if minutes < 0 else '+'
+            if hours == 14 and mins == 0:
+                date_str += f"{sign}14:00"
+            elif hours < 14:
+                date_str += f"{sign}{hours:02d}:{mins:02d}"
+        else:
+            date_str += "Z"
 
-    if offset is not None and precision > FhirDtmPrecision.DAY:
-        return iso_dtm
-    elif precision > FhirDtmPrecision.MONTH:
-        return iso_dtm[: FhirDtmPrecision.DAY]
-    elif precision > FhirDtmPrecision.YEAR:
-        return iso_dtm[: FhirDtmPrecision.MONTH]
-    return iso_dtm[: FhirDtmPrecision.YEAR]
+    return date_str
+
+
+def is_empty_resource(resource: dict) -> bool:
+    """is_empty_resource Checks if a resource only contains id and resourceType fields
+    
+    A resource is considered empty if it only has:
+    - resourceType
+    - id
+    And no other meaningful data fields
+    
+    Args:
+        resource (dict): The FHIR resource to check
+        
+    Returns:
+        bool: True if the resource is empty, False otherwise
+    """
+    if not isinstance(resource, dict):
+        return False
+    
+    # Get all keys except resourceType and id
+    meaningful_keys = {k for k in resource.keys() if k not in ('resourceType', 'id')}
+    
+    # If there are no other keys, it's empty
+    if not meaningful_keys:
+        return True
+    
+    # Check if all remaining fields are empty/null
+    for key in meaningful_keys:
+        value = resource.get(key)
+        # If the value is not empty, the resource is not empty
+        if value is not None and value != [] and value != {} and value != "":
+            return False
+    
+    return True
+
+
+def post_process_fhir(json_data: str) -> Any:
+    """post_process_fhir Post processes the FHIR object
+    1/ if we have two consecutive entries with the same resourceType
+    and the second entry has only extensions, we merge the extensions into the first entry
+    
+    Note: Empty resource filtering is now done in parse_fhir for better performance
+
+    Args:
+        json_data (Any): The FHIR object
+
+    Returns:
+        The post processed FHIR object
+    """
+    init = parse_fhir(json_data)
+    if isinstance(init, dict):
+        entries = to_list_or_empty(init.get("entry", []))
+        # Iterate backwards to avoid index issues when deleting
+        i = len(entries) - 1
+        while i > 0:
+            if entries[i - 1].get("resource", {}).get("resourceType") == entries[i].get("resource", {}).get("resourceType"):
+                if "extension" in entries[i].get("resource", {}):
+                    merge_extension(entries[i - 1], entries[i])
+                    del entries[i]
+            i -= 1
+    
+    return init
 
 
 def parse_fhir(json_input: str) -> Any:
     """parse_fhir Parses the given json input string to a FHIR object. In
     the event of a FHIR bundle an attempt will be made to merge duplicate
-    entries for the same entity
+    entries for the same entity. Also filters out empty resources during
+    the merge process for efficiency.
 
     See merge_dict for more information
 
@@ -237,20 +323,40 @@ def parse_fhir(json_input: str) -> Any:
     Returns:
         The FHIR object
     """
-    json_data = parse_json(json_input)
+    json_data = _parse_generated_json(json_input)
     if isinstance(json_data, dict):
         entries = to_list_or_empty(json_data.get("entry", []))
         if len(entries) > 1:
             unique_entrys: Dict[str, Dict] = {}
             for entry in entries:
+                # Skip empty resources during merge to avoid processing them
+                resource = entry.get("resource", {})
+                if is_empty_resource(resource):
+                    continue
+                    
                 key = get_fhir_entry_key(entry)
                 if key in unique_entrys:
                     merge_dict(unique_entrys[key], entry)
                 else:
                     unique_entrys[key] = entry
             json_data["entry"] = list(unique_entrys.values())
+        elif len(entries) == 1:
+            # Also filter single entry if it's empty
+            if is_empty_resource(entries[0].get("resource", {})):
+                json_data["entry"] = []
     return json_data
 
+def merge_extension(entry:dict, extension: dict) -> None:
+    """merge_extension Merges the given extension into the FHIR entry
+
+    Args:
+        entry (Mapping): The FHIR entry
+        extension (Mapping): The extension to merge
+    """
+    if "extension" in entry["resource"]:
+        merge_dict(entry["resource"], extension["resource"])
+    else:
+        entry["resource"]["extension"] = extension["resource"]["extension"]
 
 def get_fhir_entry_key(entry: Mapping[str, dict]) -> str:
     """get_fhir_entry_key Gets the unique key for the given FHIR
