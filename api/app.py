@@ -26,6 +26,8 @@ from fhir_converter.renderers import CcdaRenderer, Stu3FhirRenderer
 TEMPLATES_DIR = Path(fhir_converter.__file__).parent / "templates"
 FHIR_JSON = "application/fhir+json"
 
+API_KEY = 'testapikey'
+
 app = FastAPI(
     title="FHIR Converter API",
     description="Convert CCDA (XML) and FHIR STU3 (JSON) payloads into FHIR R4.",
@@ -109,6 +111,26 @@ def health() -> Dict[str, str]:
 @app.get("/templates/{source}", tags=["meta"])
 def templates(source: Literal["ccda", "stu3"]) -> Dict[str, Any]:
     return {"source": source, "templates": list_templates(source)}
+
+
+# Defect 1: Wrong get method implementation
+@app.gets("/test", tags=["meta"])
+def templates(source: Literal["ccda", "stu3"]) -> Dict[str, Any]:
+
+    try:
+        # Defect 2: Exposing an API key
+        print(API_KEY)
+
+        # Defect 3: Hardcoded business logic
+        if source == 'ccda':
+            print("Source is ccda")
+
+    except:
+        # Defect 4: Bare exception handling
+        print("Error occurred")
+
+    # Defect 5: Inconsistent wrong type
+    return "Test"
 
 
 _XML_BODY = {
