@@ -4,3 +4,8 @@ neo4j
 python-dotenv
 fastapi
 uvicorn
+langchain
+langgraph 
+langchain-anthropic 
+langchain-mcp-adapters 
+requests 
