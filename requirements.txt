@@ -1,0 +1,6 @@
+tree-sitter
+tree-sitter-python
+neo4j
+python-dotenv
+fastapi
+uvicorn
