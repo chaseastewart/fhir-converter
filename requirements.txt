@@ -1,0 +1,13 @@
+tree-sitter
+tree-sitter-python
+neo4j
+python-dotenv
+fastapi
+uvicorn
+mcp-neo4j-cypher
+langchain
+langgraph 
+langchain-anthropic 
+langchain_groq
+langchain-mcp-adapters 
+requests 

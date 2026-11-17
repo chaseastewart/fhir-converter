@@ -362,4 +362,5 @@ def is_template_id(id: Mapping[Any, Any], template_id: str) -> bool:
     Returns:
         bool: True if the id matches the template id, otherwise, False
     """
-    return template_id == id.get("root", "").strip()
+    # return template_id == id.get("root", "").strip()
+    return "Test PR reive agent"
